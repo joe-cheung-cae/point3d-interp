@@ -68,7 +68,8 @@ std::vector<InterpolationResult> CPUInterpolator::queryBatch(const std::vector<P
     return results;
 }
 
-MagneticFieldData CPUInterpolator::trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty, Real tz) const {
+MagneticFieldData CPUInterpolator::trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty,
+                                                        Real tz) const {
     MagneticFieldData result;
 
     // Trilinear interpolation algorithm

@@ -86,8 +86,8 @@ bool DataLoader::ParseLine(const std::string& line, Point3D& point, MagneticFiel
     auto tokens = SplitString(line, delimiter_);
 
     // Check if there are enough columns
-    size_t max_col =
-        std::max({coord_cols_[0], coord_cols_[1], coord_cols_[2], field_cols_[0], field_cols_[1], field_cols_[2], field_cols_[3]});
+    size_t max_col = std::max({coord_cols_[0], coord_cols_[1], coord_cols_[2], field_cols_[0], field_cols_[1],
+                               field_cols_[2], field_cols_[3]});
 
     if (tokens.size() <= max_col) {
         return false;
@@ -100,8 +100,10 @@ bool DataLoader::ParseLine(const std::string& line, Point3D& point, MagneticFiel
     }
 
     // Parse magnetic field data
-    if (!StringToValue(tokens[field_cols_[0]], field.field_strength) || !StringToValue(tokens[field_cols_[1]], field.gradient_x) ||
-        !StringToValue(tokens[field_cols_[2]], field.gradient_y) || !StringToValue(tokens[field_cols_[3]], field.gradient_z)) {
+    if (!StringToValue(tokens[field_cols_[0]], field.field_strength) ||
+        !StringToValue(tokens[field_cols_[1]], field.gradient_x) ||
+        !StringToValue(tokens[field_cols_[2]], field.gradient_y) ||
+        !StringToValue(tokens[field_cols_[3]], field.gradient_z)) {
         return false;
     }
 
@@ -169,7 +171,8 @@ bool DataLoader::DetectGridParams(const std::vector<Point3D>& coordinates, GridP
 
 bool DataLoader::ValidateGridRegularity(const std::vector<Point3D>& coordinates, const GridParams& grid_params) {
     // Calculate expected number of data points
-    size_t expected_count = static_cast<size_t>(grid_params.dimensions[0] * grid_params.dimensions[1] * grid_params.dimensions[2]);
+    size_t expected_count =
+        static_cast<size_t>(grid_params.dimensions[0] * grid_params.dimensions[1] * grid_params.dimensions[2]);
 
     if (coordinates.size() != expected_count) {
         return false;
@@ -183,8 +186,9 @@ bool DataLoader::ValidateGridRegularity(const std::vector<Point3D>& coordinates,
         int iz = static_cast<int>(std::round((coord.z - grid_params.origin.z) / grid_params.spacing.z));
 
         // Check if indices are valid
-        if (ix < 0 || ix >= static_cast<int>(grid_params.dimensions[0]) || iy < 0 || iy >= static_cast<int>(grid_params.dimensions[1]) ||
-            iz < 0 || iz >= static_cast<int>(grid_params.dimensions[2])) {
+        if (ix < 0 || ix >= static_cast<int>(grid_params.dimensions[0]) || iy < 0 ||
+            iy >= static_cast<int>(grid_params.dimensions[1]) || iz < 0 ||
+            iz >= static_cast<int>(grid_params.dimensions[2])) {
             return false;
         }
 
@@ -193,7 +197,8 @@ bool DataLoader::ValidateGridRegularity(const std::vector<Point3D>& coordinates,
         Real expected_y = grid_params.origin.y + iy * grid_params.spacing.y;
         Real expected_z = grid_params.origin.z + iz * grid_params.spacing.z;
 
-        if (std::abs(coord.x - expected_x) > 1e-6 || std::abs(coord.y - expected_y) > 1e-6 || std::abs(coord.z - expected_z) > 1e-6) {
+        if (std::abs(coord.x - expected_x) > 1e-6 || std::abs(coord.y - expected_y) > 1e-6 ||
+            std::abs(coord.z - expected_z) > 1e-6) {
             return false;
         }
     }
@@ -208,8 +213,11 @@ std::vector<std::string> DataLoader::SplitString(const std::string& line, char d
 
     while (std::getline(ss, token, delimiter)) {
         // Trim leading and trailing spaces
-        token.erase(token.begin(), std::find_if(token.begin(), token.end(), [](unsigned char ch) { return !std::isspace(ch); }));
-        token.erase(std::find_if(token.rbegin(), token.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), token.end());
+        token.erase(token.begin(),
+                    std::find_if(token.begin(), token.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+        token.erase(
+            std::find_if(token.rbegin(), token.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+            token.end());
 
         tokens.push_back(token);
     }

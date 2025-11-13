@@ -57,13 +57,15 @@ RegularGrid3D& RegularGrid3D::operator=(RegularGrid3D&& other) noexcept {
 
 P3D_HOST_DEVICE
 Point3D RegularGrid3D::worldToGrid(const Point3D& world_point) const {
-    return Point3D((world_point.x - params_.origin.x) / params_.spacing.x, (world_point.y - params_.origin.y) / params_.spacing.y,
+    return Point3D((world_point.x - params_.origin.x) / params_.spacing.x,
+                   (world_point.y - params_.origin.y) / params_.spacing.y,
                    (world_point.z - params_.origin.z) / params_.spacing.z);
 }
 
 P3D_HOST_DEVICE
 Point3D RegularGrid3D::gridToWorld(const Point3D& grid_point) const {
-    return Point3D(params_.origin.x + grid_point.x * params_.spacing.x, params_.origin.y + grid_point.y * params_.spacing.y,
+    return Point3D(params_.origin.x + grid_point.x * params_.spacing.x,
+                   params_.origin.y + grid_point.y * params_.spacing.y,
                    params_.origin.z + grid_point.z * params_.spacing.z);
 }
 
@@ -79,8 +81,8 @@ bool RegularGrid3D::getCellVertexIndices(const Point3D& grid_coords, uint32_t in
     int k1 = k0 + 1;
 
     // Check bounds
-    if (i0 < 0 || i1 >= static_cast<int>(params_.dimensions[0]) || j0 < 0 || j1 >= static_cast<int>(params_.dimensions[1]) || k0 < 0 ||
-        k1 >= static_cast<int>(params_.dimensions[2])) {
+    if (i0 < 0 || i1 >= static_cast<int>(params_.dimensions[0]) || j0 < 0 ||
+        j1 >= static_cast<int>(params_.dimensions[1]) || k0 < 0 || k1 >= static_cast<int>(params_.dimensions[2])) {
         return false;
     }
 

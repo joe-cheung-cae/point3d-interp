@@ -8,7 +8,8 @@ namespace cuda {
  * @brief Convert world coordinates to grid coordinates
  */
 __device__ Point3D WorldToGrid(const Point3D& world_point, const GridParams& params) {
-    return Point3D((world_point.x - params.origin.x) / params.spacing.x, (world_point.y - params.origin.y) / params.spacing.y,
+    return Point3D((world_point.x - params.origin.x) / params.spacing.x,
+                   (world_point.y - params.origin.y) / params.spacing.y,
                    (world_point.z - params.origin.z) / params.spacing.z);
 }
 
@@ -33,8 +34,8 @@ __device__ bool GetCellVertexIndices(const Point3D& grid_coords, const GridParam
     int k1 = k0 + 1;
 
     // Check bounds
-    if (i0 < 0 || i1 >= static_cast<int>(params.dimensions[0]) || j0 < 0 || j1 >= static_cast<int>(params.dimensions[1]) || k0 < 0 ||
-        k1 >= static_cast<int>(params.dimensions[2])) {
+    if (i0 < 0 || i1 >= static_cast<int>(params.dimensions[0]) || j0 < 0 ||
+        j1 >= static_cast<int>(params.dimensions[1]) || k0 < 0 || k1 >= static_cast<int>(params.dimensions[2])) {
         return false;
     }
 
@@ -94,8 +95,10 @@ __device__ MagneticFieldData TrilinearInterpolate(const MagneticFieldData vertex
  * @param results Output results array (device memory)
  * @param count Number of query points
  */
-__global__ void TrilinearInterpolationKernel(const Point3D* __restrict__ query_points, const MagneticFieldData* __restrict__ grid_data,
-                                             const GridParams grid_params, InterpolationResult* __restrict__ results, const size_t count) {
+__global__ void TrilinearInterpolationKernel(const Point3D* __restrict__ query_points,
+                                             const MagneticFieldData* __restrict__ grid_data,
+                                             const GridParams grid_params, InterpolationResult* __restrict__ results,
+                                             const size_t     count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid >= count) {
@@ -136,8 +139,8 @@ __global__ void TrilinearInterpolationKernel(const Point3D* __restrict__ query_p
     const int k0 = __float2int_rd(grid_z);
 
     // Combine bounds checking to reduce branching
-    const bool valid_cell = (i0 >= 0) && (i0 < static_cast<int>(nx) - 1) && (j0 >= 0) && (j0 < static_cast<int>(ny) - 1) && (k0 >= 0) &&
-                            (k0 < static_cast<int>(nz) - 1);
+    const bool valid_cell = (i0 >= 0) && (i0 < static_cast<int>(nx) - 1) && (j0 >= 0) &&
+                            (j0 < static_cast<int>(ny) - 1) && (k0 >= 0) && (k0 < static_cast<int>(nz) - 1);
 
     if (!valid_cell) {
         results[tid] = result;

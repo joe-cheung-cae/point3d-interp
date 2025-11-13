@@ -27,8 +27,8 @@ class DataLoader {
      * @param grid_params Output grid parameters
      * @return Error code
      */
-    ErrorCode LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates, std::vector<MagneticFieldData>& field_data,
-                          GridParams& grid_params);
+    ErrorCode LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
+                          std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
 
     /**
      * @brief Set delimiter

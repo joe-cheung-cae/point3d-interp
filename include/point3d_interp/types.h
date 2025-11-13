@@ -67,13 +67,14 @@ struct MagneticFieldData {
 
     P3D_HOST_DEVICE
     MagneticFieldData operator+(const MagneticFieldData& other) const {
-        return MagneticFieldData(field_strength + other.field_strength, gradient_x + other.gradient_x, gradient_y + other.gradient_y,
-                                 gradient_z + other.gradient_z);
+        return MagneticFieldData(field_strength + other.field_strength, gradient_x + other.gradient_x,
+                                 gradient_y + other.gradient_y, gradient_z + other.gradient_z);
     }
 
     P3D_HOST_DEVICE
     MagneticFieldData operator*(Real scalar) const {
-        return MagneticFieldData(field_strength * scalar, gradient_x * scalar, gradient_y * scalar, gradient_z * scalar);
+        return MagneticFieldData(field_strength * scalar, gradient_x * scalar, gradient_y * scalar,
+                                 gradient_z * scalar);
     }
 };
 
@@ -100,8 +101,8 @@ struct GridParams {
     // Check if point is inside boundaries
     P3D_HOST_DEVICE
     bool is_point_inside(const Point3D& point) const {
-        return (point.x >= min_bound.x && point.x <= max_bound.x) && (point.y >= min_bound.y && point.y <= max_bound.y) &&
-               (point.z >= min_bound.z && point.z <= max_bound.z);
+        return (point.x >= min_bound.x && point.x <= max_bound.x) &&
+               (point.y >= min_bound.y && point.y <= max_bound.y) && (point.z >= min_bound.z && point.z <= max_bound.z);
     }
 };
 

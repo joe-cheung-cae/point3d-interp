@@ -1,7 +1,7 @@
 BasedOnStyle: Google
 
 # Longer lines
-ColumnLimit: 140
+ColumnLimit: 120
 
 # Increase indentation
 IndentWidth: 4

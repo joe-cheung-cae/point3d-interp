@@ -58,7 +58,8 @@ class Benchmark {
 
                 // Calculate throughput
                 double throughput = query_size / (cpu_time / 1000.0);
-                std::cout << "  Throughput: " << std::fixed << std::setprecision(0) << throughput << " queries/second\n";
+                std::cout << "  Throughput: " << std::fixed << std::setprecision(0) << throughput
+                          << " queries/second\n";
 
                 std::cout << "\n";
             }
@@ -131,7 +132,8 @@ class Benchmark {
         MagneticFieldInterpolator interp(false);  // CPU mode
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), test_data.coordinates.size());
+        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                              test_data.coordinates.size());
         if (err != ErrorCode::Success) {
             std::cerr << "CPU data loading failed: " << static_cast<int>(err) << std::endl;
             return -1.0;
@@ -162,7 +164,8 @@ class Benchmark {
         MagneticFieldInterpolator interp(true);  // GPU mode
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), test_data.coordinates.size());
+        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                              test_data.coordinates.size());
         if (err != ErrorCode::Success) {
             return -1.0;  // GPU unavailable or initialization failed
         }
@@ -200,8 +203,8 @@ class Benchmark {
             size_t total_points = size[0] * size[1] * size[2];
             size_t memory_mb    = total_points * sizeof(MagneticFieldData) / (1024 * 1024);
 
-            std::cout << "Data scale: " << size[0] << "x" << size[1] << "x" << size[2] << " (" << total_points << " points, ~" << memory_mb
-                      << " MB)\n";
+            std::cout << "Data scale: " << size[0] << "x" << size[1] << "x" << size[2] << " (" << total_points
+                      << " points, ~" << memory_mb << " MB)\n";
 
             auto test_data = GenerateTestData(size);
 
@@ -209,8 +212,9 @@ class Benchmark {
             {
                 MagneticFieldInterpolator interp(false);
                 auto                      start = std::chrono::high_resolution_clock::now();
-                ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                auto      end = std::chrono::high_resolution_clock::now();
+                ErrorCode                 err =
+                    interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
+                auto end = std::chrono::high_resolution_clock::now();
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -224,8 +228,9 @@ class Benchmark {
             {
                 MagneticFieldInterpolator interp(true);
                 auto                      start = std::chrono::high_resolution_clock::now();
-                ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                auto      end = std::chrono::high_resolution_clock::now();
+                ErrorCode                 err =
+                    interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
+                auto end = std::chrono::high_resolution_clock::now();
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

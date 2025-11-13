@@ -168,7 +168,8 @@ class GpuMemory {
 
 // Implementation of GpuMemoryManager
 
-GpuMemoryManager::GpuMemoryManager(GpuMemoryManager&& other) noexcept : device_ptr_(other.device_ptr_), size_(other.size_) {
+GpuMemoryManager::GpuMemoryManager(GpuMemoryManager&& other) noexcept
+    : device_ptr_(other.device_ptr_), size_(other.size_) {
     other.device_ptr_ = nullptr;
     other.size_       = 0;
 }

@@ -12,7 +12,8 @@ namespace p3d {
 /**
  * @brief Main magnetic field data interpolator class
  *
- * This is the main interface class of the library, responsible for data loading, GPU resource management, and interpolation calculations
+ * This is the main interface class of the library, responsible for data loading, GPU resource management, and
+ * interpolation calculations
  */
 class MagneticFieldInterpolator {
   public:

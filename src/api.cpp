@@ -63,7 +63,8 @@ class MagneticFieldInterpolator::Impl {
 
 // Implementation
 
-MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id) : use_gpu_(use_gpu), device_id_(device_id), gpu_initialized_(false) {
+MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id)
+    : use_gpu_(use_gpu), device_id_(device_id), gpu_initialized_(false) {
 #ifdef __CUDACC__
     if (use_gpu_) {
         gpu_initialized_ = InitializeGPU(device_id);
@@ -92,7 +93,8 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepa
     return LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count) {
+ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
+                                                          size_t count) {
     if (!points || !field_data || count == 0) {
         return ErrorCode::InvalidParameter;
     }
@@ -131,7 +133,8 @@ ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, Int
     return ErrorCode::Success;
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count) {
+ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,
+                                                      size_t count) {
     if (!IsDataLoaded()) {
         return ErrorCode::DataNotLoaded;
     }
@@ -181,8 +184,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             dim3 block_dim(BLOCK_SIZE);
             dim3 grid_dim(num_blocks);
 
-            cuda::TrilinearInterpolationKernel<<<grid_dim, block_dim>>>(gpu_query_points_->getDevicePtr(), gpu_field_data_->getDevicePtr(),
-                                                                        grid_->getParams(), gpu_results_->getDevicePtr(), count);
+            cuda::TrilinearInterpolationKernel<<<grid_dim, block_dim>>>(
+                gpu_query_points_->getDevicePtr(), gpu_field_data_->getDevicePtr(), grid_->getParams(),
+                gpu_results_->getDevicePtr(), count);
 
             // Check CUDA errors
             cudaError_t cuda_err = cudaGetLastError();
@@ -271,7 +275,8 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
         const auto& coordinates = grid_->getCoordinates();
         const auto& field_data  = grid_->getFieldData();
 
-        if (!gpu_points_->copyToDevice(coordinates.data(), data_count) || !gpu_field_data_->copyToDevice(field_data.data(), data_count)) {
+        if (!gpu_points_->copyToDevice(coordinates.data(), data_count) ||
+            !gpu_field_data_->copyToDevice(field_data.data(), data_count)) {
             return false;
         }
 
@@ -287,11 +292,13 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
 
 // MagneticFieldInterpolator implementation
 
-MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id) : impl_(std::make_unique<Impl>(use_gpu, device_id)) {}
+MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id)
+    : impl_(std::make_unique<Impl>(use_gpu, device_id)) {}
 
 MagneticFieldInterpolator::~MagneticFieldInterpolator() = default;
 
-MagneticFieldInterpolator::MagneticFieldInterpolator(MagneticFieldInterpolator&& other) noexcept : impl_(std::move(other.impl_)) {}
+MagneticFieldInterpolator::MagneticFieldInterpolator(MagneticFieldInterpolator&& other) noexcept
+    : impl_(std::move(other.impl_)) {}
 
 MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInterpolator&& other) noexcept {
     if (this != &other) {
@@ -302,7 +309,8 @@ MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInt
 
 ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) { return impl_->LoadFromCSV(filepath); }
 
-ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count) {
+ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
+                                                    size_t count) {
     return impl_->LoadFromMemory(points, field_data, count);
 }
 
@@ -310,7 +318,8 @@ ErrorCode MagneticFieldInterpolator::Query(const Point3D& query_point, Interpola
     return impl_->Query(query_point, result);
 }
 
-ErrorCode MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count) {
+ErrorCode MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results,
+                                                size_t count) {
     return impl_->QueryBatch(query_points, results, count);
 }
 
