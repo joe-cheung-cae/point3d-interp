@@ -1,0 +1,97 @@
+Start testing: Nov 13 14:03 CST
+----------------------------------------------------------
+1/1 Testing: unit_tests
+1/1 Test: unit_tests
+Command: "/home/joe/repo/point3d_interp/build/tests/unit_tests"
+Directory: /home/joe/repo/point3d_interp/build/tests
+"unit_tests" start time: Nov 13 14:03 CST
+Output:
+----------------------------------------------------------
+=== 3D Magnetic Field Data Interpolation Library Performance Benchmarks ===
+
+Test data scale: 10x10x10 (1000 points)
+------------------------------------------------------------
+Number of query points: 100
+  CPU time: 0.063 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.060 ms  Speedup: 1.05x  Throughput: 1587302 queries/second
+
+Number of query points: 1000
+  CPU time: 0.379 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.328 ms  Speedup: 1.16x  Throughput: 2638522 queries/second
+
+Number of query points: 10000
+  CPU time: 5.320 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 4.196 ms  Speedup: 1.27x  Throughput: 1879699 queries/second
+
+
+Test data scale: 20x20x20 (8000 points)
+------------------------------------------------------------
+Number of query points: 100
+  CPU time: 0.085 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.090 ms  Speedup: 0.94x  Throughput: 1176471 queries/second
+
+Number of query points: 1000
+  CPU time: 0.475 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.398 ms  Speedup: 1.19x  Throughput: 2105263 queries/second
+
+Number of query points: 10000
+  CPU time: 5.312 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 5.131 ms  Speedup: 1.04x  Throughput: 1882530 queries/second
+
+
+Test data scale: 30x30x30 (27000 points)
+------------------------------------------------------------
+Number of query points: 100
+  CPU time: 0.064 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.060 ms  Speedup: 1.07x  Throughput: 1562500 queries/second
+
+Number of query points: 1000
+  CPU time: 0.471 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.514 ms  Speedup: 0.92x  Throughput: 2123142 queries/second
+
+Number of query points: 10000
+  CPU time: 4.886 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 4.127 ms  Speedup: 1.18x  Throughput: 2046664 queries/second
+
+
+Test data scale: 50x50x50 (125000 points)
+------------------------------------------------------------
+Number of query points: 100
+  CPU time: 0.071 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.082 ms  Speedup: 0.87x  Throughput: 1408451 queries/second
+
+Number of query points: 1000
+  CPU time: 0.561 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 0.596 ms  Speedup: 0.94x  Throughput: 1782531 queries/second
+
+Number of query points: 10000
+  CPU time: 7.817 msWarning: Failed to upload data to GPU, using CPU only
+  GPU time: 4.280 ms  Speedup: 1.83x  Throughput: 1279263 queries/second
+
+
+=== 内存使用基准测试 ===
+
+数据规模: 10x10x10 (1000 点, ~0 MB)
+  CPU加载时间: 0 ms
+Warning: Failed to upload data to GPU, using CPU only
+  GPU加载时间: 0 ms
+
+数据规模: 50x50x50 (125000 点, ~1 MB)
+  CPU加载时间: 27 ms
+Warning: Failed to upload data to GPU, using CPU only
+  GPU加载时间: 27 ms
+
+数据规模: 100x100x100 (1000000 点, ~15 MB)
+  CPU加载时间: 243 ms
+Warning: Failed to upload data to GPU, using CPU only
+  GPU加载时间: 232 ms
+
+<end of output>
+Test time =   0.87 sec
+----------------------------------------------------------
+Test Passed.
+"unit_tests" end time: Nov 13 14:03 CST
+"unit_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 13 14:03 CST

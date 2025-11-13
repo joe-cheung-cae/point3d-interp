@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-15 qc libpoint3d_interp.a CMakeFiles/point3d_interp.dir/src/error_codes.cpp.o CMakeFiles/point3d_interp.dir/src/data_loader.cpp.o CMakeFiles/point3d_interp.dir/src/grid_structure.cpp.o CMakeFiles/point3d_interp.dir/src/cpu_interpolator.cpp.o CMakeFiles/point3d_interp.dir/src/api.cpp.o CMakeFiles/point3d_interp.dir/src/cuda_interpolator.cu.o CMakeFiles/point3d_interp.dir/src/memory_manager.cu.o
+/usr/bin/llvm-ranlib-15 libpoint3d_interp.a

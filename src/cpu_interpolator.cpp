@@ -1,0 +1,117 @@
+#include "point3d_interp/cpu_interpolator.h"
+#include <algorithm>
+#include <cmath>
+
+namespace p3d {
+
+CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid)
+    : grid_(grid)
+{
+}
+
+CPUInterpolator::~CPUInterpolator() = default;
+
+CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept
+    : grid_(other.grid_)
+{
+}
+
+CPUInterpolator& CPUInterpolator::operator=(CPUInterpolator&& other) noexcept {
+    // const reference cannot be reassigned, nothing to do here
+    // grid_ is initialized in constructor and cannot be changed
+    return *this;
+}
+
+InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
+    InterpolationResult result;
+
+    // Check if point is within grid bounds
+    if (!grid_.getParams().is_point_inside(query_point)) {
+        result.valid = false;
+        return result;
+    }
+
+    // Convert to grid coordinates
+    Point3D grid_coords = grid_.worldToGrid(query_point);
+
+    // Check if grid coordinates are valid
+    if (!grid_.isValidGridCoords(grid_coords)) {
+        result.valid = false;
+        return result;
+    }
+
+    // Get cell vertex indices
+    uint32_t indices[8];
+    if (!grid_.getCellVertexIndices(grid_coords, indices)) {
+        result.valid = false;
+        return result;
+    }
+
+    // Get vertex data
+    MagneticFieldData vertex_data[8];
+    getVertexData(indices, vertex_data);
+
+    // Calculate local coordinates (between 0 and 1)
+    Real tx = grid_coords.x - std::floor(grid_coords.x);
+    Real ty = grid_coords.y - std::floor(grid_coords.y);
+    Real tz = grid_coords.z - std::floor(grid_coords.z);
+
+    // Perform trilinear interpolation
+    result.data = trilinearInterpolate(vertex_data, tx, ty, tz);
+    result.valid = true;
+
+    return result;
+}
+
+std::vector<InterpolationResult> CPUInterpolator::queryBatch(
+    const std::vector<Point3D>& query_points
+) const {
+    std::vector<InterpolationResult> results;
+    results.reserve(query_points.size());
+
+    for (const auto& point : query_points) {
+        results.push_back(query(point));
+    }
+
+    return results;
+}
+
+MagneticFieldData CPUInterpolator::trilinearInterpolate(
+    const MagneticFieldData vertex_data[8],
+    Real tx, Real ty, Real tz
+) const {
+    MagneticFieldData result;
+
+    // Trilinear interpolation algorithm
+    // Vertex indices correspond to:
+    // 0: (i,j,k),     1: (i+1,j,k),   2: (i,j+1,k),   3: (i+1,j+1,k)
+    // 4: (i,j,k+1),   5: (i+1,j,k+1), 6: (i,j+1,k+1), 7: (i+1,j+1,k+1)
+
+    // X-direction interpolation (4 times)
+    MagneticFieldData c00 = vertex_data[0] * (1 - tx) + vertex_data[1] * tx;  // (i,j,k) -> (i+1,j,k)
+    MagneticFieldData c01 = vertex_data[4] * (1 - tx) + vertex_data[5] * tx;  // (i,j,k+1) -> (i+1,j,k+1)
+    MagneticFieldData c10 = vertex_data[2] * (1 - tx) + vertex_data[3] * tx;  // (i,j+1,k) -> (i+1,j+1,k)
+    MagneticFieldData c11 = vertex_data[6] * (1 - tx) + vertex_data[7] * tx;  // (i,j+1,k+1) -> (i+1,j+1,k+1)
+
+    // Y-direction interpolation (2 times)
+    MagneticFieldData c0 = c00 * (1 - ty) + c10 * ty;  // Merge k layer
+    MagneticFieldData c1 = c01 * (1 - ty) + c11 * ty;  // Merge k+1 layer
+
+    // Z-direction interpolation (1 time)
+    result = c0 * (1 - tz) + c1 * tz;
+
+    return result;
+}
+
+void CPUInterpolator::getVertexData(
+    const uint32_t indices[8],
+    MagneticFieldData vertex_data[8]
+) const {
+    const auto& field_data = grid_.getFieldData();
+
+    for (int i = 0; i < 8; ++i) {
+        vertex_data[i] = field_data[indices[i]];
+    }
+}
+
+} // namespace p3d

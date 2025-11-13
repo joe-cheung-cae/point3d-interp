@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-15 qc ../../../lib/libgmock.a "CMakeFiles/gmock.dir/src/gmock-all.cc.o"
+/usr/bin/llvm-ranlib-15 ../../../lib/libgmock.a
