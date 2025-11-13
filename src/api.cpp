@@ -111,7 +111,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
 
         // Upload data to GPU
         if (use_gpu_ && !UploadDataToGPU()) {
-            std::cerr << "Warning: Failed to upload data to GPU, using CPU only" << std::endl;
+            // Failed to upload to GPU, fall back to CPU
             use_gpu_ = false;
         }
 
@@ -184,7 +184,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             dim3 block_dim(BLOCK_SIZE);
             dim3 grid_dim(num_blocks);
 
-            cuda::TrilinearInterpolationKernel<<<grid_dim, block_dim>>>(
+            cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
                 gpu_query_points_->getDevicePtr(), gpu_field_data_->getDevicePtr(), grid_->getParams(),
                 gpu_results_->getDevicePtr(), count);
 

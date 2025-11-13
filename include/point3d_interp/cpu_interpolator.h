@@ -50,15 +50,26 @@ class CPUInterpolator {
 
   private:
     /**
-     * @brief Perform trilinear interpolation calculation
-     * @param grid_coords Grid coordinates
+     * @brief 1D Hermite interpolation
+     * @param f0 Value at 0
+     * @param f1 Value at 1
+     * @param df0 Derivative at 0
+     * @param df1 Derivative at 1
+     * @param t Parameter (0-1)
+     * @return Interpolated value
+     */
+    Real hermiteInterpolate(Real f0, Real f1, Real df0, Real df1, Real t) const;
+
+    /**
+     * @brief Perform tricubic Hermite interpolation calculation
      * @param vertex_data Magnetic field data of 8 vertices
      * @param tx Local coordinate in x direction (0-1)
      * @param ty Local coordinate in y direction (0-1)
      * @param tz Local coordinate in z direction (0-1)
      * @return Interpolation result
      */
-    MagneticFieldData trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty, Real tz) const;
+    MagneticFieldData tricubicHermiteInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty,
+                                                 Real tz) const;
 
     /**
      * @brief Get cell vertex data

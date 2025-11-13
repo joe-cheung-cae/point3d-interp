@@ -50,8 +50,8 @@ InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
     Real ty = grid_coords.y - std::floor(grid_coords.y);
     Real tz = grid_coords.z - std::floor(grid_coords.z);
 
-    // Perform trilinear interpolation
-    result.data  = trilinearInterpolate(vertex_data, tx, ty, tz);
+    // Perform tricubic Hermite interpolation
+    result.data  = tricubicHermiteInterpolate(vertex_data, tx, ty, tz);
     result.valid = true;
 
     return result;
@@ -68,27 +68,101 @@ std::vector<InterpolationResult> CPUInterpolator::queryBatch(const std::vector<P
     return results;
 }
 
-MagneticFieldData CPUInterpolator::trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty,
-                                                        Real tz) const {
+Real CPUInterpolator::hermiteInterpolate(Real f0, Real f1, Real df0, Real df1, Real t) const {
+    Real t2  = t * t;
+    Real t3  = t2 * t;
+    Real h00 = 2 * t3 - 3 * t2 + 1;
+    Real h10 = t3 - 2 * t2 + t;
+    Real h01 = -2 * t3 + 3 * t2;
+    Real h11 = t3 - t2;
+    return f0 * h00 + df0 * h10 + f1 * h01 + df1 * h11;
+}
+
+MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty,
+                                                              Real tz) const {
     MagneticFieldData result;
 
-    // Trilinear interpolation algorithm
     // Vertex indices correspond to:
     // 0: (i,j,k),     1: (i+1,j,k),   2: (i,j+1,k),   3: (i+1,j+1,k)
     // 4: (i,j,k+1),   5: (i+1,j,k+1), 6: (i,j+1,k+1), 7: (i+1,j+1,k+1)
 
-    // X-direction interpolation (4 times)
-    MagneticFieldData c00 = vertex_data[0] * (1 - tx) + vertex_data[1] * tx;  // (i,j,k) -> (i+1,j,k)
-    MagneticFieldData c01 = vertex_data[4] * (1 - tx) + vertex_data[5] * tx;  // (i,j,k+1) -> (i+1,j,k+1)
-    MagneticFieldData c10 = vertex_data[2] * (1 - tx) + vertex_data[3] * tx;  // (i,j+1,k) -> (i+1,j+1,k)
-    MagneticFieldData c11 = vertex_data[6] * (1 - tx) + vertex_data[7] * tx;  // (i,j+1,k+1) -> (i+1,j+1,k+1)
+    // Interpolate along x for each of the 4 yz positions
+    MagneticFieldData interp_x[4];
+    for (int i = 0; i < 4; ++i) {
+        int idx0 = (i % 2) + (i / 2) * 4;  // 0,1,4,5 for i=0,1,2,3
+        int idx1 = idx0 + 1;               // 1,2,5,6
 
-    // Y-direction interpolation (2 times)
-    MagneticFieldData c0 = c00 * (1 - ty) + c10 * ty;  // Merge k layer
-    MagneticFieldData c1 = c01 * (1 - ty) + c11 * ty;  // Merge k+1 layer
+        // For field_strength, use linear (no derivatives available)
+        interp_x[i].field_strength =
+            vertex_data[idx0].field_strength * (1 - tx) + vertex_data[idx1].field_strength * tx;
 
-    // Z-direction interpolation (1 time)
-    result = c0 * (1 - tz) + c1 * tz;
+        // For gradients, use Hermite
+        interp_x[i].gradient_x = hermiteInterpolate(vertex_data[idx0].gradient_x, vertex_data[idx1].gradient_x,
+                                                    vertex_data[idx0].dBx_dx, vertex_data[idx1].dBx_dx, tx);
+        interp_x[i].gradient_y = hermiteInterpolate(vertex_data[idx0].gradient_y, vertex_data[idx1].gradient_y,
+                                                    vertex_data[idx0].dBy_dx, vertex_data[idx1].dBy_dx, tx);
+        interp_x[i].gradient_z = hermiteInterpolate(vertex_data[idx0].gradient_z, vertex_data[idx1].gradient_z,
+                                                    vertex_data[idx0].dBz_dx, vertex_data[idx1].dBz_dx, tx);
+
+        // Derivatives set to 0 (no higher-order data)
+        interp_x[i].dBx_dx = 0;
+        interp_x[i].dBx_dy = 0;
+        interp_x[i].dBx_dz = 0;
+        interp_x[i].dBy_dx = 0;
+        interp_x[i].dBy_dy = 0;
+        interp_x[i].dBy_dz = 0;
+        interp_x[i].dBz_dx = 0;
+        interp_x[i].dBz_dy = 0;
+        interp_x[i].dBz_dz = 0;
+    }
+
+    // Interpolate along y for the 2 z layers
+    MagneticFieldData interp_y[2];
+    for (int i = 0; i < 2; ++i) {
+        int idx0 = i * 2;     // 0,2 for z=0,1
+        int idx1 = idx0 + 1;  // 1,3
+
+        interp_y[i].field_strength = interp_x[idx0].field_strength * (1 - ty) + interp_x[idx1].field_strength * ty;
+
+        interp_y[i].gradient_x = hermiteInterpolate(interp_x[idx0].gradient_x, interp_x[idx1].gradient_x,
+                                                    interp_x[idx0].dBx_dy, interp_x[idx1].dBx_dy, ty);
+        interp_y[i].gradient_y = hermiteInterpolate(interp_x[idx0].gradient_y, interp_x[idx1].gradient_y,
+                                                    interp_x[idx0].dBy_dy, interp_x[idx1].dBy_dy, ty);
+        interp_y[i].gradient_z = hermiteInterpolate(interp_x[idx0].gradient_z, interp_x[idx1].gradient_z,
+                                                    interp_x[idx0].dBz_dy, interp_x[idx1].dBz_dy, ty);
+
+        // Derivatives 0
+        interp_y[i].dBx_dx = 0;
+        interp_y[i].dBx_dy = 0;
+        interp_y[i].dBx_dz = 0;
+        interp_y[i].dBy_dx = 0;
+        interp_y[i].dBy_dy = 0;
+        interp_y[i].dBy_dz = 0;
+        interp_y[i].dBz_dx = 0;
+        interp_y[i].dBz_dy = 0;
+        interp_y[i].dBz_dz = 0;
+    }
+
+    // Interpolate along z
+    result.field_strength = interp_y[0].field_strength * (1 - tz) + interp_y[1].field_strength * tz;
+
+    result.gradient_x =
+        hermiteInterpolate(interp_y[0].gradient_x, interp_y[1].gradient_x, interp_y[0].dBx_dz, interp_y[1].dBx_dz, tz);
+    result.gradient_y =
+        hermiteInterpolate(interp_y[0].gradient_y, interp_y[1].gradient_y, interp_y[0].dBy_dz, interp_y[1].dBy_dz, tz);
+    result.gradient_z =
+        hermiteInterpolate(interp_y[0].gradient_z, interp_y[1].gradient_z, interp_y[0].dBz_dz, interp_y[1].dBz_dz, tz);
+
+    // Derivatives 0
+    result.dBx_dx = 0;
+    result.dBx_dy = 0;
+    result.dBx_dz = 0;
+    result.dBy_dx = 0;
+    result.dBy_dy = 0;
+    result.dBy_dz = 0;
+    result.dBz_dx = 0;
+    result.dBz_dy = 0;
+    result.dBz_dz = 0;
 
     return result;
 }

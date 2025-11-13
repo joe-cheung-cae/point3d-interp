@@ -45,9 +45,10 @@ class DataLoader {
     /**
      * @brief Set column indices
      * @param coord_cols Coordinate column indices [x, y, z]
-     * @param field_cols Magnetic field data column indices [B, Bx, By, Bz]
+     * @param field_cols Magnetic field data column indices [B, Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy,
+     * dBy_dz, dBz_dx, dBz_dy, dBz_dz]
      */
-    void SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 4>& field_cols);
+    void SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 13>& field_cols);
 
   private:
     /**
@@ -93,10 +94,10 @@ class DataLoader {
     bool StringToValue(const std::string& str, T& value);
 
   private:
-    char                  delimiter_;    // Delimiter
-    bool                  skip_header_;  // Whether to skip header row
-    std::array<size_t, 3> coord_cols_;   // Coordinate column indices
-    std::array<size_t, 4> field_cols_;   // Magnetic field data column indices
+    char                   delimiter_;    // Delimiter
+    bool                   skip_header_;  // Whether to skip header row
+    std::array<size_t, 3>  coord_cols_;   // Coordinate column indices
+    std::array<size_t, 13> field_cols_;   // Magnetic field data column indices
 };
 
 }  // namespace p3d

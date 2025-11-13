@@ -20,12 +20,16 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
     // Set test data for known function: f(x,y,z) = x^2 + y^2 + z^2
     // Gradient: (2x, 2y, 2z)
+    // Derivatives: dBx_dx=2, dBx_dy=0, dBx_dz=0, dBy_dx=0, dBy_dy=2, dBy_dz=0, dBz_dx=0, dBz_dy=0, dBz_dz=2
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
         float       x = coord.x, y = coord.y, z = coord.z;
         field_data[i] = MagneticFieldData(x * x + y * y + z * z,  // B = x² + y² + z²
-                                          2 * x, 2 * y, 2 * z     // Gradient = (2x, 2y, 2z)
+                                          2 * x, 2 * y, 2 * z,    // Gradient = (2x, 2y, 2z)
+                                          2.0f, 0.0f, 0.0f,       // dBx_dx, dBx_dy, dBx_dz
+                                          0.0f, 2.0f, 0.0f,       // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 2.0f        // dBz_dx, dBz_dy, dBz_dz
         );
     }
 
@@ -70,7 +74,10 @@ TEST(AccuracyTest, BoundaryInterpolation) {
         const auto& coord = grid.getCoordinates()[i];
         float       x = coord.x, y = coord.y, z = coord.z;
         field_data[i] = MagneticFieldData(x + 2 * y + 3 * z + 1,  // B = x + 2y + 3z + 1
-                                          1.0f, 2.0f, 3.0f        // Gradient = (1, 2, 3)
+                                          1.0f, 2.0f, 3.0f,       // Gradient = (1, 2, 3)
+                                          0.0f, 0.0f, 0.0f,       // dBx_dx, dBx_dy, dBx_dz (constant)
+                                          0.0f, 0.0f, 0.0f,       // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 0.0f        // dBz_dx, dBz_dy, dBz_dz
         );
     }
 
@@ -116,7 +123,8 @@ TEST(AccuracyTest, GridPointExactness) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
         data = MagneticFieldData(static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX,
-                                 static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX);
+                                 static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX, 0.0f,
+                                 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -154,7 +162,10 @@ TEST(AccuracyTest, NumericalStability) {
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
         field_data[i]     = MagneticFieldData(coord.x + coord.y + coord.z,  // B = x + y + z
-                                              1.0f, 1.0f, 1.0f);
+                                              1.0f, 1.0f, 1.0f,             // Gradient = (1, 1, 1)
+                                              0.0f, 0.0f, 0.0f,             // dBx_dx, dBx_dy, dBx_dz
+                                              0.0f, 0.0f, 0.0f,             // dBy_dx, dBy_dy, dBy_dz
+                                              0.0f, 0.0f, 0.0f);            // dBz_dx, dBz_dy, dBz_dz
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -193,7 +204,8 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     for (auto& data : field_data) {
         data = MagneticFieldData(
             static_cast<float>(rand()) / RAND_MAX * 10.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f);
+            static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     CPUInterpolator cpu_interp(grid);

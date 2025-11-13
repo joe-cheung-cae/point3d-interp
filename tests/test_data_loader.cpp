@@ -24,16 +24,16 @@ class DataLoaderTest : public ::testing::Test {
         std::ofstream file(test_file_path_);
         ASSERT_TRUE(file.is_open());
 
-        // 写入测试数据 (2x2x2网格)
-        file << "x,y,z,B,Bx,By,Bz\n";
-        file << "0.0,0.0,0.0,1.0,0.1,0.2,0.3\n";
-        file << "1.0,0.0,0.0,1.1,0.15,0.18,0.32\n";
-        file << "0.0,1.0,0.0,0.9,0.08,0.22,0.28\n";
-        file << "1.0,1.0,0.0,1.0,0.13,0.19,0.31\n";
-        file << "0.0,0.0,1.0,1.2,0.12,0.18,0.35\n";
-        file << "1.0,0.0,1.0,1.3,0.17,0.14,0.37\n";
-        file << "0.0,1.0,1.0,1.1,0.1,0.2,0.33\n";
-        file << "1.0,1.0,1.0,1.2,0.15,0.16,0.35\n";
+        // 写入测试数据 (2x2x2网格) 包含导数
+        file << "x,y,z,B,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";
+        file << "0.0,0.0,0.0,1.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09\n";
+        file << "1.0,0.0,0.0,1.1,0.15,0.18,0.32,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,0.091\n";
+        file << "0.0,1.0,0.0,0.9,0.08,0.22,0.28,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,0.092\n";
+        file << "1.0,1.0,0.0,1.0,0.13,0.19,0.31,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,0.093\n";
+        file << "0.0,0.0,1.0,1.2,0.12,0.18,0.35,0.014,0.024,0.034,0.044,0.054,0.064,0.074,0.084,0.094\n";
+        file << "1.0,0.0,1.0,1.3,0.17,0.14,0.37,0.015,0.025,0.035,0.045,0.055,0.065,0.075,0.085,0.095\n";
+        file << "0.0,1.0,1.0,1.1,0.1,0.2,0.33,0.016,0.026,0.036,0.046,0.056,0.066,0.076,0.086,0.096\n";
+        file << "1.0,1.0,1.0,1.2,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
 
         file.close();
     }
@@ -135,7 +135,7 @@ TEST_F(DataLoaderTest, InvalidFileFormat) {
 TEST_F(DataLoaderTest, EmptyFile) {
     std::string   empty_file = "empty.csv";
     std::ofstream file(empty_file);
-    file << "x,y,z,B,Bx,By,Bz\n";  // 只有标题行
+    file << "x,y,z,B,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";  // 只有标题行
     file.close();
 
     DataLoader                     loader;
@@ -155,7 +155,8 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     DataLoader loader;
 
     // 设置自定义列索引 (假设数据顺序不同)
-    loader.SetColumnIndices({1, 2, 0}, {4, 5, 6, 3});  // x,y,z,B,Bx,By,Bz -> y,z,x,Bx,By,Bz,B
+    loader.SetColumnIndices({1, 2, 0}, {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                                        3});  // x,y,z,B,Bx,By,Bz,dBx_dx,... -> y,z,x,Bx,By,Bz,dBx_dx,...,B
 
     std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
@@ -166,9 +167,9 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     EXPECT_EQ(result, ErrorCode::Success);
 
     // 验证数据是否按自定义索引正确解析
-    // 第一个数据行: 0.0,0.0,0.0,1.0,0.1,0.2,0.3
+    // 第一个数据行: 0.0,0.0,0.0,1.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09
     // 按索引 {1,2,0} 解析坐标: y=0.0, z=0.0, x=0.0 -> (0.0, 0.0, 0.0)
-    // 按索引 {4,5,6,3} 解析磁场: Bx=0.1, By=0.2, Bz=0.3, B=1.0
+    // 按索引 {4,5,6,7,8,9,10,11,12,13,14,15,3} 解析磁场: Bx=0.1, By=0.2, Bz=0.3, dBx_dx=0.01, ..., B=1.0
     EXPECT_FLOAT_EQ(coordinates[0].x, 0.0f);
     EXPECT_FLOAT_EQ(coordinates[0].y, 0.0f);
     EXPECT_FLOAT_EQ(coordinates[0].z, 0.0f);
@@ -177,6 +178,15 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     EXPECT_FLOAT_EQ(field_data[0].gradient_x, 0.1f);
     EXPECT_FLOAT_EQ(field_data[0].gradient_y, 0.2f);
     EXPECT_FLOAT_EQ(field_data[0].gradient_z, 0.3f);
+    EXPECT_FLOAT_EQ(field_data[0].dBx_dx, 0.01f);
+    EXPECT_FLOAT_EQ(field_data[0].dBx_dy, 0.02f);
+    EXPECT_FLOAT_EQ(field_data[0].dBx_dz, 0.03f);
+    EXPECT_FLOAT_EQ(field_data[0].dBy_dx, 0.04f);
+    EXPECT_FLOAT_EQ(field_data[0].dBy_dy, 0.05f);
+    EXPECT_FLOAT_EQ(field_data[0].dBy_dz, 0.06f);
+    EXPECT_FLOAT_EQ(field_data[0].dBz_dx, 0.07f);
+    EXPECT_FLOAT_EQ(field_data[0].dBz_dy, 0.08f);
+    EXPECT_FLOAT_EQ(field_data[0].dBz_dz, 0.09f);
 }
 
 }  // namespace test
