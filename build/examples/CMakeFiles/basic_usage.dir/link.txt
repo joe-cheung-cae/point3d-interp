@@ -1,1 +1,0 @@
-/usr/bin/clang++-15 -g CMakeFiles/basic_usage.dir/basic_usage.cpp.o -o basic_usage   -L/usr/local/cuda-12.3/targets/x86_64-linux/lib/stubs  -L/usr/local/cuda-12.3/targets/x86_64-linux/lib  ../libpoint3d_interp.a -lcudart -lcudadevrt -lcudart_static -lrt -lpthread -ldl 
