@@ -68,9 +68,8 @@ int main() {
 
     err = interp.Query(query_point, result);
     if (err == ErrorCode::Success && result.valid) {
-        std::cout << "Magnetic field strength: " << result.data.field_strength << std::endl;
-        std::cout << "Gradient: (" << result.data.gradient_x << ", "
-                  << result.data.gradient_y << ", " << result.data.gradient_z << ")" << std::endl;
+        std::cout << "Magnetic field: (" << result.data.Bx << ", "
+                  << result.data.By << ", " << result.data.Bz << ")" << std::endl;
     }
 
     // Batch interpolation
@@ -87,18 +86,20 @@ int main() {
 
 ### CSV File Format
 
-First line is header, each subsequent line contains 7 fields:
+First line is header, each subsequent line contains 15 fields:
 
 ```csv
-x,y,z,B,Bx,By,Bz
-0.0,0.0,0.0,1.234,0.123,-0.456,0.789
-1.0,0.0,0.0,1.245,0.125,-0.454,0.791
+x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz
+0.0,0.0,0.0,0.123,-0.456,0.789,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09
+1.0,0.0,0.0,0.125,-0.454,0.791,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,0.091
 ...
 ```
 
 - `x,y,z`: 3D spatial coordinates
-- `B`: Magnetic field strength scalar value
-- `Bx,By,Bz`: Magnetic field gradient vector components
+- `Bx,By,Bz`: Magnetic field vector components
+- `dBx_dx,dBx_dy,dBx_dz`: Derivatives of Bx with respect to x, y, z
+- `dBy_dx,dBy_dy,dBy_dz`: Derivatives of By with respect to x, y, z
+- `dBz_dx,dBz_dy,dBz_dz`: Derivatives of Bz with respect to x, y, z
 
 ### Data Requirements
 
@@ -132,7 +133,7 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
 ### Data Structures
 
 - `Point3D`: 3D point structure (x, y, z)
-- `MagneticFieldData`: Magnetic field data structure (field_strength, gradient_x, gradient_y, gradient_z)
+- `MagneticFieldData`: Magnetic field data structure (Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz)
 - `InterpolationResult`: Interpolation result (data, valid)
 - `GridParams`: Grid parameters (origin, spacing, dimensions, bounds)
 

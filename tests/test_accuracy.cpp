@@ -18,18 +18,16 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
     RegularGrid3D grid(params);
 
-    // Set test data for known function: f(x,y,z) = x^2 + y^2 + z^2
-    // Gradient: (2x, 2y, 2z)
+    // Set test data for known function: Bx = 2x, By = 2y, Bz = 2z
     // Derivatives: dBx_dx=2, dBx_dy=0, dBx_dz=0, dBy_dx=0, dBy_dy=2, dBy_dz=0, dBz_dx=0, dBz_dy=0, dBz_dz=2
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
         float       x = coord.x, y = coord.y, z = coord.z;
-        field_data[i] = MagneticFieldData(x * x + y * y + z * z,  // B = x² + y² + z²
-                                          2 * x, 2 * y, 2 * z,    // Gradient = (2x, 2y, 2z)
-                                          2.0f, 0.0f, 0.0f,       // dBx_dx, dBx_dy, dBx_dz
-                                          0.0f, 2.0f, 0.0f,       // dBy_dx, dBy_dy, dBy_dz
-                                          0.0f, 0.0f, 2.0f        // dBz_dx, dBz_dy, dBz_dz
+        field_data[i] = MagneticFieldData(2 * x, 2 * y, 2 * z,  // B = (2x, 2y, 2z)
+                                          2.0f, 0.0f, 0.0f,     // dBx_dx, dBx_dy, dBx_dz
+                                          0.0f, 2.0f, 0.0f,     // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 2.0f      // dBz_dx, dBz_dy, dBz_dz
         );
     }
 
@@ -44,16 +42,14 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
         // Calculate analytical solution
         float x = point.x, y = point.y, z = point.z;
-        float expected_B  = x * x + y * y + z * z;
         float expected_Bx = 2 * x;
         float expected_By = 2 * y;
         float expected_Bz = 2 * z;
 
-        // Check interpolation accuracy (trilinear interpolation should have good accuracy)
-        EXPECT_NEAR(result.data.field_strength, expected_B, 1e-3f);
-        EXPECT_NEAR(result.data.gradient_x, expected_Bx, 1e-3f);
-        EXPECT_NEAR(result.data.gradient_y, expected_By, 1e-3f);
-        EXPECT_NEAR(result.data.gradient_z, expected_Bz, 1e-3f);
+        // Check interpolation accuracy
+        EXPECT_NEAR(result.data.Bx, expected_Bx, 1e-3f);
+        EXPECT_NEAR(result.data.By, expected_By, 1e-3f);
+        EXPECT_NEAR(result.data.Bz, expected_Bz, 1e-3f);
     }
 }
 
@@ -68,16 +64,13 @@ TEST(AccuracyTest, BoundaryInterpolation) {
 
     RegularGrid3D grid(params);
 
-    // Set linear field: f(x,y,z) = x + 2*y + 3*z + 1
+    // Set linear field: Bx = 1, By = 2, Bz = 3
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
-        const auto& coord = grid.getCoordinates()[i];
-        float       x = coord.x, y = coord.y, z = coord.z;
-        field_data[i] = MagneticFieldData(x + 2 * y + 3 * z + 1,  // B = x + 2y + 3z + 1
-                                          1.0f, 2.0f, 3.0f,       // Gradient = (1, 2, 3)
-                                          0.0f, 0.0f, 0.0f,       // dBx_dx, dBx_dy, dBx_dz (constant)
-                                          0.0f, 0.0f, 0.0f,       // dBy_dx, dBy_dy, dBy_dz
-                                          0.0f, 0.0f, 0.0f        // dBz_dx, dBz_dy, dBz_dz
+        field_data[i] = MagneticFieldData(1.0f, 2.0f, 3.0f,  // B = (1, 2, 3)
+                                          0.0f, 0.0f, 0.0f,  // dBx_dx, dBx_dy, dBx_dz (constant)
+                                          0.0f, 0.0f, 0.0f,  // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 0.0f   // dBz_dx, dBz_dy, dBz_dz
         );
     }
 
@@ -97,14 +90,10 @@ TEST(AccuracyTest, BoundaryInterpolation) {
         InterpolationResult result = cpu_interp.query(point);
         ASSERT_TRUE(result.valid);
 
-        // Calculate analytical solution
-        float expected_B = point.x + 2 * point.y + 3 * point.z + 1;
-
-        // For linear fields, trilinear interpolation should be exact
-        EXPECT_NEAR(result.data.field_strength, expected_B, 1e-6f);
-        EXPECT_NEAR(result.data.gradient_x, 1.0f, 1e-6f);
-        EXPECT_NEAR(result.data.gradient_y, 2.0f, 1e-6f);
-        EXPECT_NEAR(result.data.gradient_z, 3.0f, 1e-6f);
+        // For linear fields, Hermite interpolation should be exact
+        EXPECT_NEAR(result.data.Bx, 1.0f, 1e-6f);
+        EXPECT_NEAR(result.data.By, 2.0f, 1e-6f);
+        EXPECT_NEAR(result.data.Bz, 3.0f, 1e-6f);
     }
 }
 
@@ -123,8 +112,8 @@ TEST(AccuracyTest, GridPointExactness) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
         data = MagneticFieldData(static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX,
-                                 static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX, 0.0f,
-                                 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+                                 static_cast<float>(rand()) / RAND_MAX, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                                 0.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -139,10 +128,9 @@ TEST(AccuracyTest, GridPointExactness) {
 
         // Grid point interpolation should exactly match original data
         const MagneticFieldData& original = field_data[i];
-        EXPECT_FLOAT_EQ(result.data.field_strength, original.field_strength);
-        EXPECT_FLOAT_EQ(result.data.gradient_x, original.gradient_x);
-        EXPECT_FLOAT_EQ(result.data.gradient_y, original.gradient_y);
-        EXPECT_FLOAT_EQ(result.data.gradient_z, original.gradient_z);
+        EXPECT_FLOAT_EQ(result.data.Bx, original.Bx);
+        EXPECT_FLOAT_EQ(result.data.By, original.By);
+        EXPECT_FLOAT_EQ(result.data.Bz, original.Bz);
     }
 }
 
@@ -157,15 +145,13 @@ TEST(AccuracyTest, NumericalStability) {
 
     RegularGrid3D grid(params);
 
-    // Set simple function
+    // Set simple function: Bx = 1, By = 1, Bz = 1
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
-        const auto& coord = grid.getCoordinates()[i];
-        field_data[i]     = MagneticFieldData(coord.x + coord.y + coord.z,  // B = x + y + z
-                                              1.0f, 1.0f, 1.0f,             // Gradient = (1, 1, 1)
-                                              0.0f, 0.0f, 0.0f,             // dBx_dx, dBx_dy, dBx_dz
-                                              0.0f, 0.0f, 0.0f,             // dBy_dx, dBy_dy, dBy_dz
-                                              0.0f, 0.0f, 0.0f);            // dBz_dx, dBz_dy, dBz_dz
+        field_data[i] = MagneticFieldData(1.0f, 1.0f, 1.0f,   // B = (1, 1, 1)
+                                          0.0f, 0.0f, 0.0f,   // dBx_dx, dBx_dy, dBx_dz
+                                          0.0f, 0.0f, 0.0f,   // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 0.0f);  // dBz_dx, dBz_dy, dBz_dz
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -177,14 +163,10 @@ TEST(AccuracyTest, NumericalStability) {
         InterpolationResult result = cpu_interp.query(point);
         ASSERT_TRUE(result.valid);
 
-        // Calculate analytical solution
-        float expected_B = point.x + point.y + point.z;
-
         // Check numerical stability
-        EXPECT_NEAR(result.data.field_strength, expected_B, 1e-2f);  // Relaxed precision requirement
-        EXPECT_NEAR(result.data.gradient_x, 1.0f, 1e-2f);
-        EXPECT_NEAR(result.data.gradient_y, 1.0f, 1e-2f);
-        EXPECT_NEAR(result.data.gradient_z, 1.0f, 1e-2f);
+        EXPECT_NEAR(result.data.Bx, 1.0f, 1e-2f);
+        EXPECT_NEAR(result.data.By, 1.0f, 1e-2f);
+        EXPECT_NEAR(result.data.Bz, 1.0f, 1e-2f);
     }
 }
 
@@ -203,9 +185,8 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
         data = MagneticFieldData(
-            static_cast<float>(rand()) / RAND_MAX * 10.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+            static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f,
+            static_cast<float>(rand()) / RAND_MAX * 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -237,10 +218,9 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
         EXPECT_EQ(single.valid, batch.valid);
 
         if (single.valid && batch.valid) {
-            EXPECT_FLOAT_EQ(single.data.field_strength, batch.data.field_strength);
-            EXPECT_FLOAT_EQ(single.data.gradient_x, batch.data.gradient_x);
-            EXPECT_FLOAT_EQ(single.data.gradient_y, batch.data.gradient_y);
-            EXPECT_FLOAT_EQ(single.data.gradient_z, batch.data.gradient_z);
+            EXPECT_FLOAT_EQ(single.data.Bx, batch.data.Bx);
+            EXPECT_FLOAT_EQ(single.data.By, batch.data.By);
+            EXPECT_FLOAT_EQ(single.data.Bz, batch.data.Bz);
         }
     }
 }

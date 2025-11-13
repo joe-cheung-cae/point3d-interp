@@ -49,10 +49,8 @@ int main() {
         std::cout << "Query point: (" << query_point.x << ", " << query_point.y << ", " << query_point.z << ")"
                   << std::endl;
         std::cout << "Interpolation result:" << std::endl;
-        std::cout << "  Magnetic field strength B: " << std::fixed << std::setprecision(6) << result.data.field_strength
-                  << std::endl;
-        std::cout << "  Gradient vector: (" << result.data.gradient_x << ", " << result.data.gradient_y << ", "
-                  << result.data.gradient_z << ")" << std::endl;
+        std::cout << "  Magnetic field vector: (" << result.data.Bx << ", " << result.data.By << ", " << result.data.Bz
+                  << ")" << std::endl;
         std::cout << "Query time: " << duration.count() << " microseconds" << std::endl;
     } else {
         std::cout << "Interpolation failed: " << ErrorCodeToString(err) << std::endl;
@@ -98,8 +96,8 @@ int main() {
             const auto& res   = results[i];
             if (res.valid) {
                 std::cout << "  Point " << i + 1 << ": (" << std::fixed << std::setprecision(2) << point.x << ", "
-                          << point.y << ", " << point.z << ") -> B = " << std::setprecision(4)
-                          << res.data.field_strength << std::endl;
+                          << point.y << ", " << point.z << ") -> Bx = " << std::setprecision(4) << res.data.Bx
+                          << std::endl;
             }
         }
     } else {

@@ -15,7 +15,7 @@
 **目标**：扩展 CSV 数据格式以支持磁场梯度分量
 **实现内容**：
 - 新增 9 个梯度分量：dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz
-- CSV 格式从 7 列扩展到 16 列
+- CSV 格式从 7 列扩展到 15 列
 - 更新了示例数据文件 `data/sample_magnetic_field.csv`
 
 **修改文件**：
@@ -72,11 +72,10 @@
 ### 数据结构扩展
 ```cpp
 struct MagneticFieldData {
-    Real field_strength;  // B
-    Real gradient_x;      // Bx
-    Real gradient_y;      // By
-    Real gradient_z;      // Bz
-    // 新增梯度分量
+    Real Bx;  // 磁场x分量
+    Real By;  // 磁场y分量
+    Real Bz;  // 磁场z分量
+    // 梯度分量
     Real dBx_dx, dBx_dy, dBx_dz;
     Real dBy_dx, dBy_dy, dBy_dz;
     Real dBz_dx, dBz_dy, dBz_dz;
@@ -85,7 +84,7 @@ struct MagneticFieldData {
 
 ### 插值算法
 - **一维埃尔米特插值**：使用 4 个控制点（值和导数）实现三次多项式插值
-- **三立方埃尔米特插值**：通过三重一维插值实现，梯度分量使用埃尔米特插值，标量场使用线性插值
+- **三立方埃尔米特插值**：通过三重一维插值实现，对磁场梯度分量使用埃尔米特插值
 - **GPU 加速**：CUDA 内核实现并行插值计算
 
 ### 测试覆盖

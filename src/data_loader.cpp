@@ -12,8 +12,8 @@ DataLoader::DataLoader()
     : delimiter_(','),
       skip_header_(true),
       coord_cols_{0, 1, 2},  // x, y, z
-      field_cols_{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-// B, Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz
+      field_cols_{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+// Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz
 {}
 
 DataLoader::~DataLoader() = default;
@@ -78,7 +78,7 @@ ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point
     return ErrorCode::Success;
 }
 
-void DataLoader::SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 13>& field_cols) {
+void DataLoader::SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 12>& field_cols) {
     coord_cols_ = coord_cols;
     field_cols_ = field_cols;
 }
@@ -103,16 +103,13 @@ bool DataLoader::ParseLine(const std::string& line, Point3D& point, MagneticFiel
     }
 
     // Parse magnetic field data
-    if (!StringToValue(tokens[field_cols_[0]], field.field_strength) ||
-        !StringToValue(tokens[field_cols_[1]], field.gradient_x) ||
-        !StringToValue(tokens[field_cols_[2]], field.gradient_y) ||
-        !StringToValue(tokens[field_cols_[3]], field.gradient_z) ||
-        !StringToValue(tokens[field_cols_[4]], field.dBx_dx) || !StringToValue(tokens[field_cols_[5]], field.dBx_dy) ||
-        !StringToValue(tokens[field_cols_[6]], field.dBx_dz) || !StringToValue(tokens[field_cols_[7]], field.dBy_dx) ||
-        !StringToValue(tokens[field_cols_[8]], field.dBy_dy) || !StringToValue(tokens[field_cols_[9]], field.dBy_dz) ||
-        !StringToValue(tokens[field_cols_[10]], field.dBz_dx) ||
-        !StringToValue(tokens[field_cols_[11]], field.dBz_dy) ||
-        !StringToValue(tokens[field_cols_[12]], field.dBz_dz)) {
+    if (!StringToValue(tokens[field_cols_[0]], field.Bx) || !StringToValue(tokens[field_cols_[1]], field.By) ||
+        !StringToValue(tokens[field_cols_[2]], field.Bz) || !StringToValue(tokens[field_cols_[3]], field.dBx_dx) ||
+        !StringToValue(tokens[field_cols_[4]], field.dBx_dy) || !StringToValue(tokens[field_cols_[5]], field.dBx_dz) ||
+        !StringToValue(tokens[field_cols_[6]], field.dBy_dx) || !StringToValue(tokens[field_cols_[7]], field.dBy_dy) ||
+        !StringToValue(tokens[field_cols_[8]], field.dBy_dz) || !StringToValue(tokens[field_cols_[9]], field.dBz_dx) ||
+        !StringToValue(tokens[field_cols_[10]], field.dBz_dy) ||
+        !StringToValue(tokens[field_cols_[11]], field.dBz_dz)) {
         return false;
     }
 

@@ -76,59 +76,39 @@ __device__ MagneticFieldData TricubicHermiteInterpolate(const MagneticFieldData 
     // 0: (i,j,k),     1: (i+1,j,k),   2: (i,j+1,k),   3: (i+1,j+1,k)
     // 4: (i,j,k+1),   5: (i+1,j,k+1), 6: (i,j+1,k+1), 7: (i+1,j+1,k+1)
 
-    // For simplicity, use linear for field_strength, Hermite for gradients
     // X-direction interpolation
     MagneticFieldData c00, c01, c10, c11;
-    c00.field_strength = vertex_data[0].field_strength * (1 - tx) + vertex_data[1].field_strength * tx;
-    c00.gradient_x     = HermiteInterpolate(vertex_data[0].gradient_x, vertex_data[1].gradient_x, vertex_data[0].dBx_dx,
-                                            vertex_data[1].dBx_dx, tx);
-    c00.gradient_y     = HermiteInterpolate(vertex_data[0].gradient_y, vertex_data[1].gradient_y, vertex_data[0].dBy_dx,
-                                            vertex_data[1].dBy_dx, tx);
-    c00.gradient_z     = HermiteInterpolate(vertex_data[0].gradient_z, vertex_data[1].gradient_z, vertex_data[0].dBz_dx,
-                                            vertex_data[1].dBz_dx, tx);
+    c00.Bx = HermiteInterpolate(vertex_data[0].Bx, vertex_data[1].Bx, vertex_data[0].dBx_dx, vertex_data[1].dBx_dx, tx);
+    c00.By = HermiteInterpolate(vertex_data[0].By, vertex_data[1].By, vertex_data[0].dBy_dx, vertex_data[1].dBy_dx, tx);
+    c00.Bz = HermiteInterpolate(vertex_data[0].Bz, vertex_data[1].Bz, vertex_data[0].dBz_dx, vertex_data[1].dBz_dx, tx);
 
-    c01.field_strength = vertex_data[4].field_strength * (1 - tx) + vertex_data[5].field_strength * tx;
-    c01.gradient_x     = HermiteInterpolate(vertex_data[4].gradient_x, vertex_data[5].gradient_x, vertex_data[4].dBx_dx,
-                                            vertex_data[5].dBx_dx, tx);
-    c01.gradient_y     = HermiteInterpolate(vertex_data[4].gradient_y, vertex_data[5].gradient_y, vertex_data[4].dBy_dx,
-                                            vertex_data[5].dBy_dx, tx);
-    c01.gradient_z     = HermiteInterpolate(vertex_data[4].gradient_z, vertex_data[5].gradient_z, vertex_data[4].dBz_dx,
-                                            vertex_data[5].dBz_dx, tx);
+    c01.Bx = HermiteInterpolate(vertex_data[4].Bx, vertex_data[5].Bx, vertex_data[4].dBx_dx, vertex_data[5].dBx_dx, tx);
+    c01.By = HermiteInterpolate(vertex_data[4].By, vertex_data[5].By, vertex_data[4].dBy_dx, vertex_data[5].dBy_dx, tx);
+    c01.Bz = HermiteInterpolate(vertex_data[4].Bz, vertex_data[5].Bz, vertex_data[4].dBz_dx, vertex_data[5].dBz_dx, tx);
 
-    c10.field_strength = vertex_data[2].field_strength * (1 - tx) + vertex_data[3].field_strength * tx;
-    c10.gradient_x     = HermiteInterpolate(vertex_data[2].gradient_x, vertex_data[3].gradient_x, vertex_data[2].dBx_dx,
-                                            vertex_data[3].dBx_dx, tx);
-    c10.gradient_y     = HermiteInterpolate(vertex_data[2].gradient_y, vertex_data[3].gradient_y, vertex_data[2].dBy_dx,
-                                            vertex_data[3].dBy_dx, tx);
-    c10.gradient_z     = HermiteInterpolate(vertex_data[2].gradient_z, vertex_data[3].gradient_z, vertex_data[2].dBz_dx,
-                                            vertex_data[3].dBz_dx, tx);
+    c10.Bx = HermiteInterpolate(vertex_data[2].Bx, vertex_data[3].Bx, vertex_data[2].dBx_dx, vertex_data[3].dBx_dx, tx);
+    c10.By = HermiteInterpolate(vertex_data[2].By, vertex_data[3].By, vertex_data[2].dBy_dx, vertex_data[3].dBy_dx, tx);
+    c10.Bz = HermiteInterpolate(vertex_data[2].Bz, vertex_data[3].Bz, vertex_data[2].dBz_dx, vertex_data[3].dBz_dx, tx);
 
-    c11.field_strength = vertex_data[6].field_strength * (1 - tx) + vertex_data[7].field_strength * tx;
-    c11.gradient_x     = HermiteInterpolate(vertex_data[6].gradient_x, vertex_data[7].gradient_x, vertex_data[6].dBx_dx,
-                                            vertex_data[7].dBx_dx, tx);
-    c11.gradient_y     = HermiteInterpolate(vertex_data[6].gradient_y, vertex_data[7].gradient_y, vertex_data[6].dBy_dx,
-                                            vertex_data[7].dBy_dx, tx);
-    c11.gradient_z     = HermiteInterpolate(vertex_data[6].gradient_z, vertex_data[7].gradient_z, vertex_data[6].dBz_dx,
-                                            vertex_data[7].dBz_dx, tx);
+    c11.Bx = HermiteInterpolate(vertex_data[6].Bx, vertex_data[7].Bx, vertex_data[6].dBx_dx, vertex_data[7].dBx_dx, tx);
+    c11.By = HermiteInterpolate(vertex_data[6].By, vertex_data[7].By, vertex_data[6].dBy_dx, vertex_data[7].dBy_dx, tx);
+    c11.Bz = HermiteInterpolate(vertex_data[6].Bz, vertex_data[7].Bz, vertex_data[6].dBz_dx, vertex_data[7].dBz_dx, tx);
 
     // Y-direction interpolation
     MagneticFieldData c0, c1;
-    c0.field_strength = c00.field_strength * (1 - ty) + c10.field_strength * ty;
-    c0.gradient_x     = HermiteInterpolate(c00.gradient_x, c10.gradient_x, c00.dBx_dy, c10.dBx_dy,
-                                           ty);  // Assuming dBx_dy is set, but in data it's 0
-    c0.gradient_y     = HermiteInterpolate(c00.gradient_y, c10.gradient_y, c00.dBy_dy, c10.dBy_dy, ty);
-    c0.gradient_z     = HermiteInterpolate(c00.gradient_z, c10.gradient_z, c00.dBz_dy, c10.dBz_dy, ty);
+    c0.Bx = HermiteInterpolate(c00.Bx, c10.Bx, c00.dBx_dy, c10.dBx_dy,
+                               ty);  // Assuming dBx_dy is set, but in data it's 0
+    c0.By = HermiteInterpolate(c00.By, c10.By, c00.dBy_dy, c10.dBy_dy, ty);
+    c0.Bz = HermiteInterpolate(c00.Bz, c10.Bz, c00.dBz_dy, c10.dBz_dy, ty);
 
-    c1.field_strength = c01.field_strength * (1 - ty) + c11.field_strength * ty;
-    c1.gradient_x     = HermiteInterpolate(c01.gradient_x, c11.gradient_x, c01.dBx_dy, c11.dBx_dy, ty);
-    c1.gradient_y     = HermiteInterpolate(c01.gradient_y, c11.gradient_y, c01.dBy_dy, c11.dBy_dy, ty);
-    c1.gradient_z     = HermiteInterpolate(c01.gradient_z, c11.gradient_z, c01.dBz_dy, c11.dBz_dy, ty);
+    c1.Bx = HermiteInterpolate(c01.Bx, c11.Bx, c01.dBx_dy, c11.dBx_dy, ty);
+    c1.By = HermiteInterpolate(c01.By, c11.By, c01.dBy_dy, c11.dBy_dy, ty);
+    c1.Bz = HermiteInterpolate(c01.Bz, c11.Bz, c01.dBz_dy, c11.dBz_dy, ty);
 
     // Z-direction interpolation
-    result.field_strength = c0.field_strength * (1 - tz) + c1.field_strength * tz;
-    result.gradient_x     = HermiteInterpolate(c0.gradient_x, c1.gradient_x, c0.dBx_dz, c1.dBx_dz, tz);
-    result.gradient_y     = HermiteInterpolate(c0.gradient_y, c1.gradient_y, c0.dBy_dz, c1.dBy_dz, tz);
-    result.gradient_z     = HermiteInterpolate(c0.gradient_z, c1.gradient_z, c0.dBz_dz, c1.dBz_dz, tz);
+    result.Bx = HermiteInterpolate(c0.Bx, c1.Bx, c0.dBx_dz, c1.dBx_dz, tz);
+    result.By = HermiteInterpolate(c0.By, c1.By, c0.dBy_dz, c1.dBy_dz, tz);
+    result.Bz = HermiteInterpolate(c0.Bz, c1.Bz, c0.dBz_dz, c1.dBz_dz, tz);
 
     // Derivatives set to 0
     result.dBx_dx = 0;

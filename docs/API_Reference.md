@@ -121,10 +121,13 @@ Contains magnetic field data at a point.
 
 ```cpp
 struct MagneticFieldData {
-    Real field_strength;  // B - magnetic field strength
-    Real gradient_x;      // Bx - gradient in x direction
-    Real gradient_y;      // By - gradient in y direction
-    Real gradient_z;      // Bz - gradient in z direction
+    Real Bx;  // Magnetic field component in x direction
+    Real By;  // Magnetic field component in y direction
+    Real Bz;  // Magnetic field component in z direction
+    // Derivatives of Bx, By, Bz with respect to x, y, z
+    Real dBx_dx, dBx_dy, dBx_dz;
+    Real dBy_dx, dBy_dy, dBy_dz;
+    Real dBz_dx, dBz_dy, dBz_dz;
 };
 ```
 
@@ -196,7 +199,7 @@ int main() {
 
     err = interp.Query(query, result);
     if (err == p3d::ErrorCode::Success && result.valid) {
-        std::cout << "B = " << result.data.field_strength << std::endl;
+        std::cout << "Bx = " << result.data.Bx << std::endl;
     }
 
     return 0;

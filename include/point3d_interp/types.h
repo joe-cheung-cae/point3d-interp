@@ -47,23 +47,21 @@ struct Point3D {
 
 // Magnetic field data structure
 struct MagneticFieldData {
-    Real field_strength;  // B
-    Real gradient_x;      // Bx
-    Real gradient_y;      // By
-    Real gradient_z;      // Bz
+    Real Bx;  // Magnetic field component in x direction
+    Real By;  // Magnetic field component in y direction
+    Real Bz;  // Magnetic field component in z direction
     // Derivatives of Bx, By, Bz with respect to x, y, z
     Real dBx_dx, dBx_dy, dBx_dz;
     Real dBy_dx, dBy_dy, dBy_dz;
     Real dBz_dx, dBz_dy, dBz_dz;
 
     P3D_HOST_DEVICE
-    MagneticFieldData(Real b = 0, Real bx = 0, Real by = 0, Real bz = 0, Real dbx_dx = 0, Real dbx_dy = 0,
-                      Real dbx_dz = 0, Real dby_dx = 0, Real dby_dy = 0, Real dby_dz = 0, Real dbz_dx = 0,
-                      Real dbz_dy = 0, Real dbz_dz = 0)
-        : field_strength(b),
-          gradient_x(bx),
-          gradient_y(by),
-          gradient_z(bz),
+    MagneticFieldData(Real bx = 0, Real by = 0, Real bz = 0, Real dbx_dx = 0, Real dbx_dy = 0, Real dbx_dz = 0,
+                      Real dby_dx = 0, Real dby_dy = 0, Real dby_dz = 0, Real dbz_dx = 0, Real dbz_dy = 0,
+                      Real dbz_dz = 0)
+        : Bx(bx),
+          By(by),
+          Bz(bz),
           dBx_dx(dbx_dx),
           dBx_dy(dbx_dy),
           dBx_dz(dbx_dz),
@@ -76,10 +74,9 @@ struct MagneticFieldData {
 
     P3D_HOST_DEVICE
     MagneticFieldData& operator+=(const MagneticFieldData& other) {
-        field_strength += other.field_strength;
-        gradient_x += other.gradient_x;
-        gradient_y += other.gradient_y;
-        gradient_z += other.gradient_z;
+        Bx += other.Bx;
+        By += other.By;
+        Bz += other.Bz;
         dBx_dx += other.dBx_dx;
         dBx_dy += other.dBx_dy;
         dBx_dz += other.dBx_dz;
@@ -94,8 +91,7 @@ struct MagneticFieldData {
 
     P3D_HOST_DEVICE
     MagneticFieldData operator+(const MagneticFieldData& other) const {
-        return MagneticFieldData(field_strength + other.field_strength, gradient_x + other.gradient_x,
-                                 gradient_y + other.gradient_y, gradient_z + other.gradient_z, dBx_dx + other.dBx_dx,
+        return MagneticFieldData(Bx + other.Bx, By + other.By, Bz + other.Bz, dBx_dx + other.dBx_dx,
                                  dBx_dy + other.dBx_dy, dBx_dz + other.dBx_dz, dBy_dx + other.dBy_dx,
                                  dBy_dy + other.dBy_dy, dBy_dz + other.dBy_dz, dBz_dx + other.dBz_dx,
                                  dBz_dy + other.dBz_dy, dBz_dz + other.dBz_dz);
@@ -103,9 +99,9 @@ struct MagneticFieldData {
 
     P3D_HOST_DEVICE
     MagneticFieldData operator*(Real scalar) const {
-        return MagneticFieldData(field_strength * scalar, gradient_x * scalar, gradient_y * scalar, gradient_z * scalar,
-                                 dBx_dx * scalar, dBx_dy * scalar, dBx_dz * scalar, dBy_dx * scalar, dBy_dy * scalar,
-                                 dBy_dz * scalar, dBz_dx * scalar, dBz_dy * scalar, dBz_dz * scalar);
+        return MagneticFieldData(Bx * scalar, By * scalar, Bz * scalar, dBx_dx * scalar, dBx_dy * scalar,
+                                 dBx_dz * scalar, dBy_dx * scalar, dBy_dy * scalar, dBy_dz * scalar, dBz_dx * scalar,
+                                 dBz_dy * scalar, dBz_dz * scalar);
     }
 };
 
@@ -153,20 +149,19 @@ struct InterpolationResult {
     // CUDA device-friendly initialization function
     P3D_HOST_DEVICE
     void initialize() {
-        data.field_strength = 0;
-        data.gradient_x     = 0;
-        data.gradient_y     = 0;
-        data.gradient_z     = 0;
-        data.dBx_dx         = 0;
-        data.dBx_dy         = 0;
-        data.dBx_dz         = 0;
-        data.dBy_dx         = 0;
-        data.dBy_dy         = 0;
-        data.dBy_dz         = 0;
-        data.dBz_dx         = 0;
-        data.dBz_dy         = 0;
-        data.dBz_dz         = 0;
-        valid               = false;
+        data.Bx     = 0;
+        data.By     = 0;
+        data.Bz     = 0;
+        data.dBx_dx = 0;
+        data.dBx_dy = 0;
+        data.dBx_dz = 0;
+        data.dBy_dx = 0;
+        data.dBy_dy = 0;
+        data.dBy_dz = 0;
+        data.dBz_dx = 0;
+        data.dBz_dy = 0;
+        data.dBz_dz = 0;
+        valid       = false;
     }
 
     P3D_HOST_DEVICE

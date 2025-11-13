@@ -22,10 +22,8 @@ class CPUInterpolatorTest : public ::testing::Test {
         // 设置测试数据 (简单的线性场)
         auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid_->getFieldData());
         for (size_t i = 0; i < field_data.size(); ++i) {
-            const auto& coord = grid_->getCoordinates()[i];
-            // B = x + y + z + 1
             // Bx = 1, By = 1, Bz = 1 (常数梯度)
-            field_data[i] = MagneticFieldData(coord.x + coord.y + coord.z + 1.0f, 1.0f, 1.0f, 1.0f);
+            field_data[i] = MagneticFieldData(1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
         }
 
         interpolator_ = std::make_unique<CPUInterpolator>(*grid_);
@@ -42,20 +40,18 @@ TEST_F(CPUInterpolatorTest, GridPointInterpolation) {
     InterpolationResult result = interpolator_->query(point);
 
     EXPECT_TRUE(result.valid);
-    EXPECT_FLOAT_EQ(result.data.field_strength, 1.0f);  // 0+0+0+1 = 1
-    EXPECT_FLOAT_EQ(result.data.gradient_x, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_y, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_z, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.By, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bz, 1.0f);
 
     // 测试网格点 (1,1,1)
     point  = Point3D(1.0f, 1.0f, 1.0f);
     result = interpolator_->query(point);
 
     EXPECT_TRUE(result.valid);
-    EXPECT_FLOAT_EQ(result.data.field_strength, 4.0f);  // 1+1+1+1 = 4
-    EXPECT_FLOAT_EQ(result.data.gradient_x, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_y, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_z, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.By, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bz, 1.0f);
 }
 
 // 测试单元格中心插值
@@ -66,15 +62,10 @@ TEST_F(CPUInterpolatorTest, CellCenterInterpolation) {
 
     EXPECT_TRUE(result.valid);
 
-    // 在单元格 (0,0,0) 到 (1,1,1) 的中心
-    // 8个顶点的B值: 1, 2, 2, 3, 2, 3, 3, 4
-    // 平均值 = (1+2+2+3+2+3+3+4)/8 = 20/8 = 2.5
-    EXPECT_FLOAT_EQ(result.data.field_strength, 2.5f);
-
-    // 梯度应该是常数1
-    EXPECT_FLOAT_EQ(result.data.gradient_x, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_y, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_z, 1.0f);
+    // B should be constant 1
+    EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.By, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bz, 1.0f);
 }
 
 // 测试边界外点
@@ -107,15 +98,15 @@ TEST_F(CPUInterpolatorTest, BatchInterpolation) {
 
     // 检查第一个结果 (网格点)
     EXPECT_TRUE(results[0].valid);
-    EXPECT_FLOAT_EQ(results[0].data.field_strength, 1.0f);
+    EXPECT_FLOAT_EQ(results[0].data.Bx, 1.0f);
 
     // 检查第二个结果 (单元格中心)
     EXPECT_TRUE(results[1].valid);
-    EXPECT_FLOAT_EQ(results[1].data.field_strength, 2.5f);
+    EXPECT_FLOAT_EQ(results[1].data.Bx, 1.0f);
 
     // 检查第三个结果 (网格点)
     EXPECT_TRUE(results[2].valid);
-    EXPECT_FLOAT_EQ(results[2].data.field_strength, 4.0f);
+    EXPECT_FLOAT_EQ(results[2].data.Bx, 1.0f);
 
     // 检查第四个结果 (边界外)
     EXPECT_FALSE(results[3].valid);
@@ -150,15 +141,10 @@ TEST_F(CPUInterpolatorTest, TrilinearInterpolationAccuracy) {
     float c0 = c00 * (1.0f - 0.7f) + c10 * 0.7f;  // 1.3*0.3 + 2.3*0.7 = 0.39 + 1.61 = 2.0
     float c1 = c01 * (1.0f - 0.7f) + c11 * 0.7f;  // 2.1*0.3 + 3.1*0.7 = 0.63 + 2.17 = 2.8
 
-    // Z方向插值:
-    float expected_B = c0 * (1.0f - 0.2f) + c1 * 0.2f;  // 2.0*0.8 + 2.8*0.2 = 1.6 + 0.56 = 2.16
-
-    EXPECT_NEAR(result.data.field_strength, expected_B, 1e-6f);
-
-    // 梯度应该仍然是1 (常数场)
-    EXPECT_FLOAT_EQ(result.data.gradient_x, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_y, 1.0f);
-    EXPECT_FLOAT_EQ(result.data.gradient_z, 1.0f);
+    // B should still be 1 (constant field)
+    EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.By, 1.0f);
+    EXPECT_FLOAT_EQ(result.data.Bz, 1.0f);
 }
 
 // 测试空网格

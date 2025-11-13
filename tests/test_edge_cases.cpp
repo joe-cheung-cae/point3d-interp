@@ -30,43 +30,50 @@ class EdgeCaseTest : public ::testing::Test {
 
     void CreateIrregularGridFile() {
         std::ofstream file("irregular_grid.csv");
-        file << "x,y,z,B,Bx,By,Bz\n";
+        file << "x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";
         // Irregular spacing - should fail grid detection
-        file << "0.0,0.0,0.0,1.0,0.1,0.2,0.3\n";
-        file << "1.5,0.0,0.0,1.1,0.15,0.18,0.32\n";  // Non-uniform spacing
-        file << "0.0,2.0,0.0,0.9,0.08,0.22,0.28\n";  // Non-uniform spacing
-        file << "1.5,2.0,0.0,1.0,0.13,0.19,0.31\n";
-        file << "0.0,0.0,3.0,1.2,0.12,0.18,0.35\n";  // Non-uniform spacing
-        file << "1.5,0.0,3.0,1.3,0.17,0.14,0.37\n";
-        file << "0.0,2.0,3.0,1.1,0.1,0.2,0.33\n";
-        file << "1.5,2.0,3.0,1.2,0.15,0.16,0.35\n";
+        file << "0.0,0.0,0.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09\n";
+        file << "1.5,0.0,0.0,0.15,0.18,0.32,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,0.091\n";  // Non-uniform
+                                                                                                       // spacing
+        file << "0.0,2.0,0.0,0.08,0.22,0.28,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,0.092\n";  // Non-uniform
+                                                                                                       // spacing
+        file << "1.5,2.0,0.0,0.13,0.19,0.31,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,0.093\n";
+        file << "0.0,0.0,3.0,0.12,0.18,0.35,0.014,0.024,0.034,0.044,0.054,0.064,0.074,0.084,0.094\n";  // Non-uniform
+                                                                                                       // spacing
+        file << "1.5,0.0,3.0,0.17,0.14,0.37,0.015,0.025,0.035,0.045,0.055,0.065,0.075,0.085,0.095\n";
+        file << "0.0,2.0,3.0,0.1,0.2,0.33,0.016,0.026,0.036,0.046,0.056,0.066,0.076,0.086,0.096\n";
+        file << "1.5,2.0,3.0,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
         file.close();
     }
 
     void CreateBoundaryTestFile() {
         std::ofstream file("boundary_test.csv");
-        file << "x,y,z,B,Bx,By,Bz\n";
+        file << "x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";
         // 2x2x2 grid at boundaries
-        file << "-1.0,-1.0,-1.0,1.0,0.1,0.2,0.3\n";
-        file << "0.0,-1.0,-1.0,1.1,0.15,0.18,0.32\n";
-        file << "-1.0,0.0,-1.0,0.9,0.08,0.22,0.28\n";
-        file << "0.0,0.0,-1.0,1.0,0.13,0.19,0.31\n";
-        file << "-1.0,-1.0,0.0,1.2,0.12,0.18,0.35\n";
-        file << "0.0,-1.0,0.0,1.3,0.17,0.14,0.37\n";
-        file << "-1.0,0.0,0.0,1.1,0.1,0.2,0.33\n";
-        file << "0.0,0.0,0.0,1.2,0.15,0.16,0.35\n";
+        file << "-1.0,-1.0,-1.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09\n";
+        file << "0.0,-1.0,-1.0,0.15,0.18,0.32,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,0.091\n";
+        file << "-1.0,0.0,-1.0,0.08,0.22,0.28,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,0.092\n";
+        file << "0.0,0.0,-1.0,0.13,0.19,0.31,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,0.093\n";
+        file << "-1.0,-1.0,0.0,0.12,0.18,0.35,0.014,0.024,0.034,0.044,0.054,0.064,0.074,0.084,0.094\n";
+        file << "0.0,-1.0,0.0,0.17,0.14,0.37,0.015,0.025,0.035,0.045,0.055,0.065,0.075,0.085,0.095\n";
+        file << "-1.0,0.0,0.0,0.1,0.2,0.33,0.016,0.026,0.036,0.046,0.056,0.066,0.076,0.086,0.096\n";
+        file << "0.0,0.0,0.0,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
         file.close();
     }
 
     void CreatePrecisionTestFile() {
         std::ofstream file("precision_test.csv");
-        file << "x,y,z,B,Bx,By,Bz\n";
+        file << "x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";
         // High precision values
         file << std::fixed << std::setprecision(10);
-        file << "0.0000000001,0.0000000002,0.0000000003,1.0000000001,0.1000000001,0.2000000002,0.3000000003\n";
-        file << "1.0000000001,0.0000000002,0.0000000003,1.1000000001,0.1500000001,0.1800000002,0.3200000003\n";
-        file << "0.0000000001,1.0000000002,0.0000000003,0.9000000001,0.0800000001,0.2200000002,0.2800000003\n";
-        file << "1.0000000001,1.0000000002,0.0000000003,1.0000000001,0.1300000001,0.1900000002,0.3100000003\n";
+        file << "0.0000000001,0.0000000002,0.0000000003,0.1000000001,0.2000000002,0.3000000003,0.01,0.02,0.03,0.04,0."
+                "05,0.06,0.07,0.08,0.09\n";
+        file << "1.0000000001,0.0000000002,0.0000000003,0.1500000001,0.1800000002,0.3200000003,0.011,0.021,0.031,0.041,"
+                "0.051,0.061,0.071,0.081,0.091\n";
+        file << "0.0000000001,1.0000000002,0.0000000003,0.0800000001,0.2200000002,0.2800000003,0.012,0.022,0.032,0.042,"
+                "0.052,0.062,0.072,0.082,0.092\n";
+        file << "1.0000000001,1.0000000002,0.0000000003,0.1300000001,0.1900000002,0.3100000003,0.013,0.023,0.033,0.043,"
+                "0.053,0.063,0.073,0.083,0.093\n";
         file.close();
     }
 };
@@ -117,8 +124,8 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
     EXPECT_TRUE(result.valid);
 
     // Results should be reasonable (interpolation of high precision data)
-    EXPECT_GE(result.data.field_strength, 0.9f);
-    EXPECT_LE(result.data.field_strength, 1.2f);
+    EXPECT_GE(result.data.Bx, 0.08f);
+    EXPECT_LE(result.data.Bx, 0.17f);
 }
 
 // Test extreme values
@@ -128,10 +135,9 @@ TEST(ExtremeValueTest, VeryLargeValues) {
 
     std::vector<MagneticFieldData> field_data(4);
     for (auto& data : field_data) {
-        data.field_strength = 1e10f;  // Very large values
-        data.gradient_x     = 1e8f;
-        data.gradient_y     = 1e8f;
-        data.gradient_z     = 1e8f;
+        data.Bx = 1e8f;
+        data.By = 1e8f;
+        data.Bz = 1e8f;
     }
 
     MagneticFieldInterpolator interp;
@@ -143,7 +149,7 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
-    EXPECT_FLOAT_EQ(result.data.field_strength, 1e10f);  // Should interpolate correctly
+    EXPECT_FLOAT_EQ(result.data.Bx, 1e8f);  // Should interpolate correctly
 }
 
 // Test very small values
@@ -152,10 +158,9 @@ TEST(ExtremeValueTest, VerySmallValues) {
 
     std::vector<MagneticFieldData> field_data(4);
     for (auto& data : field_data) {
-        data.field_strength = 1e-10f;  // Very small values
-        data.gradient_x     = 1e-8f;
-        data.gradient_y     = 1e-8f;
-        data.gradient_z     = 1e-8f;
+        data.Bx = 1e-8f;
+        data.By = 1e-8f;
+        data.Bz = 1e-8f;
     }
 
     MagneticFieldInterpolator interp;
@@ -167,7 +172,7 @@ TEST(ExtremeValueTest, VerySmallValues) {
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
-    EXPECT_NEAR(result.data.field_strength, 1e-10f, 1e-11f);
+    EXPECT_NEAR(result.data.Bx, 1e-8f, 1e-9f);
 }
 
 // Test NaN and Inf values
@@ -178,13 +183,14 @@ TEST(ExtremeValueTest, NaNInfValues) {
     for (size_t i = 0; i < 4; ++i) {
         if (i == 0) {
             // First point has NaN
-            field_data[i].field_strength = std::numeric_limits<float>::quiet_NaN();
+            field_data[i].Bx = std::numeric_limits<float>::quiet_NaN();
+            field_data[i].By = 1.0f;
+            field_data[i].Bz = 1.0f;
         } else {
-            field_data[i].field_strength = 1.0f;
+            field_data[i].Bx = 1.0f;
+            field_data[i].By = 1.0f;
+            field_data[i].Bz = 1.0f;
         }
-        field_data[i].gradient_x = 0.1f;
-        field_data[i].gradient_y = 0.2f;
-        field_data[i].gradient_z = 0.3f;
     }
 
     MagneticFieldInterpolator interp;
@@ -197,7 +203,7 @@ TEST(ExtremeValueTest, NaNInfValues) {
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     // Result may be NaN due to interpolation with NaN
-    EXPECT_TRUE(std::isnan(result.data.field_strength) || std::isfinite(result.data.field_strength));
+    EXPECT_TRUE(std::isnan(result.data.Bx) || std::isfinite(result.data.Bx));
 }
 
 // Test empty data arrays
