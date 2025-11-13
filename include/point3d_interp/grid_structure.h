@@ -8,22 +8,22 @@
 namespace p3d {
 
 /**
- * @brief 规则网格结构类
+ * @brief Regular grid structure class
  *
- * 管理三维规则网格的结构信息，提供坐标转换和索引计算功能
+ * Manages structural information of 3D regular grid, provides coordinate transformation and index calculation functions
  */
 class RegularGrid3D {
 public:
     /**
-     * @brief 构造函数
-     * @param params 网格参数
+     * @brief Constructor
+     * @param params Grid parameters
      */
     explicit RegularGrid3D(const GridParams& params);
 
     /**
-     * @brief 构造函数（从数据点自动构建）
-     * @param coordinates 坐标数组
-     * @param field_data 磁场数据数组
+     * @brief Constructor (automatically build from data points)
+     * @param coordinates Coordinate array
+     * @param field_data Magnetic field data array
      */
     RegularGrid3D(
         const std::vector<Point3D>& coordinates,
@@ -32,96 +32,96 @@ public:
 
     ~RegularGrid3D();
 
-    // 禁止拷贝，允许移动
+    // Disable copy, allow move
     RegularGrid3D(const RegularGrid3D&) = delete;
     RegularGrid3D& operator=(const RegularGrid3D&) = delete;
     RegularGrid3D(RegularGrid3D&&) noexcept;
     RegularGrid3D& operator=(RegularGrid3D&&) noexcept;
 
     /**
-     * @brief 世界坐标转换为网格坐标
-     * @param world_point 世界坐标点
-     * @return 网格坐标
+     * @brief Convert world coordinates to grid coordinates
+     * @param world_point World coordinate point
+     * @return Grid coordinates
      */
     P3D_HOST_DEVICE
     Point3D worldToGrid(const Point3D& world_point) const;
 
     /**
-     * @brief 网格坐标转换为世界坐标
-     * @param grid_point 网格坐标点
-     * @return 世界坐标
+     * @brief Convert grid coordinates to world coordinates
+     * @param grid_point Grid coordinate point
+     * @return World coordinates
      */
     P3D_HOST_DEVICE
     Point3D gridToWorld(const Point3D& grid_point) const;
 
     /**
-     * @brief 获取包含点的网格单元格的8个顶点索引
-     * @param grid_coords 网格坐标
-     * @param indices 输出8个顶点索引数组
-     * @return 是否在有效范围内
+     * @brief Get 8 vertex indices of grid cell containing the point
+     * @param grid_coords Grid coordinates
+     * @param indices Output array of 8 vertex indices
+     * @return Whether within valid range
      */
     P3D_HOST_DEVICE
     bool getCellVertexIndices(const Point3D& grid_coords, uint32_t indices[8]) const;
 
     /**
-     * @brief 获取网格数据在数组中的索引
-     * @param i x方向索引
-     * @param j y方向索引
-     * @param k z方向索引
-     * @return 数组索引
+     * @brief Get index of grid data in array
+     * @param i Index in x direction
+     * @param j Index in y direction
+     * @param k Index in z direction
+     * @return Array index
      */
     P3D_HOST_DEVICE
     uint32_t getDataIndex(uint32_t i, uint32_t j, uint32_t k) const;
 
     /**
-     * @brief 检查网格坐标是否在有效范围内
-     * @param grid_coords 网格坐标
-     * @return 是否有效
+     * @brief Check if grid coordinates are within valid range
+     * @param grid_coords Grid coordinates
+     * @return Whether valid
      */
     P3D_HOST_DEVICE
     bool isValidGridCoords(const Point3D& grid_coords) const;
 
     /**
-     * @brief 获取网格参数
-     * @return 网格参数
+     * @brief Get grid parameters
+     * @return Grid parameters
      */
     const GridParams& getParams() const { return params_; }
 
     /**
-     * @brief 获取数据点数量
-     * @return 数据点数量
+     * @brief Get number of data points
+     * @return Number of data points
      */
     size_t getDataCount() const;
 
     /**
-     * @brief 获取所有坐标点
-     * @return 坐标点数组
+     * @brief Get all coordinate points
+     * @return Array of coordinate points
      */
     const std::vector<Point3D>& getCoordinates() const { return coordinates_; }
 
     /**
-     * @brief 获取所有磁场数据
-     * @return 磁场数据数组
+     * @brief Get all magnetic field data
+     * @return Array of magnetic field data
      */
     const std::vector<MagneticFieldData>& getFieldData() const { return field_data_; }
 
 private:
     /**
-     * @brief 从坐标数据构建网格参数
-     * @param coordinates 坐标数组
+     * @brief Build grid parameters from coordinate data
+     * @param coordinates Coordinate array
      */
     void buildFromCoordinates(const std::vector<Point3D>& coordinates);
 
     /**
-     * @brief 验证网格数据的完整性
-     * @return 是否有效
+     * @brief Validate integrity of grid data
+     * @return Whether valid
      */
     bool validateGridData() const;
 
 private:
-    GridParams params_;                           // 网格参数
-    std::vector<Point3D> coordinates_;            // 坐标数据
-    std::vector<MagneticFieldData> field_data_;   // 磁场数据
+    GridParams params_;                           // Grid parameters
+    std::vector<Point3D> coordinates_;            // Coordinate data
+    std::vector<MagneticFieldData> field_data_;   // Magnetic field data
 };
 
 } // namespace p3d

@@ -92,7 +92,7 @@ private:
         data.coordinates.reserve(total_points);
         data.field_data.reserve(total_points);
 
-        // Geenerate magnetic field data for each grid point
+        // Generate magnetic field data for each grid point
         for (size_t k = 0; k < dimensions[2]; ++k) {
             for (size_t j = 0; j < dimensions[1]; ++j) {
                 for (size_t i = 0; i < dimensions[0]; ++i) {
@@ -106,7 +106,7 @@ private:
                     // Generate magnetic field data for each grid point
                     MagneticFieldData field(
                         coord.x + coord.y + coord.z + 1.0f,  // B = x + y + z + 1
-                        1.0f, 1.0f, 1.0f                    // 常数梯度
+                        1.0f, 1.0f, 1.0f                    // Constant gradient
                     );
                     data.field_data.push_back(field);
                 }
@@ -134,24 +134,24 @@ private:
     }
 
     double BenchmarkCPU(const TestData& test_data, const std::vector<Point3D>& query_points) {
-        MagneticFieldInterpolator interp(false);  // CPU模式
+        MagneticFieldInterpolator interp(false);  // CPU mode
 
-        // 加载数据
+        // Load data
         ErrorCode err = interp.LoadFromMemory(
             test_data.coordinates.data(),
             test_data.field_data.data(),
             test_data.coordinates.size()
         );
         if (err != ErrorCode::Success) {
-            std::cerr << "CPU数据加载失败: " << static_cast<int>(err) << std::endl;
+            std::cerr << "CPU data loading failed: " << static_cast<int>(err) << std::endl;
             return -1.0;
         }
 
-        // 预热
+        // Warm up
         InterpolationResult dummy;
         interp.Query(query_points[0], dummy);
 
-        // 基准测试
+        // Benchmark
         auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<InterpolationResult> results(query_points.size());
@@ -160,32 +160,32 @@ private:
         auto end = std::chrono::high_resolution_clock::now();
 
         if (err != ErrorCode::Success) {
-            std::cerr << "CPU查询失败: " << static_cast<int>(err) << std::endl;
+            std::cerr << "CPU query failed: " << static_cast<int>(err) << std::endl;
             return -1.0;
         }
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        return duration.count() / 1000.0;  // 转换为毫秒
+        return duration.count() / 1000.0;  // Convert to milliseconds
     }
 
     double BenchmarkGPU(const TestData& test_data, const std::vector<Point3D>& query_points) {
-        MagneticFieldInterpolator interp(true);  // GPU模式
+        MagneticFieldInterpolator interp(true);  // GPU mode
 
-        // 加载数据
+        // Load data
         ErrorCode err = interp.LoadFromMemory(
             test_data.coordinates.data(),
             test_data.field_data.data(),
             test_data.coordinates.size()
         );
         if (err != ErrorCode::Success) {
-            return -1.0;  // GPU不可用或初始化失败
+            return -1.0;  // GPU unavailable or initialization failed
         }
 
-        // 预热
+        // Warm up
         InterpolationResult dummy;
         interp.Query(query_points[0], dummy);
 
-        // 基准测试
+        // Benchmark
         auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<InterpolationResult> results(query_points.size());
@@ -198,28 +198,28 @@ private:
         }
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        return duration.count() / 1000.0;  // 转换为毫秒
+        return duration.count() / 1000.0;  // Convert to milliseconds
     }
 
     void RunMemoryBenchmark() {
-        std::cout << "=== 内存使用基准测试 ===\n\n";
+        std::cout << "=== Memory usage benchmark ===\n\n";
 
         std::vector<std::array<size_t, 3>> sizes = {
             {10, 10, 10},    // ~0.4MB
             {50, 50, 50},    // ~50MB
-            {100, 100, 100}  // ~800MB (可能超出GPU内存)
+            {100, 100, 100}  // ~800MB (may exceed GPU memory)
         };
 
         for (const auto& size : sizes) {
             size_t total_points = size[0] * size[1] * size[2];
             size_t memory_mb = total_points * sizeof(MagneticFieldData) / (1024 * 1024);
 
-            std::cout << "数据规模: " << size[0] << "x" << size[1] << "x" << size[2]
-                      << " (" << total_points << " 点, ~" << memory_mb << " MB)\n";
+            std::cout << "Data scale: " << size[0] << "x" << size[1] << "x" << size[2]
+                      << " (" << total_points << " points, ~" << memory_mb << " MB)\n";
 
             auto test_data = GenerateTestData(size);
 
-            // CPU测试
+            // CPU test
             {
                 MagneticFieldInterpolator interp(false);
                 auto start = std::chrono::high_resolution_clock::now();
@@ -232,13 +232,13 @@ private:
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                    std::cout << "  CPU加载时间: " << duration.count() << " ms\n";
+                    std::cout << "  CPU loading time: " << duration.count() << " ms\n";
                 } else {
-                    std::cout << "  CPU加载失败\n";
+                    std::cout << "  CPU loading failed\n";
                 }
             }
 
-            // GPU测试
+            // GPU test
             {
                 MagneticFieldInterpolator interp(true);
                 auto start = std::chrono::high_resolution_clock::now();
@@ -251,9 +251,9 @@ private:
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                    std::cout << "  GPU加载时间: " << duration.count() << " ms\n";
+                    std::cout << "  GPU loading time: " << duration.count() << " ms\n";
                 } else {
-                    std::cout << "  GPU加载失败 (可能是内存不足)\n";
+                    std::cout << "  GPU loading failed (possibly insufficient memory)\n";
                 }
             }
 

@@ -10,40 +10,40 @@
 namespace p3d {
 
 /**
- * @brief 磁场数据插值器主类
+ * @brief Main magnetic field data interpolator class
  *
- * 这是库的主要接口类，负责数据加载、GPU资源管理和插值计算
+ * This is the main interface class of the library, responsible for data loading, GPU resource management, and interpolation calculations
  */
 class MagneticFieldInterpolator {
 public:
     /**
-     * @brief 构造函数
-     * @param use_gpu 是否使用GPU加速（默认true）
-     * @param device_id GPU设备ID（默认0）
+     * @brief Constructor
+     * @param use_gpu Whether to use GPU acceleration (default true)
+     * @param device_id GPU device ID (default 0)
      */
     explicit MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
 
     ~MagneticFieldInterpolator();
 
-    // 禁止拷贝，允许移动
+    // Disable copy, allow move
     MagneticFieldInterpolator(const MagneticFieldInterpolator&) = delete;
     MagneticFieldInterpolator& operator=(const MagneticFieldInterpolator&) = delete;
     MagneticFieldInterpolator(MagneticFieldInterpolator&&) noexcept;
     MagneticFieldInterpolator& operator=(MagneticFieldInterpolator&&) noexcept;
 
     /**
-     * @brief 从CSV文件加载磁场数据
-     * @param filepath CSV文件路径
-     * @return 错误码
+     * @brief Load magnetic field data from CSV file
+     * @param filepath CSV file path
+     * @return Error code
      */
     ErrorCode LoadFromCSV(const std::string& filepath);
 
     /**
-     * @brief 从内存加载数据
-     * @param points 坐标数组
-     * @param field_data 磁场数据数组
-     * @param count 数据点数量
-     * @return 错误码
+     * @brief Load data from memory
+     * @param points Coordinate array
+     * @param field_data Magnetic field data array
+     * @param count Number of data points
+     * @return Error code
      */
     ErrorCode LoadFromMemory(
         const Point3D* points,
@@ -52,19 +52,19 @@ public:
     );
 
     /**
-     * @brief 单点插值查询
-     * @param query_point 查询点坐标
-     * @param result 输出结果
-     * @return 错误码
+     * @brief Single point interpolation query
+     * @param query_point Query point coordinates
+     * @param result Output result
+     * @return Error code
      */
     ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
 
     /**
-     * @brief 批量插值查询
-     * @param query_points 查询点数组
-     * @param results 输出结果数组
-     * @param count 查询点数量
-     * @return 错误码
+     * @brief Batch interpolation query
+     * @param query_points Query point array
+     * @param results Output result array
+     * @param count Number of query points
+     * @return Error code
      */
     ErrorCode QueryBatch(
         const Point3D* query_points,
@@ -73,43 +73,43 @@ public:
     );
 
     /**
-     * @brief 获取网格参数
-     * @return 网格参数
+     * @brief Get grid parameters
+     * @return Grid parameters
      */
     const GridParams& GetGridParams() const;
 
     /**
-     * @brief 检查是否已加载数据
-     * @return true表示已加载
+     * @brief Check if data is loaded
+     * @return true if loaded
      */
     bool IsDataLoaded() const;
 
     /**
-     * @brief 获取数据点数量
-     * @return 数据点数量
+     * @brief Get number of data points
+     * @return Number of data points
      */
     size_t GetDataPointCount() const;
 
 private:
     /**
-     * @brief 初始化GPU资源
-     * @return 是否成功
+     * @brief Initialize GPU resources
+     * @return Whether successful
      */
     bool InitializeGPU(int device_id);
 
     /**
-     * @brief 释放GPU资源
+     * @brief Release GPU resources
      */
     void ReleaseGPU();
 
     /**
-     * @brief 上传数据到GPU
-     * @return 是否成功
+     * @brief Upload data to GPU
+     * @return Whether successful
      */
     bool UploadDataToGPU();
 
 private:
-    class Impl;  // Pimpl模式实现
+    class Impl;  // Pimpl pattern implementation
     std::unique_ptr<Impl> impl_;
 };
 

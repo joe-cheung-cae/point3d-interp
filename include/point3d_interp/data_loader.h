@@ -10,9 +10,9 @@
 namespace p3d {
 
 /**
- * @brief CSV数据加载器
+ * @brief CSV data loader
  *
- * 负责从CSV文件加载磁场数据，支持多种分隔符和格式
+ * Responsible for loading magnetic field data from CSV files, supports multiple delimiters and formats
  */
 class DataLoader {
 public:
@@ -20,12 +20,12 @@ public:
     ~DataLoader();
 
     /**
-     * @brief 从CSV文件加载数据
-     * @param filepath CSV文件路径
-     * @param coordinates 输出坐标数组
-     * @param field_data 输出磁场数据数组
-     * @param grid_params 输出网格参数
-     * @return 错误码
+     * @brief Load data from CSV file
+     * @param filepath CSV file path
+     * @param coordinates Output coordinate array
+     * @param field_data Output magnetic field data array
+     * @param grid_params Output grid parameters
+     * @return Error code
      */
     ErrorCode LoadFromCSV(
         const std::string& filepath,
@@ -35,21 +35,21 @@ public:
     );
 
     /**
-     * @brief 设置分隔符
-     * @param delimiter 分隔符（默认逗号）
+     * @brief Set delimiter
+     * @param delimiter Delimiter (default comma)
      */
     void SetDelimiter(char delimiter) { delimiter_ = delimiter; }
 
     /**
-     * @brief 设置是否跳过标题行
-     * @param skip_header 是否跳过标题行（默认true）
+     * @brief Set whether to skip header row
+     * @param skip_header Whether to skip header row (default true)
      */
     void SetSkipHeader(bool skip_header) { skip_header_ = skip_header; }
 
     /**
-     * @brief 设置列索引
-     * @param coord_cols 坐标列索引 [x, y, z]
-     * @param field_cols 磁场数据列索引 [B, Bx, By, Bz]
+     * @brief Set column indices
+     * @param coord_cols Coordinate column indices [x, y, z]
+     * @param field_cols Magnetic field data column indices [B, Bx, By, Bz]
      */
     void SetColumnIndices(
         const std::array<size_t, 3>& coord_cols,
@@ -58,11 +58,11 @@ public:
 
 private:
     /**
-     * @brief 解析单行数据
-     * @param line 输入行
-     * @param point 输出坐标点
-     * @param field 输出磁场数据
-     * @return 是否解析成功
+     * @brief Parse single line data
+     * @param line Input line
+     * @param point Output coordinate point
+     * @param field Output magnetic field data
+     * @return Whether parsing succeeded
      */
     bool ParseLine(
         const std::string& line,
@@ -71,10 +71,10 @@ private:
     );
 
     /**
-     * @brief 从数据中检测网格参数
-     * @param coordinates 坐标数组
-     * @param grid_params 输出网格参数
-     * @return 是否检测成功
+     * @brief Detect grid parameters from data
+     * @param coordinates Coordinate array
+     * @param grid_params Output grid parameters
+     * @return Whether detection succeeded
      */
     bool DetectGridParams(
         const std::vector<Point3D>& coordinates,
@@ -82,10 +82,10 @@ private:
     );
 
     /**
-     * @brief 验证网格规则性
-     * @param coordinates 坐标数组
-     * @param grid_params 网格参数
-     * @return 是否为规则网格
+     * @brief Validate grid regularity
+     * @param coordinates Coordinate array
+     * @param grid_params Grid parameters
+     * @return Whether it is a regular grid
      */
     bool ValidateGridRegularity(
         const std::vector<Point3D>& coordinates,
@@ -93,10 +93,10 @@ private:
     );
 
     /**
-     * @brief 分割字符串
-     * @param line 输入行
-     * @param delimiter 分隔符
-     * @return 分割后的字符串数组
+     * @brief Split string
+     * @param line Input line
+     * @param delimiter Delimiter
+     * @return Array of split strings
      */
     std::vector<std::string> SplitString(
         const std::string& line,
@@ -104,19 +104,19 @@ private:
     );
 
     /**
-     * @brief 转换字符串为数值
-     * @param str 输入字符串
-     * @param value 输出数值
-     * @return 是否转换成功
+     * @brief Convert string to numeric value
+     * @param str Input string
+     * @param value Output numeric value
+     * @return Whether conversion succeeded
      */
     template<typename T>
     bool StringToValue(const std::string& str, T& value);
 
 private:
-    char delimiter_;                    // 分隔符
-    bool skip_header_;                  // 是否跳过标题行
-    std::array<size_t, 3> coord_cols_;  // 坐标列索引
-    std::array<size_t, 4> field_cols_;  // 磁场数据列索引
+    char delimiter_;                    // Delimiter
+    bool skip_header_;                  // Whether to skip header row
+    std::array<size_t, 3> coord_cols_;  // Coordinate column indices
+    std::array<size_t, 4> field_cols_;  // Magnetic field data column indices
 };
 
 } // namespace p3d

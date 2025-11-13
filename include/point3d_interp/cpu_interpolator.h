@@ -8,57 +8,57 @@
 namespace p3d {
 
 /**
- * @brief CPU端三线性插值器
+ * @brief CPU-side trilinear interpolator
  *
- * 提供CPU版本的三线性插值实现，用于验证GPU版本的正确性
+ * Provides CPU version of trilinear interpolation implementation for verifying GPU version correctness
  */
 class CPUInterpolator {
 public:
     /**
-     * @brief 构造函数
-     * @param grid 规则网格对象
+     * @brief Constructor
+     * @param grid Regular grid object
      */
     explicit CPUInterpolator(const RegularGrid3D& grid);
 
     ~CPUInterpolator();
 
-    // 禁止拷贝，允许移动
+    // Disable copy, allow move
     CPUInterpolator(const CPUInterpolator&) = delete;
     CPUInterpolator& operator=(const CPUInterpolator&) = delete;
     CPUInterpolator(CPUInterpolator&&) noexcept;
     CPUInterpolator& operator=(CPUInterpolator&&) noexcept;
 
     /**
-     * @brief 单点插值查询
-     * @param query_point 查询点坐标
-     * @return 插值结果
+     * @brief Single point interpolation query
+     * @param query_point Query point coordinates
+     * @return Interpolation result
      */
     InterpolationResult query(const Point3D& query_point) const;
 
     /**
-     * @brief 批量插值查询
-     * @param query_points 查询点数组
-     * @return 插值结果数组
+     * @brief Batch interpolation query
+     * @param query_points Query point array
+     * @return Interpolation result array
      */
     std::vector<InterpolationResult> queryBatch(
         const std::vector<Point3D>& query_points
     ) const;
 
     /**
-     * @brief 获取网格引用
-     * @return 网格对象的常量引用
+     * @brief Get grid reference
+     * @return Constant reference to grid object
      */
     const RegularGrid3D& getGrid() const { return grid_; }
 
 private:
     /**
-     * @brief 执行三线性插值计算
-     * @param grid_coords 网格坐标
-     * @param vertex_data 8个顶点的磁场数据
-     * @param tx x方向局部坐标 (0-1)
-     * @param ty y方向局部坐标 (0-1)
-     * @param tz z方向局部坐标 (0-1)
-     * @return 插值结果
+     * @brief Perform trilinear interpolation calculation
+     * @param grid_coords Grid coordinates
+     * @param vertex_data Magnetic field data of 8 vertices
+     * @param tx Local coordinate in x direction (0-1)
+     * @param ty Local coordinate in y direction (0-1)
+     * @param tz Local coordinate in z direction (0-1)
+     * @return Interpolation result
      */
     MagneticFieldData trilinearInterpolate(
         const MagneticFieldData vertex_data[8],
@@ -66,9 +66,9 @@ private:
     ) const;
 
     /**
-     * @brief 获取单元格顶点数据
-     * @param indices 8个顶点索引
-     * @param vertex_data 输出顶点数据数组
+     * @brief Get cell vertex data
+     * @param indices 8 vertex indices
+     * @param vertex_data Output vertex data array
      */
     void getVertexData(
         const uint32_t indices[8],
@@ -76,7 +76,7 @@ private:
     ) const;
 
 private:
-    const RegularGrid3D& grid_;  // 网格引用
+    const RegularGrid3D& grid_;  // Grid reference
 };
 
 } // namespace p3d

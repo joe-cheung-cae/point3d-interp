@@ -6,21 +6,21 @@
 
 namespace p3d {
 
-// 精度选择：使用float或double
+// Precision selection: use float or double
 #ifdef USE_DOUBLE_PRECISION
 using Real = double;
 #else
 using Real = float;
 #endif
 
-// CUDA 关键字定义（仅在CUDA编译时有效）
+// CUDA keyword definitions (only valid during CUDA compilation)
 #ifdef __CUDACC__
 #define P3D_HOST_DEVICE __host__ __device__
 #else
 #define P3D_HOST_DEVICE
 #endif
 
-// 三维点结构
+// 3D point structure
 struct Point3D {
     Real x, y, z;
 
@@ -52,7 +52,7 @@ struct Point3D {
     }
 };
 
-// 磁场数据结构
+// Magnetic field data structure
 struct MagneticFieldData {
     Real field_strength;        // B
     Real gradient_x;            // Bx
@@ -93,13 +93,13 @@ struct MagneticFieldData {
     }
 };
 
-// 网格参数结构
+// Grid parameters structure
 struct GridParams {
-    Point3D origin;             // 网格起点
-    Point3D spacing;            // 网格间距 (dx, dy, dz)
-    std::array<uint32_t, 3> dimensions;  // 网格维度 (nx, ny, nz)
+    Point3D origin;             // Grid origin
+    Point3D spacing;            // Grid spacing (dx, dy, dz)
+    std::array<uint32_t, 3> dimensions;  // Grid dimensions (nx, ny, nz)
 
-    // 边界
+    // Boundaries
     Point3D min_bound;
     Point3D max_bound;
 
@@ -107,7 +107,7 @@ struct GridParams {
         : origin(0, 0, 0), spacing(1, 1, 1),
           dimensions{0, 0, 0}, min_bound(0, 0, 0), max_bound(0, 0, 0) {}
 
-    // 计算边界
+    // Calculate boundaries
     void update_bounds() {
         min_bound = origin;
         max_bound.x = origin.x + (dimensions[0] - 1) * spacing.x;
@@ -115,7 +115,7 @@ struct GridParams {
         max_bound.z = origin.z + (dimensions[2] - 1) * spacing.z;
     }
 
-    // 检查点是否在边界内
+    // Check if point is inside boundaries
     P3D_HOST_DEVICE
     bool is_point_inside(const Point3D& point) const {
         return (point.x >= min_bound.x && point.x <= max_bound.x) &&
@@ -124,21 +124,21 @@ struct GridParams {
     }
 };
 
-// 插值结果
+// Interpolation result
 struct InterpolationResult {
     MagneticFieldData data;
-    bool valid;                 // 是否在有效范围内
+    bool valid;                 // Whether within valid range
 
-    // 默认构造函数
+    // Default constructor
     P3D_HOST_DEVICE
     InterpolationResult() : data(), valid(false) {}
 
-    // 带参数构造函数
+    // Constructor with data and validity flag
     P3D_HOST_DEVICE
     InterpolationResult(const MagneticFieldData& d, bool v = true)
         : data(d), valid(v) {}
 
-    // CUDA设备友好的初始化函数
+    // CUDA device-friendly initialization function
     P3D_HOST_DEVICE
     void initialize() {
         data.field_strength = 0;

@@ -8,7 +8,7 @@ int main() {
 
     std::cout << "=== 3D Magnetic Field Data Interpolation Library Example ===\n" << std::endl;
 
-    // 创建插值器实例
+    // Create interpolator instance
     MagneticFieldInterpolator interp(true);  // Use GPU
 
     // Load data
