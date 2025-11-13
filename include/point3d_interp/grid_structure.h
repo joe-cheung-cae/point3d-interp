@@ -13,7 +13,7 @@ namespace p3d {
  * Manages structural information of 3D regular grid, provides coordinate transformation and index calculation functions
  */
 class RegularGrid3D {
-public:
+  public:
     /**
      * @brief Constructor
      * @param params Grid parameters
@@ -25,15 +25,12 @@ public:
      * @param coordinates Coordinate array
      * @param field_data Magnetic field data array
      */
-    RegularGrid3D(
-        const std::vector<Point3D>& coordinates,
-        const std::vector<MagneticFieldData>& field_data
-    );
+    RegularGrid3D(const std::vector<Point3D>& coordinates, const std::vector<MagneticFieldData>& field_data);
 
     ~RegularGrid3D();
 
     // Disable copy, allow move
-    RegularGrid3D(const RegularGrid3D&) = delete;
+    RegularGrid3D(const RegularGrid3D&)            = delete;
     RegularGrid3D& operator=(const RegularGrid3D&) = delete;
     RegularGrid3D(RegularGrid3D&&) noexcept;
     RegularGrid3D& operator=(RegularGrid3D&&) noexcept;
@@ -105,7 +102,7 @@ public:
      */
     const std::vector<MagneticFieldData>& getFieldData() const { return field_data_; }
 
-private:
+  private:
     /**
      * @brief Build grid parameters from coordinate data
      * @param coordinates Coordinate array
@@ -118,12 +115,12 @@ private:
      */
     bool validateGridData() const;
 
-private:
-    GridParams params_;                           // Grid parameters
-    std::vector<Point3D> coordinates_;            // Coordinate data
+  private:
+    GridParams                     params_;       // Grid parameters
+    std::vector<Point3D>           coordinates_;  // Coordinate data
     std::vector<MagneticFieldData> field_data_;   // Magnetic field data
 };
 
-} // namespace p3d
+}  // namespace p3d
 
-#endif // POINTER3D_INTERP_GRID_STRUCTURE_H
+#endif  // POINTER3D_INTERP_GRID_STRUCTURE_H

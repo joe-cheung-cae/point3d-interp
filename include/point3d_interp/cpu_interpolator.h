@@ -13,7 +13,7 @@ namespace p3d {
  * Provides CPU version of trilinear interpolation implementation for verifying GPU version correctness
  */
 class CPUInterpolator {
-public:
+  public:
     /**
      * @brief Constructor
      * @param grid Regular grid object
@@ -23,7 +23,7 @@ public:
     ~CPUInterpolator();
 
     // Disable copy, allow move
-    CPUInterpolator(const CPUInterpolator&) = delete;
+    CPUInterpolator(const CPUInterpolator&)            = delete;
     CPUInterpolator& operator=(const CPUInterpolator&) = delete;
     CPUInterpolator(CPUInterpolator&&) noexcept;
     CPUInterpolator& operator=(CPUInterpolator&&) noexcept;
@@ -40,9 +40,7 @@ public:
      * @param query_points Query point array
      * @return Interpolation result array
      */
-    std::vector<InterpolationResult> queryBatch(
-        const std::vector<Point3D>& query_points
-    ) const;
+    std::vector<InterpolationResult> queryBatch(const std::vector<Point3D>& query_points) const;
 
     /**
      * @brief Get grid reference
@@ -50,7 +48,7 @@ public:
      */
     const RegularGrid3D& getGrid() const { return grid_; }
 
-private:
+  private:
     /**
      * @brief Perform trilinear interpolation calculation
      * @param grid_coords Grid coordinates
@@ -60,25 +58,19 @@ private:
      * @param tz Local coordinate in z direction (0-1)
      * @return Interpolation result
      */
-    MagneticFieldData trilinearInterpolate(
-        const MagneticFieldData vertex_data[8],
-        Real tx, Real ty, Real tz
-    ) const;
+    MagneticFieldData trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty, Real tz) const;
 
     /**
      * @brief Get cell vertex data
      * @param indices 8 vertex indices
      * @param vertex_data Output vertex data array
      */
-    void getVertexData(
-        const uint32_t indices[8],
-        MagneticFieldData vertex_data[8]
-    ) const;
+    void getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const;
 
-private:
+  private:
     const RegularGrid3D& grid_;  // Grid reference
 };
 
-} // namespace p3d
+}  // namespace p3d
 
-#endif // POINTER3D_INTERP_CPU_INTERPOLATOR_H
+#endif  // POINTER3D_INTERP_CPU_INTERPOLATOR_H

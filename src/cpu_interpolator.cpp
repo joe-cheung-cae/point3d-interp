@@ -4,17 +4,11 @@
 
 namespace p3d {
 
-CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid)
-    : grid_(grid)
-{
-}
+CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid) : grid_(grid) {}
 
 CPUInterpolator::~CPUInterpolator() = default;
 
-CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept
-    : grid_(other.grid_)
-{
-}
+CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept : grid_(other.grid_) {}
 
 CPUInterpolator& CPUInterpolator::operator=(CPUInterpolator&& other) noexcept {
     // const reference cannot be reassigned, nothing to do here
@@ -57,15 +51,13 @@ InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
     Real tz = grid_coords.z - std::floor(grid_coords.z);
 
     // Perform trilinear interpolation
-    result.data = trilinearInterpolate(vertex_data, tx, ty, tz);
+    result.data  = trilinearInterpolate(vertex_data, tx, ty, tz);
     result.valid = true;
 
     return result;
 }
 
-std::vector<InterpolationResult> CPUInterpolator::queryBatch(
-    const std::vector<Point3D>& query_points
-) const {
+std::vector<InterpolationResult> CPUInterpolator::queryBatch(const std::vector<Point3D>& query_points) const {
     std::vector<InterpolationResult> results;
     results.reserve(query_points.size());
 
@@ -76,10 +68,7 @@ std::vector<InterpolationResult> CPUInterpolator::queryBatch(
     return results;
 }
 
-MagneticFieldData CPUInterpolator::trilinearInterpolate(
-    const MagneticFieldData vertex_data[8],
-    Real tx, Real ty, Real tz
-) const {
+MagneticFieldData CPUInterpolator::trilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty, Real tz) const {
     MagneticFieldData result;
 
     // Trilinear interpolation algorithm
@@ -103,10 +92,7 @@ MagneticFieldData CPUInterpolator::trilinearInterpolate(
     return result;
 }
 
-void CPUInterpolator::getVertexData(
-    const uint32_t indices[8],
-    MagneticFieldData vertex_data[8]
-) const {
+void CPUInterpolator::getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const {
     const auto& field_data = grid_.getFieldData();
 
     for (int i = 0; i < 8; ++i) {
@@ -114,4 +100,4 @@ void CPUInterpolator::getVertexData(
     }
 }
 
-} // namespace p3d
+}  // namespace p3d

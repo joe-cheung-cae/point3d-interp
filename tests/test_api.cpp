@@ -7,7 +7,7 @@ namespace p3d {
 namespace test {
 
 class APITest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Create temporary test file
         CreateTestCSVFile();
@@ -65,7 +65,7 @@ TEST_F(APITest, SinglePointQuery) {
     MagneticFieldInterpolator interp;
     interp.LoadFromCSV(test_file_path_);
 
-    Point3D query_point(0.5f, 0.5f, 0.5f);
+    Point3D             query_point(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
 
     ErrorCode err = interp.Query(query_point, result);
@@ -82,11 +82,7 @@ TEST_F(APITest, BatchQuery) {
     MagneticFieldInterpolator interp;
     interp.LoadFromCSV(test_file_path_);
 
-    std::vector<Point3D> query_points = {
-        {0.0f, 0.0f, 0.0f},
-        {0.5f, 0.5f, 0.5f},
-        {1.0f, 1.0f, 1.0f}
-    };
+    std::vector<Point3D> query_points = {{0.0f, 0.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}};
 
     std::vector<InterpolationResult> results(query_points.size());
 
@@ -104,7 +100,7 @@ TEST_F(APITest, OutOfBoundsQuery) {
     MagneticFieldInterpolator interp;
     interp.LoadFromCSV(test_file_path_);
 
-    Point3D query_point(-1.0f, 0.5f, 0.5f);  // Out of bounds
+    Point3D             query_point(-1.0f, 0.5f, 0.5f);  // Out of bounds
     InterpolationResult result;
 
     ErrorCode err = interp.Query(query_point, result);
@@ -115,23 +111,14 @@ TEST_F(APITest, OutOfBoundsQuery) {
 // Test loading data from memory
 TEST_F(APITest, LoadFromMemory) {
     // Prepare test data
-    std::vector<Point3D> coordinates = {
-        {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f},
-        {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}
-    };
+    std::vector<Point3D> coordinates = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
+                                        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
 
-    std::vector<MagneticFieldData> field_data(coordinates.size(),
-        MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
+    std::vector<MagneticFieldData> field_data(coordinates.size(), MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
 
     MagneticFieldInterpolator interp;
 
-    ErrorCode err = interp.LoadFromMemory(
-        coordinates.data(),
-        field_data.data(),
-        coordinates.size()
-    );
+    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
 
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(interp.IsDataLoaded());
@@ -160,7 +147,7 @@ TEST_F(APITest, EmptyBatchQuery) {
 TEST(APITest, QueryWithoutData) {
     MagneticFieldInterpolator interp;  // Data not loaded
 
-    Point3D query_point(0.0f, 0.0f, 0.0f);
+    Point3D             query_point(0.0f, 0.0f, 0.0f);
     InterpolationResult result;
 
     ErrorCode err = interp.Query(query_point, result);
@@ -187,5 +174,5 @@ TEST_F(APITest, MoveSemantics) {
     EXPECT_FALSE(interp1.IsDataLoaded());
 }
 
-} // namespace test
-} // namespace p3d
+}  // namespace test
+}  // namespace p3d

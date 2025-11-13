@@ -8,6 +8,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set CUDA architectures
 set(CMAKE_CUDA_ARCHITECTURES 60 70 75 80 86)
 
+# Export compile command
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CUDA_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
+
+# Enable clang-tidy for C++ targets if available
+find_program(CLANG_TIDY_EXE clang-tidy)
+
+if(CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p;${CMAKE_BINARY_DIR}")
+endif()
+
 # Options
 option(USE_DOUBLE_PRECISION "Use double precision" OFF)
 option(BUILD_TESTS "Build tests" ON)
@@ -41,8 +52,8 @@ add_library(point3d_interp STATIC ${SOURCES} ${CUDA_SOURCES})
 # CUDA compile options
 target_compile_options(point3d_interp PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:
-        --use_fast_math
-        --expt-relaxed-constexpr
+    --use_fast_math
+    --expt-relaxed-constexpr
     >
 )
 

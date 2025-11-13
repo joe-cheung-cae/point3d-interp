@@ -34,4 +34,4 @@ const char* ErrorCodeToString(ErrorCode code) {
     }
 }
 
-} // namespace p3d
+}  // namespace p3d

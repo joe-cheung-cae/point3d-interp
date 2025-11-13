@@ -13,7 +13,7 @@ namespace test {
 
 // Test class for edge cases
 class EdgeCaseTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // Create test files
         CreateIrregularGridFile();
@@ -73,10 +73,10 @@ protected:
 
 // Test irregular grid detection
 TEST_F(EdgeCaseTest, IrregularGridDetection) {
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV("irregular_grid.csv", coordinates, field_data, grid_params);
 
@@ -87,11 +87,11 @@ TEST_F(EdgeCaseTest, IrregularGridDetection) {
 // Test boundary conditions
 TEST_F(EdgeCaseTest, BoundaryConditions) {
     MagneticFieldInterpolator interp;
-    ErrorCode err = interp.LoadFromCSV("boundary_test.csv");
+    ErrorCode                 err = interp.LoadFromCSV("boundary_test.csv");
     ASSERT_EQ(err, ErrorCode::Success);
 
     // Test points at grid boundaries
-    Point3D boundary_point(0.0f, 0.0f, 0.0f);
+    Point3D             boundary_point(0.0f, 0.0f, 0.0f);
     InterpolationResult result;
     err = interp.Query(boundary_point, result);
     EXPECT_EQ(err, ErrorCode::Success);
@@ -107,10 +107,10 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
 // Test high precision data handling
 TEST_F(EdgeCaseTest, HighPrecisionData) {
     MagneticFieldInterpolator interp;
-    ErrorCode err = interp.LoadFromCSV("precision_test.csv");
+    ErrorCode                 err = interp.LoadFromCSV("precision_test.csv");
     ASSERT_EQ(err, ErrorCode::Success);
 
-    Point3D query_point(0.5f, 0.5f, 0.0f);
+    Point3D             query_point(0.5f, 0.5f, 0.0f);
     InterpolationResult result;
     err = interp.Query(query_point, result);
     EXPECT_EQ(err, ErrorCode::Success);
@@ -124,24 +124,21 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
 // Test extreme values
 TEST(ExtremeValueTest, VeryLargeValues) {
     // Create data with very large values
-    std::vector<Point3D> coordinates = {
-        {0, 0, 0}, {1, 0, 0},
-        {0, 1, 0}, {1, 1, 0}
-    };
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
 
     std::vector<MagneticFieldData> field_data(4);
     for (auto& data : field_data) {
         data.field_strength = 1e10f;  // Very large values
-        data.gradient_x = 1e8f;
-        data.gradient_y = 1e8f;
-        data.gradient_z = 1e8f;
+        data.gradient_x     = 1e8f;
+        data.gradient_y     = 1e8f;
+        data.gradient_z     = 1e8f;
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.0f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
@@ -151,24 +148,21 @@ TEST(ExtremeValueTest, VeryLargeValues) {
 
 // Test very small values
 TEST(ExtremeValueTest, VerySmallValues) {
-    std::vector<Point3D> coordinates = {
-        {0, 0, 0}, {1, 0, 0},
-        {0, 1, 0}, {1, 1, 0}
-    };
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
 
     std::vector<MagneticFieldData> field_data(4);
     for (auto& data : field_data) {
         data.field_strength = 1e-10f;  // Very small values
-        data.gradient_x = 1e-8f;
-        data.gradient_y = 1e-8f;
-        data.gradient_z = 1e-8f;
+        data.gradient_x     = 1e-8f;
+        data.gradient_y     = 1e-8f;
+        data.gradient_z     = 1e-8f;
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.0f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
@@ -178,10 +172,7 @@ TEST(ExtremeValueTest, VerySmallValues) {
 
 // Test NaN and Inf values
 TEST(ExtremeValueTest, NaNInfValues) {
-    std::vector<Point3D> coordinates = {
-        {0, 0, 0}, {1, 0, 0},
-        {0, 1, 0}, {1, 1, 0}
-    };
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
 
     std::vector<MagneticFieldData> field_data(4);
     for (size_t i = 0; i < 4; ++i) {
@@ -197,11 +188,11 @@ TEST(ExtremeValueTest, NaNInfValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
     // Should still load (NaN is a valid float value)
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.0f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
@@ -217,7 +208,7 @@ TEST(ErrorHandlingTest, EmptyDataArrays) {
     ErrorCode err = interp.LoadFromMemory(nullptr, nullptr, 0);
     EXPECT_EQ(err, ErrorCode::InvalidParameter);
 
-    std::vector<Point3D> coords;
+    std::vector<Point3D>           coords;
     std::vector<MagneticFieldData> data;
     err = interp.LoadFromMemory(coords.data(), data.data(), 0);
     EXPECT_EQ(err, ErrorCode::InvalidParameter);
@@ -227,8 +218,8 @@ TEST(ErrorHandlingTest, EmptyDataArrays) {
 TEST(ErrorHandlingTest, MismatchedArraySizes) {
     MagneticFieldInterpolator interp;
 
-    std::vector<Point3D> coords = {{0, 0, 0}, {1, 0, 0}};
-    std::vector<MagneticFieldData> data = {{1.0f, 0.1f, 0.2f, 0.3f}};  // Only 1 element
+    std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}};
+    std::vector<MagneticFieldData> data   = {{1.0f, 0.1f, 0.2f, 0.3f}};  // Only 1 element
 
     ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), coords.size());
     EXPECT_EQ(err, ErrorCode::InvalidGridData);
@@ -239,7 +230,7 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     MagneticFieldInterpolator interp;
 
     // Load some test data
-    std::vector<Point3D> coords = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
+    std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
     std::vector<MagneticFieldData> data(4, MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
 
     ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), 4);
@@ -279,5 +270,5 @@ TEST(GridValidationTest, InvalidGridParameters) {
     delete grid;
 }
 
-} // namespace test
-} // namespace p3d
+}  // namespace test
+}  // namespace p3d

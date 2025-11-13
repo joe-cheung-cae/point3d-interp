@@ -15,7 +15,7 @@ namespace p3d {
  * Responsible for loading magnetic field data from CSV files, supports multiple delimiters and formats
  */
 class DataLoader {
-public:
+  public:
     DataLoader();
     ~DataLoader();
 
@@ -27,12 +27,8 @@ public:
      * @param grid_params Output grid parameters
      * @return Error code
      */
-    ErrorCode LoadFromCSV(
-        const std::string& filepath,
-        std::vector<Point3D>& coordinates,
-        std::vector<MagneticFieldData>& field_data,
-        GridParams& grid_params
-    );
+    ErrorCode LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates, std::vector<MagneticFieldData>& field_data,
+                          GridParams& grid_params);
 
     /**
      * @brief Set delimiter
@@ -51,12 +47,9 @@ public:
      * @param coord_cols Coordinate column indices [x, y, z]
      * @param field_cols Magnetic field data column indices [B, Bx, By, Bz]
      */
-    void SetColumnIndices(
-        const std::array<size_t, 3>& coord_cols,
-        const std::array<size_t, 4>& field_cols
-    );
+    void SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 4>& field_cols);
 
-private:
+  private:
     /**
      * @brief Parse single line data
      * @param line Input line
@@ -64,11 +57,7 @@ private:
      * @param field Output magnetic field data
      * @return Whether parsing succeeded
      */
-    bool ParseLine(
-        const std::string& line,
-        Point3D& point,
-        MagneticFieldData& field
-    );
+    bool ParseLine(const std::string& line, Point3D& point, MagneticFieldData& field);
 
     /**
      * @brief Detect grid parameters from data
@@ -76,10 +65,7 @@ private:
      * @param grid_params Output grid parameters
      * @return Whether detection succeeded
      */
-    bool DetectGridParams(
-        const std::vector<Point3D>& coordinates,
-        GridParams& grid_params
-    );
+    bool DetectGridParams(const std::vector<Point3D>& coordinates, GridParams& grid_params);
 
     /**
      * @brief Validate grid regularity
@@ -87,10 +73,7 @@ private:
      * @param grid_params Grid parameters
      * @return Whether it is a regular grid
      */
-    bool ValidateGridRegularity(
-        const std::vector<Point3D>& coordinates,
-        const GridParams& grid_params
-    );
+    bool ValidateGridRegularity(const std::vector<Point3D>& coordinates, const GridParams& grid_params);
 
     /**
      * @brief Split string
@@ -98,10 +81,7 @@ private:
      * @param delimiter Delimiter
      * @return Array of split strings
      */
-    std::vector<std::string> SplitString(
-        const std::string& line,
-        char delimiter
-    );
+    std::vector<std::string> SplitString(const std::string& line, char delimiter);
 
     /**
      * @brief Convert string to numeric value
@@ -109,16 +89,16 @@ private:
      * @param value Output numeric value
      * @return Whether conversion succeeded
      */
-    template<typename T>
+    template <typename T>
     bool StringToValue(const std::string& str, T& value);
 
-private:
-    char delimiter_;                    // Delimiter
-    bool skip_header_;                  // Whether to skip header row
-    std::array<size_t, 3> coord_cols_;  // Coordinate column indices
-    std::array<size_t, 4> field_cols_;  // Magnetic field data column indices
+  private:
+    char                  delimiter_;    // Delimiter
+    bool                  skip_header_;  // Whether to skip header row
+    std::array<size_t, 3> coord_cols_;   // Coordinate column indices
+    std::array<size_t, 4> field_cols_;   // Magnetic field data column indices
 };
 
-} // namespace p3d
+}  // namespace p3d
 
-#endif // POINTER3D_INTERP_DATA_LOADER_H
+#endif  // POINTER3D_INTERP_DATA_LOADER_H

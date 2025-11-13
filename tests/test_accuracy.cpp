@@ -11,8 +11,8 @@ namespace test {
 TEST(AccuracyTest, CPUInterpolationConsistency) {
     // Create test grid (3x3x3)
     GridParams params;
-    params.origin = Point3D(0.0f, 0.0f, 0.0f);
-    params.spacing = Point3D(1.0f, 1.0f, 1.0f);
+    params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+    params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
     params.dimensions = {3, 3, 3};
     params.update_bounds();
 
@@ -23,22 +23,16 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
-        float x = coord.x, y = coord.y, z = coord.z;
-        field_data[i] = MagneticFieldData(
-            x*x + y*y + z*z,  // B = x² + y² + z²
-            2*x, 2*y, 2*z     // Gradient = (2x, 2y, 2z)
+        float       x = coord.x, y = coord.y, z = coord.z;
+        field_data[i] = MagneticFieldData(x * x + y * y + z * z,  // B = x² + y² + z²
+                                          2 * x, 2 * y, 2 * z     // Gradient = (2x, 2y, 2z)
         );
     }
 
     CPUInterpolator cpu_interp(grid);
 
     // Test multiple query points
-    std::vector<Point3D> test_points = {
-        {0.5f, 0.5f, 0.5f},
-        {1.2f, 0.8f, 1.5f},
-        {0.3f, 1.7f, 0.9f},
-        {2.1f, 1.3f, 0.7f}
-    };
+    std::vector<Point3D> test_points = {{0.5f, 0.5f, 0.5f}, {1.2f, 0.8f, 1.5f}, {0.3f, 1.7f, 0.9f}, {2.1f, 1.3f, 0.7f}};
 
     for (const auto& point : test_points) {
         InterpolationResult result = cpu_interp.query(point);
@@ -46,10 +40,10 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
         // Calculate analytical solution
         float x = point.x, y = point.y, z = point.z;
-        float expected_B = x*x + y*y + z*z;
-        float expected_Bx = 2*x;
-        float expected_By = 2*y;
-        float expected_Bz = 2*z;
+        float expected_B  = x * x + y * y + z * z;
+        float expected_Bx = 2 * x;
+        float expected_By = 2 * y;
+        float expected_Bz = 2 * z;
 
         // Check interpolation accuracy (trilinear interpolation should have good accuracy)
         EXPECT_NEAR(result.data.field_strength, expected_B, 1e-3f);
@@ -63,8 +57,8 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 TEST(AccuracyTest, BoundaryInterpolation) {
     // Create simple 2x2x2 grid
     GridParams params;
-    params.origin = Point3D(0.0f, 0.0f, 0.0f);
-    params.spacing = Point3D(1.0f, 1.0f, 1.0f);
+    params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+    params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
     params.dimensions = {2, 2, 2};
     params.update_bounds();
 
@@ -74,10 +68,9 @@ TEST(AccuracyTest, BoundaryInterpolation) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
-        float x = coord.x, y = coord.y, z = coord.z;
-        field_data[i] = MagneticFieldData(
-            x + 2*y + 3*z + 1,  // B = x + 2y + 3z + 1
-            1.0f, 2.0f, 3.0f   // Gradient = (1, 2, 3)
+        float       x = coord.x, y = coord.y, z = coord.z;
+        field_data[i] = MagneticFieldData(x + 2 * y + 3 * z + 1,  // B = x + 2y + 3z + 1
+                                          1.0f, 2.0f, 3.0f        // Gradient = (1, 2, 3)
         );
     }
 
@@ -98,7 +91,7 @@ TEST(AccuracyTest, BoundaryInterpolation) {
         ASSERT_TRUE(result.valid);
 
         // Calculate analytical solution
-        float expected_B = point.x + 2*point.y + 3*point.z + 1;
+        float expected_B = point.x + 2 * point.y + 3 * point.z + 1;
 
         // For linear fields, trilinear interpolation should be exact
         EXPECT_NEAR(result.data.field_strength, expected_B, 1e-6f);
@@ -112,8 +105,8 @@ TEST(AccuracyTest, BoundaryInterpolation) {
 TEST(AccuracyTest, GridPointExactness) {
     // Create test grid
     GridParams params;
-    params.origin = Point3D(0.0f, 0.0f, 0.0f);
-    params.spacing = Point3D(0.5f, 0.5f, 0.5f);
+    params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+    params.spacing    = Point3D(0.5f, 0.5f, 0.5f);
     params.dimensions = {5, 5, 5};
     params.update_bounds();
 
@@ -122,12 +115,8 @@ TEST(AccuracyTest, GridPointExactness) {
     // Set random data
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
-        data = MagneticFieldData(
-            static_cast<float>(rand()) / RAND_MAX,
-            static_cast<float>(rand()) / RAND_MAX,
-            static_cast<float>(rand()) / RAND_MAX,
-            static_cast<float>(rand()) / RAND_MAX
-        );
+        data = MagneticFieldData(static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX,
+                                 static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -135,7 +124,7 @@ TEST(AccuracyTest, GridPointExactness) {
     // Test all grid points
     const auto& coordinates = grid.getCoordinates();
     for (size_t i = 0; i < coordinates.size(); ++i) {
-        const Point3D& point = coordinates[i];
+        const Point3D&      point  = coordinates[i];
         InterpolationResult result = cpu_interp.query(point);
 
         ASSERT_TRUE(result.valid);
@@ -153,8 +142,8 @@ TEST(AccuracyTest, GridPointExactness) {
 TEST(AccuracyTest, NumericalStability) {
     // Create large range grid
     GridParams params;
-    params.origin = Point3D(-100.0f, -100.0f, -100.0f);
-    params.spacing = Point3D(10.0f, 10.0f, 10.0f);
+    params.origin     = Point3D(-100.0f, -100.0f, -100.0f);
+    params.spacing    = Point3D(10.0f, 10.0f, 10.0f);
     params.dimensions = {21, 21, 21};  // From -100 to +100
     params.update_bounds();
 
@@ -164,20 +153,14 @@ TEST(AccuracyTest, NumericalStability) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
-        field_data[i] = MagneticFieldData(
-            coord.x + coord.y + coord.z,  // B = x + y + z
-            1.0f, 1.0f, 1.0f
-        );
+        field_data[i]     = MagneticFieldData(coord.x + coord.y + coord.z,  // B = x + y + z
+                                              1.0f, 1.0f, 1.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
 
     // Test points far from origin
-    std::vector<Point3D> test_points = {
-        {50.0f, 25.0f, -75.0f},
-        {-30.0f, 80.0f, 10.0f},
-        {15.0f, -45.0f, 60.0f}
-    };
+    std::vector<Point3D> test_points = {{50.0f, 25.0f, -75.0f}, {-30.0f, 80.0f, 10.0f}, {15.0f, -45.0f, 60.0f}};
 
     for (const auto& point : test_points) {
         InterpolationResult result = cpu_interp.query(point);
@@ -198,8 +181,8 @@ TEST(AccuracyTest, NumericalStability) {
 TEST(AccuracyTest, BatchVsSingleConsistency) {
     // Create test grid
     GridParams params;
-    params.origin = Point3D(0.0f, 0.0f, 0.0f);
-    params.spacing = Point3D(1.0f, 1.0f, 1.0f);
+    params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+    params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
     params.dimensions = {4, 4, 4};
     params.update_bounds();
 
@@ -208,12 +191,8 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     // Set test data
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
-        data = MagneticFieldData(
-            static_cast<float>(rand()) / RAND_MAX * 10.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f
-        );
+        data = MagneticFieldData(static_cast<float>(rand()) / RAND_MAX * 10.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f,
+                                 static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -221,11 +200,8 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     // Generate test points
     std::vector<Point3D> test_points;
     for (int i = 0; i < 50; ++i) {
-        test_points.push_back(Point3D(
-            static_cast<float>(rand()) / RAND_MAX * 3.0f,
-            static_cast<float>(rand()) / RAND_MAX * 3.0f,
-            static_cast<float>(rand()) / RAND_MAX * 3.0f
-        ));
+        test_points.push_back(Point3D(static_cast<float>(rand()) / RAND_MAX * 3.0f, static_cast<float>(rand()) / RAND_MAX * 3.0f,
+                                      static_cast<float>(rand()) / RAND_MAX * 3.0f));
     }
 
     // Single point query
@@ -242,7 +218,7 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     ASSERT_EQ(single_results.size(), batch_results.size());
     for (size_t i = 0; i < single_results.size(); ++i) {
         const auto& single = single_results[i];
-        const auto& batch = batch_results[i];
+        const auto& batch  = batch_results[i];
 
         EXPECT_EQ(single.valid, batch.valid);
 
@@ -255,5 +231,5 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     }
 }
 
-} // namespace test
-} // namespace p3d
+}  // namespace test
+}  // namespace p3d

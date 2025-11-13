@@ -11,7 +11,7 @@ using namespace p3d;
  * @brief Performance benchmark program
  */
 class Benchmark {
-public:
+  public:
     Benchmark() : rng_(std::random_device{}()) {}
 
     void RunAllBenchmarks() {
@@ -19,18 +19,18 @@ public:
 
         // Test different scale datasets
         std::vector<std::array<size_t, 3>> data_sizes = {
-            {10, 10, 10},     // 1,000 points
-            {20, 20, 20},     // 8,000 points
-            {30, 30, 30},     // 27,000 points
-            {50, 50, 50}      // 125,000 points
+            {10, 10, 10},  // 1,000 points
+            {20, 20, 20},  // 8,000 points
+            {30, 30, 30},  // 27,000 points
+            {50, 50, 50}   // 125,000 points
         };
 
         // Test different numbers of query points
         std::vector<size_t> query_sizes = {100, 1000, 10000};
 
         for (const auto& data_size : data_sizes) {
-            std::cout << "Test data scale: " << data_size[0] << "x" << data_size[1] << "x" << data_size[2]
-                      << " (" << (data_size[0] * data_size[1] * data_size[2]) << " points)\n";
+            std::cout << "Test data scale: " << data_size[0] << "x" << data_size[1] << "x" << data_size[2] << " ("
+                      << (data_size[0] * data_size[1] * data_size[2]) << " points)\n";
             std::cout << std::string(60, '-') << "\n";
 
             // Create test data
@@ -69,11 +69,11 @@ public:
         RunMemoryBenchmark();
     }
 
-private:
+  private:
     struct TestData {
-        std::vector<Point3D> coordinates;
+        std::vector<Point3D>           coordinates;
         std::vector<MagneticFieldData> field_data;
-        GridParams grid_params;
+        GridParams                     grid_params;
     };
 
     std::mt19937 rng_;
@@ -81,11 +81,10 @@ private:
     TestData GenerateTestData(const std::array<size_t, 3>& dimensions) {
         TestData data;
 
-        data.grid_params.origin = Point3D(0.0f, 0.0f, 0.0f);
-        data.grid_params.spacing = Point3D(1.0f, 1.0f, 1.0f);
-        data.grid_params.dimensions = {static_cast<uint32_t>(dimensions[0]),
-                                     static_cast<uint32_t>(dimensions[1]),
-                                     static_cast<uint32_t>(dimensions[2])};
+        data.grid_params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+        data.grid_params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
+        data.grid_params.dimensions = {static_cast<uint32_t>(dimensions[0]), static_cast<uint32_t>(dimensions[1]),
+                                       static_cast<uint32_t>(dimensions[2])};
         data.grid_params.update_bounds();
 
         size_t total_points = dimensions[0] * dimensions[1] * dimensions[2];
@@ -96,17 +95,14 @@ private:
         for (size_t k = 0; k < dimensions[2]; ++k) {
             for (size_t j = 0; j < dimensions[1]; ++j) {
                 for (size_t i = 0; i < dimensions[0]; ++i) {
-                    Point3D coord(
-                        data.grid_params.origin.x + i * data.grid_params.spacing.x,
-                        data.grid_params.origin.y + j * data.grid_params.spacing.y,
-                        data.grid_params.origin.z + k * data.grid_params.spacing.z
-                    );
+                    Point3D coord(data.grid_params.origin.x + i * data.grid_params.spacing.x,
+                                  data.grid_params.origin.y + j * data.grid_params.spacing.y,
+                                  data.grid_params.origin.z + k * data.grid_params.spacing.z);
                     data.coordinates.push_back(coord);
 
                     // Generate magnetic field data for each grid point
-                    MagneticFieldData field(
-                        coord.x + coord.y + coord.z + 1.0f,  // B = x + y + z + 1
-                        1.0f, 1.0f, 1.0f                    // Constant gradient
+                    MagneticFieldData field(coord.x + coord.y + coord.z + 1.0f,  // B = x + y + z + 1
+                                            1.0f, 1.0f, 1.0f                     // Constant gradient
                     );
                     data.field_data.push_back(field);
                 }
@@ -125,9 +121,7 @@ private:
         std::uniform_real_distribution<float> dist_z(grid_params.min_bound.z, grid_params.max_bound.z);
 
         for (size_t i = 0; i < count; ++i) {
-            points.push_back(Point3D(
-                dist_x(rng_), dist_y(rng_), dist_z(rng_)
-            ));
+            points.push_back(Point3D(dist_x(rng_), dist_y(rng_), dist_z(rng_)));
         }
 
         return points;
@@ -137,11 +131,7 @@ private:
         MagneticFieldInterpolator interp(false);  // CPU mode
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(
-            test_data.coordinates.data(),
-            test_data.field_data.data(),
-            test_data.coordinates.size()
-        );
+        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), test_data.coordinates.size());
         if (err != ErrorCode::Success) {
             std::cerr << "CPU data loading failed: " << static_cast<int>(err) << std::endl;
             return -1.0;
@@ -172,11 +162,7 @@ private:
         MagneticFieldInterpolator interp(true);  // GPU mode
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(
-            test_data.coordinates.data(),
-            test_data.field_data.data(),
-            test_data.coordinates.size()
-        );
+        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), test_data.coordinates.size());
         if (err != ErrorCode::Success) {
             return -1.0;  // GPU unavailable or initialization failed
         }
@@ -212,23 +198,19 @@ private:
 
         for (const auto& size : sizes) {
             size_t total_points = size[0] * size[1] * size[2];
-            size_t memory_mb = total_points * sizeof(MagneticFieldData) / (1024 * 1024);
+            size_t memory_mb    = total_points * sizeof(MagneticFieldData) / (1024 * 1024);
 
-            std::cout << "Data scale: " << size[0] << "x" << size[1] << "x" << size[2]
-                      << " (" << total_points << " points, ~" << memory_mb << " MB)\n";
+            std::cout << "Data scale: " << size[0] << "x" << size[1] << "x" << size[2] << " (" << total_points << " points, ~" << memory_mb
+                      << " MB)\n";
 
             auto test_data = GenerateTestData(size);
 
             // CPU test
             {
                 MagneticFieldInterpolator interp(false);
-                auto start = std::chrono::high_resolution_clock::now();
-                ErrorCode err = interp.LoadFromMemory(
-                    test_data.coordinates.data(),
-                    test_data.field_data.data(),
-                    total_points
-                );
-                auto end = std::chrono::high_resolution_clock::now();
+                auto                      start = std::chrono::high_resolution_clock::now();
+                ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
+                auto      end = std::chrono::high_resolution_clock::now();
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -241,13 +223,9 @@ private:
             // GPU test
             {
                 MagneticFieldInterpolator interp(true);
-                auto start = std::chrono::high_resolution_clock::now();
-                ErrorCode err = interp.LoadFromMemory(
-                    test_data.coordinates.data(),
-                    test_data.field_data.data(),
-                    total_points
-                );
-                auto end = std::chrono::high_resolution_clock::now();
+                auto                      start = std::chrono::high_resolution_clock::now();
+                ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
+                auto      end = std::chrono::high_resolution_clock::now();
 
                 if (err == ErrorCode::Success) {
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

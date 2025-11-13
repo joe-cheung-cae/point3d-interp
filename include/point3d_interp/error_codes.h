@@ -23,10 +23,8 @@ enum class ErrorCode {
 
 const char* ErrorCodeToString(ErrorCode code);
 
-inline std::string ErrorCodeToStringStd(ErrorCode code) {
-    return std::string(ErrorCodeToString(code));
-}
+inline std::string ErrorCodeToStringStd(ErrorCode code) { return std::string(ErrorCodeToString(code)); }
 
-} // namespace p3d
+}  // namespace p3d
 
-#endif // POINTER3D_INTERP_ERROR_CODES_H
+#endif  // POINTER3D_INTERP_ERROR_CODES_H

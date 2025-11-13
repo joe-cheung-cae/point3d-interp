@@ -11,19 +11,14 @@ namespace p3d {
 DataLoader::DataLoader()
     : delimiter_(','),
       skip_header_(true),
-      coord_cols_{0, 1, 2},  // x, y, z
-      field_cols_{3, 4, 5, 6} // B, Bx, By, Bz
-{
-}
+      coord_cols_{0, 1, 2},    // x, y, z
+      field_cols_{3, 4, 5, 6}  // B, Bx, By, Bz
+{}
 
 DataLoader::~DataLoader() = default;
 
-ErrorCode DataLoader::LoadFromCSV(
-    const std::string& filepath,
-    std::vector<Point3D>& coordinates,
-    std::vector<MagneticFieldData>& field_data,
-    GridParams& grid_params
-) {
+ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
+                                  std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
     // Open file
     std::ifstream file(filepath);
     if (!file.is_open()) {
@@ -34,7 +29,7 @@ ErrorCode DataLoader::LoadFromCSV(
     field_data.clear();
 
     std::string line;
-    size_t line_number = 0;
+    size_t      line_number = 0;
 
     // Skip header line
     if (skip_header_) {
@@ -53,7 +48,7 @@ ErrorCode DataLoader::LoadFromCSV(
             continue;
         }
 
-        Point3D point;
+        Point3D           point;
         MagneticFieldData field;
 
         if (!ParseLine(line, point, field)) {
@@ -82,53 +77,38 @@ ErrorCode DataLoader::LoadFromCSV(
     return ErrorCode::Success;
 }
 
-void DataLoader::SetColumnIndices(
-    const std::array<size_t, 3>& coord_cols,
-    const std::array<size_t, 4>& field_cols
-) {
+void DataLoader::SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 4>& field_cols) {
     coord_cols_ = coord_cols;
     field_cols_ = field_cols;
 }
 
-bool DataLoader::ParseLine(
-    const std::string& line,
-    Point3D& point,
-    MagneticFieldData& field
-) {
+bool DataLoader::ParseLine(const std::string& line, Point3D& point, MagneticFieldData& field) {
     auto tokens = SplitString(line, delimiter_);
 
     // Check if there are enough columns
-    size_t max_col = std::max({
-        coord_cols_[0], coord_cols_[1], coord_cols_[2],
-        field_cols_[0], field_cols_[1], field_cols_[2], field_cols_[3]
-    });
+    size_t max_col =
+        std::max({coord_cols_[0], coord_cols_[1], coord_cols_[2], field_cols_[0], field_cols_[1], field_cols_[2], field_cols_[3]});
 
     if (tokens.size() <= max_col) {
         return false;
     }
 
     // Parse coordinates
-    if (!StringToValue(tokens[coord_cols_[0]], point.x) ||
-        !StringToValue(tokens[coord_cols_[1]], point.y) ||
+    if (!StringToValue(tokens[coord_cols_[0]], point.x) || !StringToValue(tokens[coord_cols_[1]], point.y) ||
         !StringToValue(tokens[coord_cols_[2]], point.z)) {
         return false;
     }
 
     // Parse magnetic field data
-    if (!StringToValue(tokens[field_cols_[0]], field.field_strength) ||
-        !StringToValue(tokens[field_cols_[1]], field.gradient_x) ||
-        !StringToValue(tokens[field_cols_[2]], field.gradient_y) ||
-        !StringToValue(tokens[field_cols_[3]], field.gradient_z)) {
+    if (!StringToValue(tokens[field_cols_[0]], field.field_strength) || !StringToValue(tokens[field_cols_[1]], field.gradient_x) ||
+        !StringToValue(tokens[field_cols_[2]], field.gradient_y) || !StringToValue(tokens[field_cols_[3]], field.gradient_z)) {
         return false;
     }
 
     return true;
 }
 
-bool DataLoader::DetectGridParams(
-    const std::vector<Point3D>& coordinates,
-    GridParams& grid_params
-) {
+bool DataLoader::DetectGridParams(const std::vector<Point3D>& coordinates, GridParams& grid_params) {
     if (coordinates.empty()) {
         return false;
     }
@@ -161,9 +141,9 @@ bool DataLoader::DetectGridParams(
         if (coords.size() < 2) return 0;
         Real spacing = coords[1] - coords[0];
         for (size_t i = 2; i < coords.size(); ++i) {
-            Real current_spacing = coords[i] - coords[i-1];
+            Real current_spacing = coords[i] - coords[i - 1];
             if (std::abs(current_spacing - spacing) > 1e-6) {
-                return 0; // Non-uniform
+                return 0;  // Non-uniform
             }
         }
         return spacing;
@@ -178,28 +158,18 @@ bool DataLoader::DetectGridParams(
     }
 
     // Set grid parameters
-    grid_params.origin = Point3D(x_unique[0], y_unique[0], z_unique[0]);
-    grid_params.spacing = Point3D(dx, dy, dz);
-    grid_params.dimensions = {
-        static_cast<uint32_t>(x_unique.size()),
-        static_cast<uint32_t>(y_unique.size()),
-        static_cast<uint32_t>(z_unique.size())
-    };
+    grid_params.origin     = Point3D(x_unique[0], y_unique[0], z_unique[0]);
+    grid_params.spacing    = Point3D(dx, dy, dz);
+    grid_params.dimensions = {static_cast<uint32_t>(x_unique.size()), static_cast<uint32_t>(y_unique.size()),
+                              static_cast<uint32_t>(z_unique.size())};
     grid_params.update_bounds();
 
     return true;
 }
 
-bool DataLoader::ValidateGridRegularity(
-    const std::vector<Point3D>& coordinates,
-    const GridParams& grid_params
-) {
+bool DataLoader::ValidateGridRegularity(const std::vector<Point3D>& coordinates, const GridParams& grid_params) {
     // Calculate expected number of data points
-    size_t expected_count = static_cast<size_t>(
-        grid_params.dimensions[0] *
-        grid_params.dimensions[1] *
-        grid_params.dimensions[2]
-    );
+    size_t expected_count = static_cast<size_t>(grid_params.dimensions[0] * grid_params.dimensions[1] * grid_params.dimensions[2]);
 
     if (coordinates.size() != expected_count) {
         return false;
@@ -213,8 +183,7 @@ bool DataLoader::ValidateGridRegularity(
         int iz = static_cast<int>(std::round((coord.z - grid_params.origin.z) / grid_params.spacing.z));
 
         // Check if indices are valid
-        if (ix < 0 || ix >= static_cast<int>(grid_params.dimensions[0]) ||
-            iy < 0 || iy >= static_cast<int>(grid_params.dimensions[1]) ||
+        if (ix < 0 || ix >= static_cast<int>(grid_params.dimensions[0]) || iy < 0 || iy >= static_cast<int>(grid_params.dimensions[1]) ||
             iz < 0 || iz >= static_cast<int>(grid_params.dimensions[2])) {
             return false;
         }
@@ -224,9 +193,7 @@ bool DataLoader::ValidateGridRegularity(
         Real expected_y = grid_params.origin.y + iy * grid_params.spacing.y;
         Real expected_z = grid_params.origin.z + iz * grid_params.spacing.z;
 
-        if (std::abs(coord.x - expected_x) > 1e-6 ||
-            std::abs(coord.y - expected_y) > 1e-6 ||
-            std::abs(coord.z - expected_z) > 1e-6) {
+        if (std::abs(coord.x - expected_x) > 1e-6 || std::abs(coord.y - expected_y) > 1e-6 || std::abs(coord.z - expected_z) > 1e-6) {
             return false;
         }
     }
@@ -234,20 +201,15 @@ bool DataLoader::ValidateGridRegularity(
     return true;
 }
 
-std::vector<std::string> DataLoader::SplitString(
-    const std::string& line,
-    char delimiter
-) {
+std::vector<std::string> DataLoader::SplitString(const std::string& line, char delimiter) {
     std::vector<std::string> tokens;
-    std::stringstream ss(line);
-    std::string token;
+    std::stringstream        ss(line);
+    std::string              token;
 
     while (std::getline(ss, token, delimiter)) {
         // Trim leading and trailing spaces
-        token.erase(token.begin(), std::find_if(token.begin(), token.end(),
-            [](unsigned char ch) { return !std::isspace(ch); }));
-        token.erase(std::find_if(token.rbegin(), token.rend(),
-            [](unsigned char ch) { return !std::isspace(ch); }).base(), token.end());
+        token.erase(token.begin(), std::find_if(token.begin(), token.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+        token.erase(std::find_if(token.rbegin(), token.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), token.end());
 
         tokens.push_back(token);
     }
@@ -255,7 +217,7 @@ std::vector<std::string> DataLoader::SplitString(
     return tokens;
 }
 
-template<typename T>
+template <typename T>
 bool DataLoader::StringToValue(const std::string& str, T& value) {
     std::istringstream iss(str);
     iss >> value;
@@ -266,4 +228,4 @@ bool DataLoader::StringToValue(const std::string& str, T& value) {
 template bool DataLoader::StringToValue<float>(const std::string& str, float& value);
 template bool DataLoader::StringToValue<double>(const std::string& str, double& value);
 
-} // namespace p3d
+}  // namespace p3d

@@ -15,7 +15,7 @@ namespace p3d {
  * This is the main interface class of the library, responsible for data loading, GPU resource management, and interpolation calculations
  */
 class MagneticFieldInterpolator {
-public:
+  public:
     /**
      * @brief Constructor
      * @param use_gpu Whether to use GPU acceleration (default true)
@@ -26,7 +26,7 @@ public:
     ~MagneticFieldInterpolator();
 
     // Disable copy, allow move
-    MagneticFieldInterpolator(const MagneticFieldInterpolator&) = delete;
+    MagneticFieldInterpolator(const MagneticFieldInterpolator&)            = delete;
     MagneticFieldInterpolator& operator=(const MagneticFieldInterpolator&) = delete;
     MagneticFieldInterpolator(MagneticFieldInterpolator&&) noexcept;
     MagneticFieldInterpolator& operator=(MagneticFieldInterpolator&&) noexcept;
@@ -45,11 +45,7 @@ public:
      * @param count Number of data points
      * @return Error code
      */
-    ErrorCode LoadFromMemory(
-        const Point3D* points,
-        const MagneticFieldData* field_data,
-        size_t count
-    );
+    ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
 
     /**
      * @brief Single point interpolation query
@@ -66,11 +62,7 @@ public:
      * @param count Number of query points
      * @return Error code
      */
-    ErrorCode QueryBatch(
-        const Point3D* query_points,
-        InterpolationResult* results,
-        size_t count
-    );
+    ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
 
     /**
      * @brief Get grid parameters
@@ -90,7 +82,7 @@ public:
      */
     size_t GetDataPointCount() const;
 
-private:
+  private:
     /**
      * @brief Initialize GPU resources
      * @return Whether successful
@@ -108,11 +100,11 @@ private:
      */
     bool UploadDataToGPU();
 
-private:
+  private:
     class Impl;  // Pimpl pattern implementation
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace p3d
+}  // namespace p3d
 
-#endif // POINTER3D_INTERP_API_H
+#endif  // POINTER3D_INTERP_API_H

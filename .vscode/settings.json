@@ -1,3 +1,29 @@
 {
-    "cmake.sourceDirectory": "/home/joe/repo/point3d_interp"
+    "editor.fontSize": 18,
+    "terminal.integrated.fontSize": 16,
+    "cSpell.enabled": true,
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "editor.inlayHints.enabled": "off",
+    "clangd.arguments": [
+        "--clang-tidy",
+        "--compile-commands-dir=${workspaceFolder}/build",
+        "--header-insertion=never",
+        "-j=128",
+    ],
+    "cSpell.customDictionaries": {
+        "project-words": {
+            "name": "project-words",
+            "path": "${workspaceFolder}/.vscode/project-words.txt",
+            "description": "Words used in project joe-engine.",
+            "addWords": true,
+        },
+        "custom": true, // Enable the 'custom' dictionary
+    },
+    "cSpell.ignorePaths": [
+        "vscode-extension",
+        ".git/objects",
+        ".vscode",
+        ".vscode-insiders",
+    ],
+    "editor.formatOnSave": true
 }

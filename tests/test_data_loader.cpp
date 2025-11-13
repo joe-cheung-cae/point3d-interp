@@ -7,7 +7,7 @@ namespace p3d {
 namespace test {
 
 class DataLoaderTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         // 创建临时测试文件
         CreateTestCSVFile();
@@ -43,10 +43,10 @@ protected:
 
 // 测试基本加载功能
 TEST_F(DataLoaderTest, LoadValidCSV) {
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params);
 
@@ -70,10 +70,10 @@ TEST_F(DataLoaderTest, LoadValidCSV) {
 
 // 测试数据内容正确性
 TEST_F(DataLoaderTest, DataContentValidation) {
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params);
 
@@ -100,10 +100,10 @@ TEST_F(DataLoaderTest, DataContentValidation) {
 
 // 测试文件不存在的情况
 TEST_F(DataLoaderTest, FileNotFound) {
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV("nonexistent_file.csv", coordinates, field_data, grid_params);
 
@@ -113,16 +113,16 @@ TEST_F(DataLoaderTest, FileNotFound) {
 // 测试无效文件格式
 TEST_F(DataLoaderTest, InvalidFileFormat) {
     // 创建无效的CSV文件
-    std::string invalid_file = "invalid.csv";
+    std::string   invalid_file = "invalid.csv";
     std::ofstream file(invalid_file);
     file << "invalid,data,format\n";
     file << "1.0,2.0\n";  // 列数不匹配
     file.close();
 
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV(invalid_file, coordinates, field_data, grid_params);
 
@@ -133,15 +133,15 @@ TEST_F(DataLoaderTest, InvalidFileFormat) {
 
 // 测试空文件
 TEST_F(DataLoaderTest, EmptyFile) {
-    std::string empty_file = "empty.csv";
+    std::string   empty_file = "empty.csv";
     std::ofstream file(empty_file);
     file << "x,y,z,B,Bx,By,Bz\n";  // 只有标题行
     file.close();
 
-    DataLoader loader;
-    std::vector<Point3D> coordinates;
+    DataLoader                     loader;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV(empty_file, coordinates, field_data, grid_params);
 
@@ -157,9 +157,9 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     // 设置自定义列索引 (假设数据顺序不同)
     loader.SetColumnIndices({1, 2, 0}, {4, 5, 6, 3});  // x,y,z,B,Bx,By,Bz -> y,z,x,Bx,By,Bz,B
 
-    std::vector<Point3D> coordinates;
+    std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
-    GridParams grid_params;
+    GridParams                     grid_params;
 
     ErrorCode result = loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params);
 
@@ -179,5 +179,5 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     EXPECT_FLOAT_EQ(field_data[0].gradient_z, 0.3f);
 }
 
-} // namespace test
-} // namespace p3d
+}  // namespace test
+}  // namespace p3d

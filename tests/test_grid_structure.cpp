@@ -24,8 +24,8 @@ TEST(GridStructureTest, GridParamsConstructor) {
 // 测试网格参数边界更新
 TEST(GridStructureTest, GridParamsUpdateBounds) {
     GridParams params;
-    params.origin = Point3D(1.0f, 2.0f, 3.0f);
-    params.spacing = Point3D(0.5f, 1.0f, 2.0f);
+    params.origin     = Point3D(1.0f, 2.0f, 3.0f);
+    params.spacing    = Point3D(0.5f, 1.0f, 2.0f);
     params.dimensions = {10, 5, 3};
 
     params.update_bounds();
@@ -62,8 +62,8 @@ TEST(GridStructureTest, PointInsideBounds) {
 // 测试RegularGrid3D构造函数（参数版本）
 TEST(GridStructureTest, RegularGridConstructorWithParams) {
     GridParams params;
-    params.origin = Point3D(0.0f, 0.0f, 0.0f);
-    params.spacing = Point3D(1.0f, 1.0f, 1.0f);
+    params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+    params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
     params.dimensions = {2, 2, 2};
     params.update_bounds();
 
@@ -93,12 +93,8 @@ TEST(GridStructureTest, RegularGridConstructorWithParams) {
 
 // 测试RegularGrid3D构造函数（数据版本）
 TEST(GridStructureTest, RegularGridConstructorWithData) {
-    std::vector<Point3D> coordinates = {
-        {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f},
-        {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}
-    };
+    std::vector<Point3D> coordinates = {{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
+                                        {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}};
 
     std::vector<MagneticFieldData> field_data(8, MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
 
@@ -123,8 +119,8 @@ TEST(GridStructureTest, RegularGridConstructorWithData) {
 // 测试坐标转换
 TEST(GridStructureTest, CoordinateConversion) {
     GridParams params;
-    params.origin = Point3D(1.0f, 2.0f, 3.0f);
-    params.spacing = Point3D(0.5f, 1.0f, 2.0f);
+    params.origin     = Point3D(1.0f, 2.0f, 3.0f);
+    params.spacing    = Point3D(0.5f, 1.0f, 2.0f);
     params.dimensions = {10, 5, 3};
     params.update_bounds();
 
@@ -176,7 +172,7 @@ TEST(GridStructureTest, CellVertexIndices) {
     RegularGrid3D grid(params);
 
     // 测试网格坐标 (1.3, 1.7, 0.5) 应该在单元格 (1,1,0) 内
-    Point3D grid_coords(1.3f, 1.7f, 0.5f);
+    Point3D  grid_coords(1.3f, 1.7f, 0.5f);
     uint32_t indices[8];
 
     bool success = grid.getCellVertexIndices(grid_coords, indices);
@@ -207,40 +203,34 @@ TEST(GridStructureTest, DataIndexCalculation) {
     // 测试边界情况
     EXPECT_EQ(grid.getDataIndex(0, 0, 0), 0u);
     EXPECT_EQ(grid.getDataIndex(3, 0, 0), 3u);
-    EXPECT_EQ(grid.getDataIndex(0, 2, 0), 8u);  // 2 * 4
-    EXPECT_EQ(grid.getDataIndex(0, 0, 1), 12u); // 1 * 4 * 3
-    EXPECT_EQ(grid.getDataIndex(3, 2, 1), 23u); // 3 + 2*4 + 1*12
+    EXPECT_EQ(grid.getDataIndex(0, 2, 0), 8u);   // 2 * 4
+    EXPECT_EQ(grid.getDataIndex(0, 0, 1), 12u);  // 1 * 4 * 3
+    EXPECT_EQ(grid.getDataIndex(3, 2, 1), 23u);  // 3 + 2*4 + 1*12
 }
 
 // 测试无效网格数据
 TEST(GridStructureTest, InvalidGridData) {
     // 空坐标数据
-    std::vector<Point3D> empty_coords;
+    std::vector<Point3D>           empty_coords;
     std::vector<MagneticFieldData> empty_data;
 
-    EXPECT_THROW({
-        RegularGrid3D grid(empty_coords, empty_data);
-    }, std::invalid_argument);
+    EXPECT_THROW({ RegularGrid3D grid(empty_coords, empty_data); }, std::invalid_argument);
 
     // 坐标和数据大小不匹配
-    std::vector<Point3D> coords = {{0, 0, 0}, {1, 0, 0}};
-    std::vector<MagneticFieldData> data = {MagneticFieldData()};  // 只有1个数据点
+    std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}};
+    std::vector<MagneticFieldData> data   = {MagneticFieldData()};  // 只有1个数据点
 
-    EXPECT_THROW({
-        RegularGrid3D grid(coords, data);
-    }, std::invalid_argument);
+    EXPECT_THROW({ RegularGrid3D grid(coords, data); }, std::invalid_argument);
 
     // 不规则网格数据
     std::vector<Point3D> irregular_coords = {
-        {0, 0, 0}, {1, 0, 0}, {2, 0, 0},  // x方向正常
-        {0, 1, 0}, {1, 0.5, 0}, {2, 1, 0}  // y方向不均匀
+        {0, 0, 0}, {1, 0, 0},   {2, 0, 0},  // x方向正常
+        {0, 1, 0}, {1, 0.5, 0}, {2, 1, 0}   // y方向不均匀
     };
     std::vector<MagneticFieldData> irregular_data(6, MagneticFieldData());
 
-    EXPECT_THROW({
-        RegularGrid3D grid(irregular_coords, irregular_data);
-    }, std::invalid_argument);
+    EXPECT_THROW({ RegularGrid3D grid(irregular_coords, irregular_data); }, std::invalid_argument);
 }
 
-} // namespace test
-} // namespace p3d
+}  // namespace test
+}  // namespace p3d

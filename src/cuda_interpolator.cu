@@ -7,28 +7,22 @@ namespace cuda {
 /**
  * @brief Convert world coordinates to grid coordinates
  */
-__device__
-Point3D WorldToGrid(const Point3D& world_point, const GridParams& params) {
-    return Point3D(
-        (world_point.x - params.origin.x) / params.spacing.x,
-        (world_point.y - params.origin.y) / params.spacing.y,
-        (world_point.z - params.origin.z) / params.spacing.z
-    );
+__device__ Point3D WorldToGrid(const Point3D& world_point, const GridParams& params) {
+    return Point3D((world_point.x - params.origin.x) / params.spacing.x, (world_point.y - params.origin.y) / params.spacing.y,
+                   (world_point.z - params.origin.z) / params.spacing.z);
 }
 
 /**
  * @brief Get grid data index
  */
-__device__
-uint32_t GetGridIndex(uint32_t i, uint32_t j, uint32_t k, const GridParams& params) {
+__device__ uint32_t GetGridIndex(uint32_t i, uint32_t j, uint32_t k, const GridParams& params) {
     return i + j * params.dimensions[0] + k * params.dimensions[0] * params.dimensions[1];
 }
 
 /**
  * @brief Get cell vertex indices
  */
-__device__
-bool GetCellVertexIndices(const Point3D& grid_coords, const GridParams& params, uint32_t indices[8]) {
+__device__ bool GetCellVertexIndices(const Point3D& grid_coords, const GridParams& params, uint32_t indices[8]) {
     // Get cell starting indices (floor)
     int i0 = static_cast<int>(grid_coords.x);
     int j0 = static_cast<int>(grid_coords.y);
@@ -39,9 +33,8 @@ bool GetCellVertexIndices(const Point3D& grid_coords, const GridParams& params, 
     int k1 = k0 + 1;
 
     // Check bounds
-    if (i0 < 0 || i1 >= static_cast<int>(params.dimensions[0]) ||
-        j0 < 0 || j1 >= static_cast<int>(params.dimensions[1]) ||
-        k0 < 0 || k1 >= static_cast<int>(params.dimensions[2])) {
+    if (i0 < 0 || i1 >= static_cast<int>(params.dimensions[0]) || j0 < 0 || j1 >= static_cast<int>(params.dimensions[1]) || k0 < 0 ||
+        k1 >= static_cast<int>(params.dimensions[2])) {
         return false;
     }
 
@@ -61,11 +54,7 @@ bool GetCellVertexIndices(const Point3D& grid_coords, const GridParams& params, 
 /**
  * @brief Perform trilinear interpolation
  */
-__device__
-MagneticFieldData TrilinearInterpolate(
-    const MagneticFieldData vertex_data[8],
-    Real tx, Real ty, Real tz
-) {
+__device__ MagneticFieldData TrilinearInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty, Real tz) {
     MagneticFieldData result;
 
     // Trilinear interpolation algorithm
@@ -105,14 +94,8 @@ MagneticFieldData TrilinearInterpolate(
  * @param results Output results array (device memory)
  * @param count Number of query points
  */
-__global__
-void TrilinearInterpolationKernel(
-    const Point3D* __restrict__ query_points,
-    const MagneticFieldData* __restrict__ grid_data,
-    const GridParams grid_params,
-    InterpolationResult* __restrict__ results,
-    const size_t count
-) {
+__global__ void TrilinearInterpolationKernel(const Point3D* __restrict__ query_points, const MagneticFieldData* __restrict__ grid_data,
+                                             const GridParams grid_params, InterpolationResult* __restrict__ results, const size_t count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid >= count) {
@@ -126,16 +109,16 @@ void TrilinearInterpolationKernel(
     InterpolationResult result = {};
 
     // Pre-compute grid parameters to registers (optimize access)
-    const Point3D origin = grid_params.origin;
-    const Point3D spacing = grid_params.spacing;
-    const uint32_t nx = grid_params.dimensions[0];
-    const uint32_t ny = grid_params.dimensions[1];
-    const uint32_t nz = grid_params.dimensions[2];
+    const Point3D  origin  = grid_params.origin;
+    const Point3D  spacing = grid_params.spacing;
+    const uint32_t nx      = grid_params.dimensions[0];
+    const uint32_t ny      = grid_params.dimensions[1];
+    const uint32_t nz      = grid_params.dimensions[2];
 
     // Fast bounds checking
     const bool inside_bounds = (query_point.x >= origin.x && query_point.x <= origin.x + (nx - 1) * spacing.x) &&
-                              (query_point.y >= origin.y && query_point.y <= origin.y + (ny - 1) * spacing.y) &&
-                              (query_point.z >= origin.z && query_point.z <= origin.z + (nz - 1) * spacing.z);
+                               (query_point.y >= origin.y && query_point.y <= origin.y + (ny - 1) * spacing.y) &&
+                               (query_point.z >= origin.z && query_point.z <= origin.z + (nz - 1) * spacing.z);
 
     if (!inside_bounds) {
         results[tid] = result;
@@ -153,9 +136,8 @@ void TrilinearInterpolationKernel(
     const int k0 = __float2int_rd(grid_z);
 
     // Combine bounds checking to reduce branching
-    const bool valid_cell = (i0 >= 0) && (i0 < static_cast<int>(nx) - 1) &&
-                           (j0 >= 0) && (j0 < static_cast<int>(ny) - 1) &&
-                           (k0 >= 0) && (k0 < static_cast<int>(nz) - 1);
+    const bool valid_cell = (i0 >= 0) && (i0 < static_cast<int>(nx) - 1) && (j0 >= 0) && (j0 < static_cast<int>(ny) - 1) && (k0 >= 0) &&
+                            (k0 < static_cast<int>(nz) - 1);
 
     if (!valid_cell) {
         results[tid] = result;
@@ -169,23 +151,23 @@ void TrilinearInterpolationKernel(
 
     // Directly calculate indices to avoid function calls
     const uint32_t base_idx = i0 + j0 * nx + k0 * nx * ny;
-    const uint32_t idx_100 = base_idx + 1;                    // (i1, j0, k0)
-    const uint32_t idx_010 = base_idx + nx;                   // (i0, j1, k0)
-    const uint32_t idx_110 = base_idx + nx + 1;               // (i1, j1, k0)
-    const uint32_t idx_001 = base_idx + nx * ny;              // (i0, j0, k1)
-    const uint32_t idx_101 = base_idx + nx * ny + 1;          // (i1, j0, k1)
-    const uint32_t idx_011 = base_idx + nx * ny + nx;         // (i0, j1, k1)
-    const uint32_t idx_111 = base_idx + nx * ny + nx + 1;     // (i1, j1, k1)
+    const uint32_t idx_100  = base_idx + 1;                 // (i1, j0, k0)
+    const uint32_t idx_010  = base_idx + nx;                // (i0, j1, k0)
+    const uint32_t idx_110  = base_idx + nx + 1;            // (i1, j1, k0)
+    const uint32_t idx_001  = base_idx + nx * ny;           // (i0, j0, k1)
+    const uint32_t idx_101  = base_idx + nx * ny + 1;       // (i1, j0, k1)
+    const uint32_t idx_011  = base_idx + nx * ny + nx;      // (i0, j1, k1)
+    const uint32_t idx_111  = base_idx + nx * ny + nx + 1;  // (i1, j1, k1)
 
     // Directly access data to avoid array copying
-    const MagneticFieldData v000 = grid_data[base_idx];       // (i0, j0, k0)
-    const MagneticFieldData v100 = grid_data[idx_100];        // (i1, j0, k0)
-    const MagneticFieldData v010 = grid_data[idx_010];        // (i0, j1, k0)
-    const MagneticFieldData v110 = grid_data[idx_110];        // (i1, j1, k0)
-    const MagneticFieldData v001 = grid_data[idx_001];        // (i0, j0, k1)
-    const MagneticFieldData v101 = grid_data[idx_101];        // (i1, j0, k1)
-    const MagneticFieldData v011 = grid_data[idx_011];        // (i0, j1, k1)
-    const MagneticFieldData v111 = grid_data[idx_111];        // (i1, j1, k1)
+    const MagneticFieldData v000 = grid_data[base_idx];  // (i0, j0, k0)
+    const MagneticFieldData v100 = grid_data[idx_100];   // (i1, j0, k0)
+    const MagneticFieldData v010 = grid_data[idx_010];   // (i0, j1, k0)
+    const MagneticFieldData v110 = grid_data[idx_110];   // (i1, j1, k0)
+    const MagneticFieldData v001 = grid_data[idx_001];   // (i0, j0, k1)
+    const MagneticFieldData v101 = grid_data[idx_101];   // (i1, j0, k1)
+    const MagneticFieldData v011 = grid_data[idx_011];   // (i0, j1, k1)
+    const MagneticFieldData v111 = grid_data[idx_111];   // (i1, j1, k1)
 
     // Pre-compute weights
     const Real tx_inv = 1.0f - tx;
@@ -204,12 +186,12 @@ void TrilinearInterpolationKernel(
     const MagneticFieldData c1 = c01 * ty_inv + c11 * ty;
 
     // Z-direction interpolation (final result)
-    result.data = c0 * tz_inv + c1 * tz;
+    result.data  = c0 * tz_inv + c1 * tz;
     result.valid = true;
 
     // Write back result
     results[tid] = result;
 }
 
-} // namespace cuda
-} // namespace p3d
+}  // namespace cuda
+}  // namespace p3d
