@@ -23,10 +23,14 @@ struct KernelConfig {
 
 #ifdef __CUDACC__
 // Forward declaration of CUDA kernel for external use
-__global__ void TricubicHermiteInterpolationKernel(const p3d::Point3D* __restrict__ query_points,
-                                                   const p3d::MagneticFieldData* __restrict__ grid_data,
-                                                   p3d::GridParams grid_params,
-                                                   p3d::InterpolationResult* __restrict__ results, size_t count);
+namespace p3d {
+namespace cuda {
+__global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ query_points,
+                                                   const MagneticFieldData* __restrict__ grid_data,
+                                                   GridParams grid_params, InterpolationResult* __restrict__ results,
+                                                   size_t     count);
+}
+}  // namespace p3d
 #endif
 
 namespace p3d {
