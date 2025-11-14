@@ -66,60 +66,113 @@ __device__ Real HermiteInterpolate(Real f0, Real f1, Real df0, Real df1, Real t)
 }
 
 /**
+ * @brief 1D Hermite interpolation derivative
+ */
+__device__ Real HermiteDerivative(Real f0, Real f1, Real df0, Real df1, Real t) {
+    Real t2      = t * t;
+    Real dh00_dt = 6 * t2 - 6 * t;
+    Real dh10_dt = 3 * t2 - 4 * t + 1;
+    Real dh01_dt = -6 * t2 + 6 * t;
+    Real dh11_dt = 3 * t2 - 2 * t;
+    return f0 * dh00_dt + df0 * dh10_dt + f1 * dh01_dt + df1 * dh11_dt;
+}
+
+/**
  * @brief Perform tricubic Hermite interpolation
  */
 __device__ MagneticFieldData TricubicHermiteInterpolate(const MagneticFieldData vertex_data[8], Real tx, Real ty,
-                                                        Real tz) {
+                                                        Real tz, const GridParams& params) {
     MagneticFieldData result;
 
     // Vertex indices correspond to:
     // 0: (i,j,k),     1: (i+1,j,k),   2: (i,j+1,k),   3: (i+1,j+1,k)
     // 4: (i,j,k+1),   5: (i+1,j,k+1), 6: (i,j+1,k+1), 7: (i+1,j+1,k+1)
 
-    // X-direction interpolation
-    MagneticFieldData c00, c01, c10, c11;
-    c00.Bx = HermiteInterpolate(vertex_data[0].Bx, vertex_data[1].Bx, vertex_data[0].dBx_dx, vertex_data[1].dBx_dx, tx);
-    c00.By = HermiteInterpolate(vertex_data[0].By, vertex_data[1].By, vertex_data[0].dBy_dx, vertex_data[1].dBy_dx, tx);
-    c00.Bz = HermiteInterpolate(vertex_data[0].Bz, vertex_data[1].Bz, vertex_data[0].dBz_dx, vertex_data[1].dBz_dx, tx);
+    // Interpolate along x for each of the 4 yz positions
+    MagneticFieldData interp_x[4];
+    for (int i = 0; i < 4; ++i) {
+        int idx0 = (i % 2) * 2 + (i / 2) * 4;  // 0,2,4,6 for i=0,1,2,3
+        int idx1 = idx0 + 1;                   // 1,3,5,7
 
-    c01.Bx = HermiteInterpolate(vertex_data[4].Bx, vertex_data[5].Bx, vertex_data[4].dBx_dx, vertex_data[5].dBx_dx, tx);
-    c01.By = HermiteInterpolate(vertex_data[4].By, vertex_data[5].By, vertex_data[4].dBy_dx, vertex_data[5].dBy_dx, tx);
-    c01.Bz = HermiteInterpolate(vertex_data[4].Bz, vertex_data[5].Bz, vertex_data[4].dBz_dx, vertex_data[5].dBz_dx, tx);
+        // Interpolate field values using Hermite
+        interp_x[i].Bx = HermiteInterpolate(vertex_data[idx0].Bx, vertex_data[idx1].Bx, vertex_data[idx0].dBx_dx,
+                                            vertex_data[idx1].dBx_dx, tx);
+        interp_x[i].By = HermiteInterpolate(vertex_data[idx0].By, vertex_data[idx1].By, vertex_data[idx0].dBy_dx,
+                                            vertex_data[idx1].dBy_dx, tx);
+        interp_x[i].Bz = HermiteInterpolate(vertex_data[idx0].Bz, vertex_data[idx1].Bz, vertex_data[idx0].dBz_dx,
+                                            vertex_data[idx1].dBz_dx, tx);
 
-    c10.Bx = HermiteInterpolate(vertex_data[2].Bx, vertex_data[3].Bx, vertex_data[2].dBx_dx, vertex_data[3].dBx_dx, tx);
-    c10.By = HermiteInterpolate(vertex_data[2].By, vertex_data[3].By, vertex_data[2].dBy_dx, vertex_data[3].dBy_dx, tx);
-    c10.Bz = HermiteInterpolate(vertex_data[2].Bz, vertex_data[3].Bz, vertex_data[2].dBz_dx, vertex_data[3].dBz_dx, tx);
+        // Compute derivatives: dBx_dx is derivative of Hermite in x direction
+        interp_x[i].dBx_dx = HermiteDerivative(vertex_data[idx0].Bx, vertex_data[idx1].Bx, vertex_data[idx0].dBx_dx,
+                                               vertex_data[idx1].dBx_dx, tx);
+        // Other derivatives interpolated linearly
+        interp_x[i].dBx_dy = (1 - tx) * vertex_data[idx0].dBx_dy + tx * vertex_data[idx1].dBx_dy;
+        interp_x[i].dBx_dz = (1 - tx) * vertex_data[idx0].dBx_dz + tx * vertex_data[idx1].dBx_dz;
+        interp_x[i].dBy_dx = HermiteDerivative(vertex_data[idx0].By, vertex_data[idx1].By, vertex_data[idx0].dBy_dx,
+                                               vertex_data[idx1].dBy_dx, tx);
+        interp_x[i].dBy_dy = (1 - tx) * vertex_data[idx0].dBy_dy + tx * vertex_data[idx1].dBy_dy;
+        interp_x[i].dBy_dz = (1 - tx) * vertex_data[idx0].dBy_dz + tx * vertex_data[idx1].dBy_dz;
+        interp_x[i].dBz_dx = HermiteDerivative(vertex_data[idx0].Bz, vertex_data[idx1].Bz, vertex_data[idx0].dBz_dx,
+                                               vertex_data[idx1].dBz_dx, tx);
+        interp_x[i].dBz_dy = (1 - tx) * vertex_data[idx0].dBz_dy + tx * vertex_data[idx1].dBz_dy;
+        interp_x[i].dBz_dz = (1 - tx) * vertex_data[idx0].dBz_dz + tx * vertex_data[idx1].dBz_dz;
+    }
 
-    c11.Bx = HermiteInterpolate(vertex_data[6].Bx, vertex_data[7].Bx, vertex_data[6].dBx_dx, vertex_data[7].dBx_dx, tx);
-    c11.By = HermiteInterpolate(vertex_data[6].By, vertex_data[7].By, vertex_data[6].dBy_dx, vertex_data[7].dBy_dx, tx);
-    c11.Bz = HermiteInterpolate(vertex_data[6].Bz, vertex_data[7].Bz, vertex_data[6].dBz_dx, vertex_data[7].dBz_dx, tx);
+    // Interpolate along y for the 2 z layers
+    MagneticFieldData interp_y[2];
+    for (int i = 0; i < 2; ++i) {
+        int idx0 = i * 2;     // 0,2 for z=0,1
+        int idx1 = idx0 + 1;  // 1,3
 
-    // Y-direction interpolation
-    MagneticFieldData c0, c1;
-    c0.Bx = HermiteInterpolate(c00.Bx, c10.Bx, c00.dBx_dy, c10.dBx_dy,
-                               ty);  // Assuming dBx_dy is set, but in data it's 0
-    c0.By = HermiteInterpolate(c00.By, c10.By, c00.dBy_dy, c10.dBy_dy, ty);
-    c0.Bz = HermiteInterpolate(c00.Bz, c10.Bz, c00.dBz_dy, c10.dBz_dy, ty);
+        // Interpolate field values using Hermite
+        interp_y[i].Bx =
+            HermiteInterpolate(interp_x[idx0].Bx, interp_x[idx1].Bx, interp_x[idx0].dBx_dy, interp_x[idx1].dBx_dy, ty);
+        interp_y[i].By =
+            HermiteInterpolate(interp_x[idx0].By, interp_x[idx1].By, interp_x[idx0].dBy_dy, interp_x[idx1].dBy_dy, ty);
+        interp_y[i].Bz =
+            HermiteInterpolate(interp_x[idx0].Bz, interp_x[idx1].Bz, interp_x[idx0].dBz_dy, interp_x[idx1].dBz_dy, ty);
 
-    c1.Bx = HermiteInterpolate(c01.Bx, c11.Bx, c01.dBx_dy, c11.dBx_dy, ty);
-    c1.By = HermiteInterpolate(c01.By, c11.By, c01.dBy_dy, c11.dBy_dy, ty);
-    c1.Bz = HermiteInterpolate(c01.Bz, c11.Bz, c01.dBz_dy, c11.dBz_dy, ty);
+        // Compute derivatives
+        interp_y[i].dBx_dx = (1 - ty) * interp_x[idx0].dBx_dx + ty * interp_x[idx1].dBx_dx;
+        interp_y[i].dBx_dy =
+            HermiteDerivative(interp_x[idx0].Bx, interp_x[idx1].Bx, interp_x[idx0].dBx_dy, interp_x[idx1].dBx_dy, ty);
+        interp_y[i].dBx_dz = (1 - ty) * interp_x[idx0].dBx_dz + ty * interp_x[idx1].dBx_dz;
+        interp_y[i].dBy_dx = (1 - ty) * interp_x[idx0].dBy_dx + ty * interp_x[idx1].dBy_dx;
+        interp_y[i].dBy_dy =
+            HermiteDerivative(interp_x[idx0].By, interp_x[idx1].By, interp_x[idx0].dBy_dy, interp_x[idx1].dBy_dy, ty);
+        interp_y[i].dBy_dz = (1 - ty) * interp_x[idx0].dBy_dz + ty * interp_x[idx1].dBy_dz;
+        interp_y[i].dBz_dx = (1 - ty) * interp_x[idx0].dBz_dx + ty * interp_x[idx1].dBz_dx;
+        interp_y[i].dBz_dy =
+            HermiteDerivative(interp_x[idx0].Bz, interp_x[idx1].Bz, interp_x[idx0].dBz_dy, interp_x[idx1].dBz_dy, ty);
+        interp_y[i].dBz_dz = (1 - ty) * interp_x[idx0].dBz_dz + ty * interp_x[idx1].dBz_dz;
+    }
 
-    // Z-direction interpolation
-    result.Bx = HermiteInterpolate(c0.Bx, c1.Bx, c0.dBx_dz, c1.dBx_dz, tz);
-    result.By = HermiteInterpolate(c0.By, c1.By, c0.dBy_dz, c1.dBy_dz, tz);
-    result.Bz = HermiteInterpolate(c0.Bz, c1.Bz, c0.dBz_dz, c1.dBz_dz, tz);
+    // Interpolate along z
+    result.Bx = HermiteInterpolate(interp_y[0].Bx, interp_y[1].Bx, interp_y[0].dBx_dz, interp_y[1].dBx_dz, tz);
+    result.By = HermiteInterpolate(interp_y[0].By, interp_y[1].By, interp_y[0].dBy_dz, interp_y[1].dBy_dz, tz);
+    result.Bz = HermiteInterpolate(interp_y[0].Bz, interp_y[1].Bz, interp_y[0].dBz_dz, interp_y[1].dBz_dz, tz);
 
-    // Derivatives set to 0
-    result.dBx_dx = 0;
-    result.dBx_dy = 0;
-    result.dBx_dz = 0;
-    result.dBy_dx = 0;
-    result.dBy_dy = 0;
-    result.dBy_dz = 0;
-    result.dBz_dx = 0;
-    result.dBz_dy = 0;
-    result.dBz_dz = 0;
+    // Compute final derivatives
+    result.dBx_dx = (1 - tz) * interp_y[0].dBx_dx + tz * interp_y[1].dBx_dx;
+    result.dBx_dy = (1 - tz) * interp_y[0].dBx_dy + tz * interp_y[1].dBx_dy;
+    result.dBx_dz = HermiteDerivative(interp_y[0].Bx, interp_y[1].Bx, interp_y[0].dBx_dz, interp_y[1].dBx_dz, tz);
+    result.dBy_dx = (1 - tz) * interp_y[0].dBy_dx + tz * interp_y[1].dBy_dx;
+    result.dBy_dy = (1 - tz) * interp_y[0].dBy_dy + tz * interp_y[1].dBy_dy;
+    result.dBy_dz = HermiteDerivative(interp_y[0].By, interp_y[1].By, interp_y[0].dBy_dz, interp_y[1].dBy_dz, tz);
+    result.dBz_dx = (1 - tz) * interp_y[0].dBz_dx + tz * interp_y[1].dBz_dx;
+    result.dBz_dy = (1 - tz) * interp_y[0].dBz_dy + tz * interp_y[1].dBz_dy;
+    result.dBz_dz = HermiteDerivative(interp_y[0].Bz, interp_y[1].Bz, interp_y[0].dBz_dz, interp_y[1].dBz_dz, tz);
+
+    // Scale derivatives to world coordinates
+    result.dBx_dx /= params.spacing.x;
+    result.dBx_dy /= params.spacing.y;
+    result.dBx_dz /= params.spacing.z;
+    result.dBy_dx /= params.spacing.x;
+    result.dBy_dy /= params.spacing.y;
+    result.dBy_dz /= params.spacing.z;
+    result.dBz_dx /= params.spacing.x;
+    result.dBz_dy /= params.spacing.y;
+    result.dBz_dz /= params.spacing.z;
 
     return result;
 }
@@ -216,7 +269,7 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
     };
 
     // Perform tricubic Hermite interpolation
-    result.data  = TricubicHermiteInterpolate(vertex_data, tx, ty, tz);
+    result.data  = TricubicHermiteInterpolate(vertex_data, tx, ty, tz, grid_params);
     result.valid = true;
 
     // Write back result
