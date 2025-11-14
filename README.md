@@ -82,6 +82,48 @@ int main() {
 }
 ```
 
+### Direct CUDA Kernel Access (Advanced)
+
+For maximum performance and integration with existing CUDA applications, you can access the interpolation kernel directly:
+
+```cpp
+#include "point3d_interp/api.h"
+#include <cuda_runtime.h>
+
+int main() {
+    using namespace p3d;
+
+    MagneticFieldInterpolator interp(true);  // GPU enabled
+    interp.LoadFromCSV("data.csv");
+
+    // Get GPU device pointers
+    const Point3D* d_grid_points = interp.GetDeviceGridPoints();
+    const MagneticFieldData* d_field_data = interp.GetDeviceFieldData();
+
+    // Allocate your own GPU memory for queries and results
+    Point3D* d_query_points;
+    InterpolationResult* d_results;
+    cudaMalloc(&d_query_points, num_queries * sizeof(Point3D));
+    cudaMalloc(&d_results, num_queries * sizeof(InterpolationResult));
+
+    // Copy query points to GPU
+    cudaMemcpy(d_query_points, host_queries, num_queries * sizeof(Point3D), cudaMemcpyHostToDevice);
+
+    // Get optimal kernel configuration
+    dim3 block_dim, grid_dim;
+    interp.GetOptimalKernelConfig(num_queries, block_dim, grid_dim);
+
+    // Launch kernel directly
+    TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
+        d_query_points, d_field_data, interp.GetGridParams(), d_results, num_queries);
+
+    // Copy results back
+    cudaMemcpy(host_results, d_results, num_queries * sizeof(InterpolationResult), cudaMemcpyDeviceToHost);
+
+    return 0;
+}
+```
+
 ## Data Format
 
 ### CSV File Format

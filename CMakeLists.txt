@@ -38,12 +38,12 @@ set(SOURCES
     src/data_loader.cpp
     src/grid_structure.cpp
     src/cpu_interpolator.cpp
-    src/api.cpp
 )
 
 set(CUDA_SOURCES
     src/cuda_interpolator.cu
     src/memory_manager.cu
+    src/api.cu
 )
 
 # Static library

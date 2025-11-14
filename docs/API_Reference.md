@@ -101,6 +101,60 @@ Returns the number of data points.
 
 **Returns:** Number of data points
 
+##### Direct CUDA Kernel Access Methods
+
+```cpp
+const Point3D* GetDeviceGridPoints() const;
+```
+
+Returns GPU device pointer to grid coordinates for direct CUDA kernel access.
+
+**Returns:** Device pointer to grid points, nullptr if not available
+
+```cpp
+const MagneticFieldData* GetDeviceFieldData() const;
+```
+
+Returns GPU device pointer to field data for direct CUDA kernel access.
+
+**Returns:** Device pointer to field data, nullptr if not available
+
+```cpp
+const GridParams* GetDeviceGridParams() const;
+```
+
+Returns GPU device pointer to grid parameters for direct CUDA kernel access.
+
+**Returns:** Device pointer to grid parameters, nullptr if not available
+
+```cpp
+ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points,
+                                   InterpolationResult* d_results,
+                                   size_t count,
+                                   cudaStream_t stream = 0);
+```
+
+Launches the interpolation kernel directly with custom device pointers.
+
+**Parameters:**
+- `d_query_points`: Device pointer to query points array
+- `d_results`: Device pointer to results array
+- `count`: Number of query points
+- `stream`: CUDA stream for asynchronous execution
+
+**Returns:** Error code
+
+```cpp
+void GetOptimalKernelConfig(size_t query_count, dim3& block_dim, dim3& grid_dim) const;
+```
+
+Gets optimal kernel launch configuration for given query count.
+
+**Parameters:**
+- `query_count`: Number of query points
+- `block_dim`: Output block dimensions
+- `grid_dim`: Output grid dimensions
+
 ## Data Structures
 
 ### Point3D
@@ -258,6 +312,65 @@ int main() {
     return 0;
 }
 ```
+
+### Direct CUDA Kernel Access
+
+For advanced users who need maximum performance or integration with existing CUDA applications, the library provides direct access to the CUDA interpolation kernel:
+
+```cpp
+#include "point3d_interp/api.h"
+#include <cuda_runtime.h>
+
+int main() {
+    p3d::MagneticFieldInterpolator interp(true);  // GPU enabled
+    interp.LoadFromCSV("data.csv");
+
+    // Get GPU device pointers
+    const p3d::Point3D* d_grid_points = interp.GetDeviceGridPoints();
+    const p3d::MagneticFieldData* d_field_data = interp.GetDeviceFieldData();
+
+    if (!d_grid_points || !d_field_data) {
+        // GPU not available or data not loaded
+        return 1;
+    }
+
+    // Allocate GPU memory for your queries and results
+    p3d::Point3D* d_query_points;
+    p3d::InterpolationResult* d_results;
+    cudaMalloc(&d_query_points, num_queries * sizeof(p3d::Point3D));
+    cudaMalloc(&d_results, num_queries * sizeof(p3d::InterpolationResult));
+
+    // Copy your query points to GPU
+    cudaMemcpy(d_query_points, host_query_points,
+               num_queries * sizeof(p3d::Point3D), cudaMemcpyHostToDevice);
+
+    // Get optimal kernel launch configuration
+    dim3 block_dim, grid_dim;
+    interp.GetOptimalKernelConfig(num_queries, block_dim, grid_dim);
+
+    // Get grid parameters
+    p3d::GridParams grid_params = interp.GetGridParams();
+
+    // Launch the interpolation kernel directly
+    TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
+        d_query_points, d_field_data, grid_params, d_results, num_queries);
+
+    // Synchronize and check for errors
+    cudaDeviceSynchronize();
+
+    // Copy results back to host
+    cudaMemcpy(host_results, d_results,
+               num_queries * sizeof(p3d::InterpolationResult), cudaMemcpyDeviceToHost);
+
+    // Clean up
+    cudaFree(d_query_points);
+    cudaFree(d_results);
+
+    return 0;
+}
+```
+
+**Note:** Direct CUDA kernel access requires CUDA programming knowledge and manual memory management. The kernel function `TricubicHermiteInterpolationKernel` is declared in the public header for external use.
 
 ## Thread Safety
 

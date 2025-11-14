@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 #ifdef __CUDACC__
     #include <cuda_runtime.h>
@@ -40,6 +41,92 @@ class MagneticFieldInterpolator::Impl {
     const GridParams& GetGridParams() const { return grid_ ? grid_->getParams() : default_params_; }
     bool              IsDataLoaded() const { return grid_ != nullptr; }
     size_t            GetDataPointCount() const { return grid_ ? grid_->getDataCount() : 0; }
+
+    const Point3D* GetDeviceGridPoints() const {
+#ifdef __CUDACC__
+        return gpu_points_ ? gpu_points_->getDevicePtr() : nullptr;
+#else
+        return nullptr;
+#endif
+    }
+
+    const MagneticFieldData* GetDeviceFieldData() const {
+#ifdef __CUDACC__
+        return gpu_field_data_ ? gpu_field_data_->getDevicePtr() : nullptr;
+#else
+        return nullptr;
+#endif
+    }
+
+    const GridParams* GetDeviceGridParams() const {
+        // Note: GridParams is stored on host, need to upload to GPU if needed
+        // For now, return nullptr as we don't maintain a GPU copy of GridParams
+        return nullptr;
+    }
+
+    ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
+                                        void* stream) {
+        if (!IsDataLoaded()) {
+            return ErrorCode::DataNotLoaded;
+        }
+
+        if (!d_query_points || !d_results || count == 0) {
+            return ErrorCode::InvalidParameter;
+        }
+
+#ifdef __CUDACC__
+        if (use_gpu_ && gpu_initialized_) {
+            try {
+                // Get optimal kernel configuration
+                KernelConfig config;
+                GetOptimalKernelConfig(count, config);
+                dim3 block_dim(config.block_x, config.block_y, config.block_z);
+                dim3 grid_dim(config.grid_x, config.grid_y, config.grid_z);
+
+                // Get grid parameters (host copy)
+                GridParams grid_params = grid_->getParams();
+
+                // Launch kernel with specified stream
+                cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, 0, (cudaStream_t)stream>>>(
+                    d_query_points, gpu_field_data_->getDevicePtr(), grid_params, d_results, count);
+
+                // Check for kernel launch errors
+                cudaError_t cuda_err = cudaGetLastError();
+                if (cuda_err != cudaSuccess) {
+                    std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(cuda_err) << std::endl;
+                    return ErrorCode::CudaError;
+                }
+
+                return ErrorCode::Success;
+            } catch (const std::exception& e) {
+                std::cerr << "GPU kernel launch failed: " << e.what() << std::endl;
+                return ErrorCode::CudaError;
+            }
+        } else {
+            return ErrorCode::CudaNotAvailable;
+        }
+#else
+        return ErrorCode::CudaNotAvailable;
+#endif
+    }
+
+    void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
+        // Use same configuration as internal batch query
+        const int BLOCK_SIZE = 512;
+        const int MIN_BLOCKS = 4;
+
+        int num_blocks       = (query_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        num_blocks           = std::max(num_blocks, MIN_BLOCKS);
+        const int MAX_BLOCKS = 1024;
+        num_blocks           = std::min(num_blocks, MAX_BLOCKS);
+
+        config.block_x = BLOCK_SIZE;
+        config.block_y = 1;
+        config.block_z = 1;
+        config.grid_x  = num_blocks;
+        config.grid_y  = 1;
+        config.grid_z  = 1;
+    }
 
   private:
     bool InitializeGPU(int device_id);
@@ -218,11 +305,11 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
             // Calculate required number of blocks, ensure at least minimum blocks
             int num_blocks = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
-            num_blocks     = max(num_blocks, MIN_BLOCKS);
+            num_blocks     = std::max(num_blocks, MIN_BLOCKS);
 
             // Limit maximum blocks to avoid excessive resource usage
             const int MAX_BLOCKS = 1024;
-            num_blocks           = min(num_blocks, MAX_BLOCKS);
+            num_blocks           = std::min(num_blocks, MAX_BLOCKS);
 
             // Configure kernel
             dim3 block_dim(BLOCK_SIZE);
@@ -407,5 +494,44 @@ const GridParams& MagneticFieldInterpolator::GetGridParams() const {
 bool MagneticFieldInterpolator::IsDataLoaded() const { return impl_ && impl_->IsDataLoaded(); }
 
 size_t MagneticFieldInterpolator::GetDataPointCount() const { return impl_ ? impl_->GetDataPointCount() : 0; }
+
+#ifdef __CUDACC__
+const Point3D* MagneticFieldInterpolator::GetDeviceGridPoints() const {
+    return impl_ ? impl_->GetDeviceGridPoints() : nullptr;
+}
+
+const MagneticFieldData* MagneticFieldInterpolator::GetDeviceFieldData() const {
+    return impl_ ? impl_->GetDeviceFieldData() : nullptr;
+}
+
+const GridParams* MagneticFieldInterpolator::GetDeviceGridParams() const {
+    return impl_ ? impl_->GetDeviceGridParams() : nullptr;
+}
+
+ErrorCode MagneticFieldInterpolator::LaunchInterpolationKernel(const Point3D*       d_query_points,
+                                                               InterpolationResult* d_results, size_t count,
+                                                               void* stream) {
+    if (!impl_) {
+        return ErrorCode::DataNotLoaded;
+    }
+    return impl_->LaunchInterpolationKernel(d_query_points, d_results, count, stream);
+}
+
+void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
+    if (impl_) {
+        impl_->GetOptimalKernelConfig(query_count, config);
+    } else {
+        // Default configuration
+        const int BLOCK_SIZE = 512;
+        int       num_blocks = (query_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        config.block_x       = BLOCK_SIZE;
+        config.block_y       = 1;
+        config.block_z       = 1;
+        config.grid_x        = num_blocks;
+        config.grid_y        = 1;
+        config.grid_z        = 1;
+    }
+}
+#endif
 
 }  // namespace p3d
