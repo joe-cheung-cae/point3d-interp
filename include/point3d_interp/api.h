@@ -135,7 +135,6 @@ class MagneticFieldInterpolator {
      */
     size_t GetDataPointCount() const;
 
-#ifdef __CUDACC__
     /**
      * @brief Get GPU device pointer to grid coordinates (for direct CUDA kernel access)
      * @return Device pointer to grid points, nullptr if not available
@@ -171,7 +170,6 @@ class MagneticFieldInterpolator {
      * @param config Output kernel configuration
      */
     void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const;
-#endif
 
   private:
     /**
@@ -191,7 +189,6 @@ class MagneticFieldInterpolator {
      */
     bool UploadDataToGPU();
 
-  private:
     class Impl;  // Pimpl pattern implementation
     std::unique_ptr<Impl> impl_;
 };

@@ -495,7 +495,6 @@ bool MagneticFieldInterpolator::IsDataLoaded() const { return impl_ && impl_->Is
 
 size_t MagneticFieldInterpolator::GetDataPointCount() const { return impl_ ? impl_->GetDataPointCount() : 0; }
 
-#ifdef __CUDACC__
 const Point3D* MagneticFieldInterpolator::GetDeviceGridPoints() const {
     return impl_ ? impl_->GetDeviceGridPoints() : nullptr;
 }
@@ -532,6 +531,5 @@ void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, Kerne
         config.grid_z        = 1;
     }
 }
-#endif
 
 }  // namespace p3d

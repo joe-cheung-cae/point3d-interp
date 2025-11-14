@@ -195,6 +195,35 @@ struct MagneticFieldData {
 4. 实施修复并验证效果
 5. 重复测试确保没有回归
 
+## 编译错误修复 ✅
+
+### 问题描述
+项目构建时出现链接错误，CUDA示例程序 `cuda_kernel_direct` 在链接时报告未定义引用错误：
+- `MagneticFieldInterpolator::GetDeviceGridPoints() const`
+- `MagneticFieldInterpolator::GetDeviceFieldData() const`
+- `MagneticFieldInterpolator::GetOptimalKernelConfig(unsigned long, KernelConfig&) const`
+
+### 根本原因
+这些方法在头文件中仅在 `#ifdef __CUDACC__` 条件下声明，在实现文件中也仅在相同条件下定义。由于 `api.cpp` 使用 C++ 编译器（g++）编译，`__CUDACC__` 未定义，导致这些方法未被实现。但 CUDA 文件使用 nvcc 编译时，`__CUDACC__` 定义，声明可见但实现缺失。
+
+### 解决方案
+1. **移除条件编译限制**：将方法声明从 `#ifdef __CUDACC__` 块中移出，确保在所有编译环境下都可见
+2. **移除实现条件编译**：将方法实现从 `#ifdef __CUDACC__` 块中移出，确保始终编译
+3. **保持内部逻辑**：方法内部仍通过 `#ifdef __CUDACC__` 判断 CUDA 可用性，返回相应结果
+
+### 修改文件
+- `include/point3d_interp/api.h`：移除 CUDA 方法声明的条件编译，清理冗余访问说明符
+- `src/api.cpp`：移除 CUDA 方法实现的条件编译
+
+### 验证结果
+- ✅ 项目成功编译（exit code 0）
+- ✅ 所有 7 个测试用例通过（100% 通过率）
+- ✅ CUDA 功能正常工作，无回归
+- ✅ CPU 和 GPU 可执行文件均能正确链接
+
+### 技术细节
+修复确保了 API 的向后兼容性，当 CUDA 不可用时相关方法返回 `nullptr`，允许代码在纯 CPU 环境下正常运行。
+
 ## 未来工作计划
 1. **高级插值算法**：考虑实现更高阶的插值方法
 2. **并行优化**：进一步优化 GPU 内核性能
