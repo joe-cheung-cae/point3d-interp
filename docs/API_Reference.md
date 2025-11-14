@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Point3D Interpolation Library provides a high-performance C++ API for 3D magnetic field data interpolation with optional GPU acceleration.
+The Point3D Interpolation Library provides a high-performance C++ API for 3D magnetic field data interpolation using tricubic Hermite interpolation with optional GPU acceleration.
 
 ## Core Classes
 
@@ -171,14 +171,14 @@ struct Point3D {
 
 ### MagneticFieldData
 
-Contains magnetic field data at a point.
+Contains magnetic field data and its spatial derivatives at a point. The derivatives are computed using tricubic Hermite interpolation.
 
 ```cpp
 struct MagneticFieldData {
     Real Bx;  // Magnetic field component in x direction
     Real By;  // Magnetic field component in y direction
     Real Bz;  // Magnetic field component in z direction
-    // Derivatives of Bx, By, Bz with respect to x, y, z
+    // Spatial derivatives of Bx, By, Bz with respect to x, y, z (computed via tricubic interpolation)
     Real dBx_dx, dBx_dy, dBx_dz;
     Real dBy_dx, dBy_dy, dBy_dz;
     Real dBz_dx, dBz_dy, dBz_dz;

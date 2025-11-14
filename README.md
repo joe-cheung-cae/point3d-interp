@@ -1,11 +1,11 @@
 # Point3D Interpolation Library
 
-A high-performance 3D magnetic field data interpolation library with GPU-accelerated trilinear interpolation.
+A high-performance 3D magnetic field data interpolation library with GPU-accelerated tricubic Hermite interpolation.
 
 ## Features
 
 - 🚀 **High Performance**: CUDA-based GPU acceleration, supports millions of interpolation queries per second
-- 📊 **Accurate**: Implements standard trilinear interpolation algorithm, ensuring computational precision
+- 📊 **Accurate**: Implements tricubic Hermite interpolation algorithm with gradient information, ensuring high computational precision
 - 🔧 **Easy to Use**: Clean C++ API interface, supports single-point and batch queries
 - 🏗️ **Flexible**: Supports regular grid data, automatic grid parameter detection
 - 💪 **Reliable**: Comprehensive error handling and boundary checking

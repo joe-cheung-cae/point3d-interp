@@ -8,9 +8,9 @@
 namespace p3d {
 
 /**
- * @brief CPU-side trilinear interpolator
+ * @brief CPU-side tricubic Hermite interpolator
  *
- * Provides CPU version of trilinear interpolation implementation for verifying GPU version correctness
+ * Provides CPU version of tricubic Hermite interpolation implementation for verifying GPU version correctness
  */
 class CPUInterpolator {
   public:
@@ -78,7 +78,17 @@ class CPUInterpolator {
      */
     void getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const;
 
-  private:
+    /**
+     * @brief 1D Hermite interpolation derivative
+     * @param f0 Value at 0
+     * @param f1 Value at 1
+     * @param df0 Derivative at 0
+     * @param df1 Derivative at 1
+     * @param t Parameter (0-1)
+     * @return Derivative of interpolated value
+     */
+    Real hermiteDerivative(Real f0, Real f1, Real df0, Real df1, Real t) const;
+
     const RegularGrid3D* grid_ptr_;  // Grid pointer
 };
 
