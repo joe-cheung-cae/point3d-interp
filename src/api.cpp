@@ -4,6 +4,7 @@
 #include "point3d_interp/cpu_interpolator.h"
 #include <memory>
 #include <iostream>
+#include <stdexcept>
 
 #ifdef __CUDACC__
     #include <cuda_runtime.h>
@@ -23,7 +24,7 @@ class GpuMemory;
  */
 class MagneticFieldInterpolator::Impl {
   public:
-    Impl(bool use_gpu, int device_id);
+    Impl(bool use_gpu, int device_id, InterpolationMethod method);
     ~Impl();
 
     // Move constructor
@@ -50,9 +51,10 @@ class MagneticFieldInterpolator::Impl {
     std::unique_ptr<CPUInterpolator> cpu_interpolator_;
 
     // GPU implementation
-    bool use_gpu_;
-    int  device_id_;
-    bool gpu_initialized_;
+    bool                use_gpu_;
+    int                 device_id_;
+    bool                gpu_initialized_;
+    InterpolationMethod method_;
 
 #ifdef __CUDACC__
     // GPU memory manager
@@ -68,8 +70,8 @@ class MagneticFieldInterpolator::Impl {
 
 // Implementation
 
-MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id)
-    : use_gpu_(use_gpu), device_id_(device_id), gpu_initialized_(false) {
+MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, InterpolationMethod method)
+    : use_gpu_(use_gpu), device_id_(device_id), gpu_initialized_(false), method_(method) {
 #ifdef __CUDACC__
     if (use_gpu_) {
         gpu_initialized_ = InitializeGPU(device_id);
@@ -86,7 +88,8 @@ MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
       cpu_interpolator_(std::move(other.cpu_interpolator_)),
       use_gpu_(other.use_gpu_),
       device_id_(other.device_id_),
-      gpu_initialized_(other.gpu_initialized_) {
+      gpu_initialized_(other.gpu_initialized_),
+      method_(other.method_) {
 #ifdef __CUDACC__
     gpu_points_       = std::move(other.gpu_points_);
     gpu_field_data_   = std::move(other.gpu_field_data_);
@@ -104,6 +107,7 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
         use_gpu_          = other.use_gpu_;
         device_id_        = other.device_id_;
         gpu_initialized_  = other.gpu_initialized_;
+        method_           = other.method_;
 #ifdef __CUDACC__
         gpu_points_       = std::move(other.gpu_points_);
         gpu_field_data_   = std::move(other.gpu_field_data_);
@@ -332,8 +336,8 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
 
 // MagneticFieldInterpolator implementation
 
-MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id)
-    : impl_(std::make_unique<Impl>(use_gpu, device_id)) {}
+MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id, InterpolationMethod method)
+    : impl_(std::make_unique<Impl>(use_gpu, device_id, method)) {}
 
 MagneticFieldInterpolator::~MagneticFieldInterpolator() = default;
 
@@ -349,7 +353,7 @@ MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInt
 
 ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
     if (!impl_) {
-        impl_ = std::make_unique<Impl>(false, 0);
+        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite);
     }
     return impl_->LoadFromCSV(filepath);
 }
@@ -357,7 +361,7 @@ ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
 ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
                                                     size_t count) {
     if (!impl_) {
-        impl_ = std::make_unique<Impl>(false, 0);
+        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite);
     }
     return impl_->LoadFromMemory(points, field_data, count);
 }
@@ -369,6 +373,30 @@ ErrorCode MagneticFieldInterpolator::Query(const Point3D& query_point, Interpola
 ErrorCode MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results,
                                                 size_t count) {
     return impl_->QueryBatch(query_points, results, count);
+}
+
+ErrorCode MagneticFieldInterpolator::QueryBatch(const std::vector<Point3D>&       query_points,
+                                                std::vector<InterpolationResult>& results) {
+    results.resize(query_points.size());
+    return impl_->QueryBatch(query_points.data(), results.data(), query_points.size());
+}
+
+InterpolationResult MagneticFieldInterpolator::QueryEx(const Point3D& query_point) {
+    InterpolationResult result;
+    ErrorCode           err = Query(query_point, result);
+    if (err != ErrorCode::Success) {
+        throw std::runtime_error("Interpolation query failed: " + std::string(ErrorCodeToString(err)));
+    }
+    return result;
+}
+
+std::vector<InterpolationResult> MagneticFieldInterpolator::QueryBatchEx(const std::vector<Point3D>& query_points) {
+    std::vector<InterpolationResult> results;
+    ErrorCode                        err = QueryBatch(query_points, results);
+    if (err != ErrorCode::Success) {
+        throw std::runtime_error("Batch interpolation query failed: " + std::string(ErrorCodeToString(err)));
+    }
+    return results;
 }
 
 const GridParams& MagneticFieldInterpolator::GetGridParams() const {

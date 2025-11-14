@@ -13,7 +13,7 @@ int main() {
 
     // Load data
     std::cout << "Loading magnetic field data..." << std::endl;
-    ErrorCode err = interp.LoadFromCSV("data/sample_magnetic_field.csv");
+    ErrorCode err = interp.LoadFromCSV("../data/sample_magnetic_field.csv");
     if (err != ErrorCode::Success) {
         std::cerr << "Data loading failed: " << ErrorCodeToString(err) << std::endl;
         return 1;

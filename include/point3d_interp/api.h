@@ -21,8 +21,10 @@ class MagneticFieldInterpolator {
      * @brief Constructor
      * @param use_gpu Whether to use GPU acceleration (default true)
      * @param device_id GPU device ID (default 0)
+     * @param method Interpolation method (default TricubicHermite)
      */
-    explicit MagneticFieldInterpolator(bool use_gpu = false, int device_id = 0);
+    explicit MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
+                                       InterpolationMethod method = InterpolationMethod::TricubicHermite);
 
     ~MagneticFieldInterpolator();
 
@@ -64,6 +66,30 @@ class MagneticFieldInterpolator {
      * @return Error code
      */
     ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
+
+    /**
+     * @brief Batch interpolation query with vectors
+     * @param query_points Query point vector
+     * @param results Output result vector (will be resized)
+     * @return Error code
+     */
+    ErrorCode QueryBatch(const std::vector<Point3D>& query_points, std::vector<InterpolationResult>& results);
+
+    /**
+     * @brief Single point interpolation query (throws on error)
+     * @param query_point Query point coordinates
+     * @return Interpolation result
+     * @throws std::runtime_error on error
+     */
+    InterpolationResult QueryEx(const Point3D& query_point);
+
+    /**
+     * @brief Batch interpolation query with vectors (throws on error)
+     * @param query_points Query point vector
+     * @return Interpolation result vector
+     * @throws std::runtime_error on error
+     */
+    std::vector<InterpolationResult> QueryBatchEx(const std::vector<Point3D>& query_points);
 
     /**
      * @brief Get grid parameters

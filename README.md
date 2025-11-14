@@ -52,8 +52,8 @@ make -j8
 int main() {
     using namespace p3d;
 
-    // Create interpolator (auto-detects GPU)
-    MagneticFieldInterpolator interp(true);
+    // Create interpolator (auto-detects GPU by default)
+    MagneticFieldInterpolator interp;
 
     // Load data from CSV file
     ErrorCode err = interp.LoadFromCSV("magnetic_field_data.csv");
@@ -117,7 +117,7 @@ Main interface class providing data loading and interpolation functionality.
 #### Constructor
 
 ```cpp
-MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
+MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0, InterpolationMethod method = InterpolationMethod::TricubicHermite);
 ```
 
 #### Methods
@@ -126,6 +126,9 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
 - `ErrorCode LoadFromMemory(const Point3D*, const MagneticFieldData*, size_t)`: Load data from memory
 - `ErrorCode Query(const Point3D&, InterpolationResult&)`: Single-point interpolation query
 - `ErrorCode QueryBatch(const Point3D*, InterpolationResult*, size_t)`: Batch interpolation query
+- `ErrorCode QueryBatch(const std::vector<Point3D>&, std::vector<InterpolationResult>&)`: Batch interpolation query with vectors
+- `InterpolationResult QueryEx(const Point3D&)`: Single-point interpolation query (throws on error)
+- `std::vector<InterpolationResult> QueryBatchEx(const std::vector<Point3D>&)`: Batch interpolation query with vectors (throws on error)
 - `const GridParams& GetGridParams() const`: Get grid parameters
 - `bool IsDataLoaded() const`: Check if data is loaded
 - `size_t GetDataPointCount() const`: Get number of data points
@@ -136,6 +139,7 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
 - `MagneticFieldData`: Magnetic field data structure (Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz)
 - `InterpolationResult`: Interpolation result (data, valid)
 - `GridParams`: Grid parameters (origin, spacing, dimensions, bounds)
+- `InterpolationMethod`: Interpolation method enum (Trilinear, TricubicHermite)
 
 ## Performance Characteristics
 
