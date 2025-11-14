@@ -178,6 +178,80 @@ __device__ MagneticFieldData TricubicHermiteInterpolate(const MagneticFieldData 
 }
 
 /**
+ * @brief Calculate Euclidean distance between two 3D points
+ */
+__device__ Real Distance(const Point3D& p1, const Point3D& p2) {
+    Real dx = p1.x - p2.x;
+    Real dy = p1.y - p2.y;
+    Real dz = p1.z - p2.z;
+    return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+/**
+ * @brief CUDA kernel: IDW interpolation for unstructured point clouds
+ *
+ * Each thread handles interpolation calculation for one query point
+ * Computes inverse distance weighted average from all data points
+ *
+ * @param query_points Query points array (device memory)
+ * @param data_points Data points array (device memory)
+ * @param field_data Magnetic field data array (device memory)
+ * @param data_count Number of data points
+ * @param power IDW power parameter
+ * @param results Output results array (device memory)
+ * @param query_count Number of query points
+ */
+__global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
+                                       const Point3D* __restrict__ data_points,
+                                       const MagneticFieldData* __restrict__ field_data, const size_t data_count,
+                                       const Real   power, InterpolationResult* __restrict__ results,
+                                       const size_t query_count) {
+    const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (tid >= query_count) {
+        return;
+    }
+
+    const Point3D       query_point = query_points[tid];
+    InterpolationResult result      = {};
+    result.valid                    = true;
+
+    Real              weight_sum   = 0.0f;
+    MagneticFieldData weighted_sum = {};
+
+    // Compute IDW from all data points
+    for (size_t i = 0; i < data_count; ++i) {
+        Real dist = Distance(query_point, data_points[i]);
+
+        // Handle exact match (avoid division by zero)
+        if (dist < 1e-8f) {
+            result.data  = field_data[i];
+            results[tid] = result;
+            return;
+        }
+
+        Real weight = 1.0f / powf(dist, power);
+        weight_sum += weight;
+
+        // Accumulate weighted field values
+        weighted_sum.Bx += field_data[i].Bx * weight;
+        weighted_sum.By += field_data[i].By * weight;
+        weighted_sum.Bz += field_data[i].Bz * weight;
+    }
+
+    // Normalize by weight sum
+    if (weight_sum > 0.0f) {
+        weighted_sum.Bx /= weight_sum;
+        weighted_sum.By /= weight_sum;
+        weighted_sum.Bz /= weight_sum;
+    }
+
+    // Derivatives are not computed for IDW (set to 0)
+    result.data  = weighted_sum;
+    results[tid] = result;
+}
+
+/**
  * @brief CUDA kernel: Optimized tricubic Hermite interpolation
  *
  * Each thread handles interpolation calculation for one query point

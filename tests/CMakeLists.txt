@@ -138,6 +138,24 @@ set_target_properties(test_gpu_interpolator PROPERTIES
 
 add_test(NAME test_gpu_interpolator COMMAND test_gpu_interpolator)
 
+# Unstructured interpolator tests
+add_executable(test_unstructured_interpolator
+    test_unstructured_interpolator.cpp
+)
+
+target_link_libraries(test_unstructured_interpolator
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_unstructured_interpolator PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_unstructured_interpolator COMMAND test_unstructured_interpolator)
+
 # Benchmark
 add_test(NAME test_edge_cases COMMAND test_edge_cases)
 

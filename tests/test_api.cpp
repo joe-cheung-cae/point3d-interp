@@ -176,6 +176,74 @@ TEST(QueryWithoutDataTest, QueryWithoutData) {
     EXPECT_EQ(err, ErrorCode::DataNotLoaded);
 }
 
+// Test unstructured data loading
+TEST_F(APITest, UnstructuredDataLoading) {
+    // Create unstructured point cloud data (irregular positions)
+    std::vector<Point3D> coordinates = {{0.0f, 0.0f, 0.0f},
+                                        {1.2f, 0.3f, 0.1f},  // Irregular spacing
+                                        {0.5f, 1.7f, 0.2f},
+                                        {2.1f, 1.1f, 0.8f},
+                                        {0.8f, 0.6f, 1.5f}};
+
+    std::vector<MagneticFieldData> field_data(coordinates.size(), MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
+
+    MagneticFieldInterpolator interp;
+
+    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
+
+    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_TRUE(interp.IsDataLoaded());
+    EXPECT_EQ(interp.GetDataPointCount(), 5u);
+
+    // Test query on unstructured data
+    Point3D             query_point(1.0f, 1.0f, 0.5f);
+    InterpolationResult result;
+
+    err = interp.Query(query_point, result);
+    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_TRUE(result.valid);
+
+    // IDW should produce reasonable interpolated values
+    EXPECT_GE(result.data.Bx, 0.0f);
+    EXPECT_GE(result.data.By, 0.0f);
+    EXPECT_GE(result.data.Bz, 0.0f);
+}
+
+// Test GPU acceleration for unstructured data
+TEST_F(APITest, GPUUnstructuredData) {
+    // Create unstructured point cloud data
+    std::vector<Point3D> coordinates = {
+        {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {0.5f, 0.5f, 1.0f}};
+
+    std::vector<MagneticFieldData> field_data;
+    for (size_t i = 0; i < coordinates.size(); ++i) {
+        field_data.emplace_back(i * 1.0f, i * 0.1f, i * 0.2f);
+    }
+
+    // Test with GPU enabled
+    MagneticFieldInterpolator interp(true);  // GPU enabled
+
+    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
+    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_TRUE(interp.IsDataLoaded());
+
+    // Test batch queries (GPU acceleration should be used)
+    std::vector<Point3D> query_points = {{0.5f, 0.5f, 0.0f}, {0.3f, 0.7f, 0.2f}, {0.8f, 0.2f, 0.8f}};
+
+    std::vector<InterpolationResult> results;
+    err = interp.QueryBatch(query_points, results);
+
+    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_EQ(results.size(), query_points.size());
+
+    for (const auto& result : results) {
+        EXPECT_TRUE(result.valid);
+        EXPECT_GE(result.data.Bx, 0.0f);
+        EXPECT_GE(result.data.By, 0.0f);
+        EXPECT_GE(result.data.Bz, 0.0f);
+    }
+}
+
 // Test move semantics
 TEST_F(APITest, MoveSemantics) {
     MagneticFieldInterpolator interp1;

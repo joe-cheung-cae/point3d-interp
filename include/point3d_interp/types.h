@@ -171,7 +171,7 @@ struct InterpolationResult {
     }
 };
 
-enum class InterpolationMethod { Trilinear, TricubicHermite };
+enum class InterpolationMethod { Trilinear, TricubicHermite, IDW };
 
 }  // namespace p3d
 

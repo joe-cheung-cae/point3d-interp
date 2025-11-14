@@ -7,9 +7,9 @@ A high-performance 3D magnetic field data interpolation library with GPU-acceler
 - 🚀 **High Performance**: CUDA-based GPU acceleration, supports millions of interpolation queries per second
 - 📊 **Accurate**: Implements tricubic Hermite interpolation algorithm with gradient information, ensuring high computational precision
 - 🔧 **Easy to Use**: Clean C++ API interface, supports single-point and batch queries
-- 🏗️ **Flexible**: Supports regular grid data, automatic grid parameter detection
+- 🏗️ **Flexible**: Supports regular grid and unstructured point cloud data, automatic data type detection
 - 💪 **Reliable**: Comprehensive error handling and boundary checking
-- 🔄 **Compatible**: Automatic CPU/GPU switching, graceful fallback when GPU unavailable
+- 🔄 **Compatible**: Automatic CPU/GPU switching for both regular grids and unstructured data
 
 ## Quick Start
 
@@ -145,10 +145,17 @@ x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz
 
 ### Data Requirements
 
+**Regular Grid Data:**
 - Data points must be on a regular 3D grid
 - Grid spacing can be non-uniform but must be regular
 - Supports 3x3x3 to arbitrary size grids
 - Automatic grid parameter detection, no manual configuration needed
+
+**Unstructured Point Cloud Data:**
+- Data points can be at arbitrary 3D positions
+- No grid structure required
+- Uses inverse distance weighting (IDW) interpolation with GPU acceleration
+- Automatic detection when loading non-regular data
 
 ## API Reference
 

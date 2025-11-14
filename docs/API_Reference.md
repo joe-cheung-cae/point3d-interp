@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Point3D Interpolation Library provides a high-performance C++ API for 3D magnetic field data interpolation using tricubic Hermite interpolation with optional GPU acceleration.
+The Point3D Interpolation Library provides a high-performance C++ API for 3D magnetic field data interpolation. It supports both regular grid data (using tricubic Hermite interpolation with optional GPU acceleration) and unstructured point cloud data (using inverse distance weighting interpolation).
 
 ## Core Classes
 
@@ -39,7 +39,7 @@ Loads magnetic field data from a CSV file.
 ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
 ```
 
-Loads magnetic field data from memory arrays.
+Loads magnetic field data from memory arrays. Automatically detects whether the data forms a regular grid or is an unstructured point cloud.
 
 **Parameters:**
 - `points`: Array of 3D coordinates
@@ -47,6 +47,8 @@ Loads magnetic field data from memory arrays.
 - `count`: Number of data points
 
 **Returns:** Error code
+
+**Note:** For regular grid data, GPU acceleration is available. For unstructured data, CPU-based IDW interpolation is used.
 
 ##### Query Methods
 
@@ -171,7 +173,7 @@ struct Point3D {
 
 ### MagneticFieldData
 
-Contains magnetic field data and its spatial derivatives at a point. The derivatives are computed using tricubic Hermite interpolation.
+Contains magnetic field data and its spatial derivatives at a point. For regular grid data, derivatives are computed using tricubic Hermite interpolation. For unstructured data using IDW interpolation, derivatives are set to zero.
 
 ```cpp
 struct MagneticFieldData {
@@ -379,6 +381,8 @@ The `MagneticFieldInterpolator` class is not thread-safe. Create separate instan
 ## Performance Considerations
 
 - Use `QueryBatch()` for multiple queries instead of looping with `Query()`
-- GPU acceleration provides significant speedup for large datasets
+- GPU acceleration provides significant speedup for both regular grid and unstructured data
+- For unstructured data, IDW interpolation supports GPU acceleration
 - Memory layout should be contiguous for optimal performance
 - Avoid frequent CPU-GPU data transfers
+- For large unstructured datasets, consider using spatial indexing (future enhancement)
