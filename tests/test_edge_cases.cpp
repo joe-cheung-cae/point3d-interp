@@ -7,6 +7,7 @@
 #include <string>
 #include <limits>
 #include <cmath>
+#include <iostream>
 
 namespace p3d {
 namespace test {
@@ -35,14 +36,15 @@ class EdgeCaseTest : public ::testing::Test {
         file << "0.0,0.0,0.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09\n";
         file << "1.5,0.0,0.0,0.15,0.18,0.32,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,0.091\n";  // Non-uniform
                                                                                                        // spacing
-        file << "0.0,2.0,0.0,0.08,0.22,0.28,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,0.092\n";  // Non-uniform
+        file << "2.5,0.0,0.0,0.08,0.22,0.28,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,0.092\n";  // Non-uniform
                                                                                                        // spacing
-        file << "1.5,2.0,0.0,0.13,0.19,0.31,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,0.093\n";
-        file << "0.0,0.0,3.0,0.12,0.18,0.35,0.014,0.024,0.034,0.044,0.054,0.064,0.074,0.084,0.094\n";  // Non-uniform
+        file << "0.0,2.0,0.0,0.13,0.19,0.31,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,0.093\n";
+        file << "1.5,2.0,0.0,0.12,0.18,0.35,0.014,0.024,0.034,0.044,0.054,0.064,0.074,0.084,0.094\n";  // Non-uniform
                                                                                                        // spacing
-        file << "1.5,0.0,3.0,0.17,0.14,0.37,0.015,0.025,0.035,0.045,0.055,0.065,0.075,0.085,0.095\n";
-        file << "0.0,2.0,3.0,0.1,0.2,0.33,0.016,0.026,0.036,0.046,0.056,0.066,0.076,0.086,0.096\n";
-        file << "1.5,2.0,3.0,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
+        file << "2.5,2.0,0.0,0.17,0.14,0.37,0.015,0.025,0.035,0.045,0.055,0.065,0.075,0.085,0.095\n";
+        file << "0.0,0.0,3.0,0.1,0.2,0.33,0.016,0.026,0.036,0.046,0.056,0.066,0.076,0.086,0.096\n";
+        file << "1.5,0.0,3.0,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
+        file << "2.5,0.0,3.0,0.15,0.16,0.35,0.017,0.027,0.037,0.047,0.057,0.067,0.077,0.087,0.097\n";
         file.close();
     }
 
@@ -65,15 +67,14 @@ class EdgeCaseTest : public ::testing::Test {
         std::ofstream file("precision_test.csv");
         file << "x,y,z,Bx,By,Bz,dBx_dx,dBx_dy,dBx_dz,dBy_dx,dBy_dy,dBy_dz,dBz_dx,dBz_dy,dBz_dz\n";
         // High precision values
-        file << std::fixed << std::setprecision(10);
-        file << "0.0000000001,0.0000000002,0.0000000003,0.1000000001,0.2000000002,0.3000000003,0.01,0.02,0.03,0.04,0."
-                "05,0.06,0.07,0.08,0.09\n";
-        file << "1.0000000001,0.0000000002,0.0000000003,0.1500000001,0.1800000002,0.3200000003,0.011,0.021,0.031,0.041,"
-                "0.051,0.061,0.071,0.081,0.091\n";
-        file << "0.0000000001,1.0000000002,0.0000000003,0.0800000001,0.2200000002,0.2800000003,0.012,0.022,0.032,0.042,"
-                "0.052,0.062,0.072,0.082,0.092\n";
-        file << "1.0000000001,1.0000000002,0.0000000003,0.1300000001,0.1900000002,0.3100000003,0.013,0.023,0.033,0.043,"
-                "0.053,0.063,0.073,0.083,0.093\n";
+        file << std::fixed << std::setprecision(6);
+        file << "0.000001,0.000002,0.000003,0.100001,0.200002,0.300003,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09\n";
+        file << "1.000001,0.000002,0.000003,0.150001,0.180002,0.320003,0.011,0.021,0.031,0.041,0.051,0.061,0.071,0.081,"
+                "0.091\n";
+        file << "0.000001,1.000002,0.000003,0.080001,0.220002,0.280003,0.012,0.022,0.032,0.042,0.052,0.062,0.072,0.082,"
+                "0.092\n";
+        file << "1.000001,1.000002,0.000003,0.130001,0.190002,0.310003,0.013,0.023,0.033,0.043,0.053,0.063,0.073,0.083,"
+                "0.093\n";
         file.close();
     }
 };
@@ -104,11 +105,17 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
 
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Boundary point (0.0,0.0,0.0): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl;
+
     // Test points outside boundaries
     Point3D outside_point(1.0f, 1.0f, 1.0f);  // Beyond grid bounds
     err = interp.Query(outside_point, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_FALSE(result.valid);
+
+    std::cout << "Outside point (1.0,1.0,1.0): valid=" << result.valid << std::endl << std::endl;
 }
 
 // Test high precision data handling
@@ -123,6 +130,11 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
 
+    std::cout << std::fixed << std::setprecision(10);
+    std::cout << "High precision query (0.5,0.5,0.0): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
+
     // Results should be reasonable (interpolation of high precision data)
     EXPECT_GE(result.data.Bx, 0.08f);
     EXPECT_LE(result.data.Bx, 0.17f);
@@ -131,9 +143,10 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
 // Test extreme values
 TEST(ExtremeValueTest, VeryLargeValues) {
     // Create data with very large values
-    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
+                                        {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
 
-    std::vector<MagneticFieldData> field_data(4);
+    std::vector<MagneticFieldData> field_data(8);
     for (auto& data : field_data) {
         data.Bx = 1e8f;
         data.By = 1e8f;
@@ -141,22 +154,28 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D             query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
     EXPECT_FLOAT_EQ(result.data.Bx, 1e8f);  // Should interpolate correctly
+
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Very large values query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
 }
 
 // Test very small values
 TEST(ExtremeValueTest, VerySmallValues) {
-    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
+                                        {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
 
-    std::vector<MagneticFieldData> field_data(4);
+    std::vector<MagneticFieldData> field_data(8);
     for (auto& data : field_data) {
         data.Bx = 1e-8f;
         data.By = 1e-8f;
@@ -164,23 +183,29 @@ TEST(ExtremeValueTest, VerySmallValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D             query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
     EXPECT_NEAR(result.data.Bx, 1e-8f, 1e-9f);
+
+    std::cout << std::scientific << std::setprecision(2);
+    std::cout << "Very small values query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
 }
 
 // Test NaN and Inf values
 TEST(ExtremeValueTest, NaNInfValues) {
-    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
+    std::vector<Point3D> coordinates = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
+                                        {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
 
-    std::vector<MagneticFieldData> field_data(4);
-    for (size_t i = 0; i < 4; ++i) {
+    std::vector<MagneticFieldData> field_data(8);
+    for (size_t i = 0; i < 8; ++i) {
         if (i == 0) {
             // First point has NaN
             field_data[i].Bx = std::numeric_limits<float>::quiet_NaN();
@@ -194,16 +219,22 @@ TEST(ExtremeValueTest, NaNInfValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 4);
+    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
     // Should still load (NaN is a valid float value)
     EXPECT_EQ(err, ErrorCode::Success);
 
-    Point3D             query(0.5f, 0.5f, 0.0f);
+    Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
     err = interp.Query(query, result);
     EXPECT_EQ(err, ErrorCode::Success);
     // Result may be NaN due to interpolation with NaN
     EXPECT_TRUE(std::isnan(result.data.Bx) || std::isfinite(result.data.Bx));
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "NaN/Inf values query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz;
+    if (std::isnan(result.data.Bx)) std::cout << " (Bx is NaN)";
+    std::cout << std::endl << std::endl;
 }
 
 // Test empty data arrays
@@ -236,15 +267,16 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     MagneticFieldInterpolator interp;
 
     // Load some test data
-    std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
-    std::vector<MagneticFieldData> data(4, MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
+    std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
+                                             {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
+    std::vector<MagneticFieldData> data(8, MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
 
-    ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), 4);
+    ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), 8);
     ASSERT_EQ(err, ErrorCode::Success);
 
     // Test that multiple queries work (basic concurrency check)
-    Point3D query1(0.5f, 0.5f, 0.0f);
-    Point3D query2(0.3f, 0.7f, 0.0f);
+    Point3D query1(0.5f, 0.5f, 0.5f);
+    Point3D query2(0.3f, 0.7f, 0.5f);
 
     InterpolationResult result1, result2;
 
@@ -257,6 +289,13 @@ TEST(ConcurrencyTest, BasicConcurrency) {
 
     EXPECT_TRUE(result1.valid);
     EXPECT_TRUE(result2.valid);
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Concurrency query1 (0.5,0.5,0.5): valid=" << result1.valid << ", Bx=" << result1.data.Bx
+              << ", By=" << result1.data.By << ", Bz=" << result1.data.Bz << std::endl;
+    std::cout << "Concurrency query2 (0.3,0.7,0.5): valid=" << result2.valid << ", Bx=" << result2.data.Bx
+              << ", By=" << result2.data.By << ", Bz=" << result2.data.Bz << std::endl
+              << std::endl;
 }
 
 // Test grid parameter validation

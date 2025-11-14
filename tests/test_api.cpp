@@ -2,6 +2,8 @@
 #include "point3d_interp/api.h"
 #include <fstream>
 #include <string>
+#include <iostream>
+#include <iomanip>
 
 namespace p3d {
 namespace test {
@@ -72,6 +74,11 @@ TEST_F(APITest, SinglePointQuery) {
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_TRUE(result.valid);
 
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Single point query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
+
     // Check result reasonableness
     EXPECT_GE(result.data.Bx, 0.0f);
     EXPECT_LE(result.data.Bx, 2.0f);
@@ -88,6 +95,18 @@ TEST_F(APITest, BatchQuery) {
 
     ErrorCode err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
     EXPECT_EQ(err, ErrorCode::Success);
+
+    std::cout << std::fixed << std::setprecision(6);
+    for (size_t i = 0; i < results.size(); ++i) {
+        std::cout << "Batch query " << i << ": point(" << query_points[i].x << "," << query_points[i].y << ","
+                  << query_points[i].z << ") -> valid=" << results[i].valid;
+        if (results[i].valid) {
+            std::cout << ", Bx=" << results[i].data.Bx << ", By=" << results[i].data.By
+                      << ", Bz=" << results[i].data.Bz;
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
 
     // Check all results are valid
     for (const auto& result : results) {
@@ -106,6 +125,9 @@ TEST_F(APITest, OutOfBoundsQuery) {
     ErrorCode err = interp.Query(query_point, result);
     EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_FALSE(result.valid);
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Out of bounds query (-1.0,0.5,0.5): valid=" << result.valid << std::endl << std::endl;
 }
 
 // Test loading data from memory
@@ -144,7 +166,7 @@ TEST_F(APITest, EmptyBatchQuery) {
 }
 
 // Test query without loaded data
-TEST(APITest, QueryWithoutData) {
+TEST(QueryWithoutDataTest, QueryWithoutData) {
     MagneticFieldInterpolator interp;  // Data not loaded
 
     Point3D             query_point(0.0f, 0.0f, 0.0f);

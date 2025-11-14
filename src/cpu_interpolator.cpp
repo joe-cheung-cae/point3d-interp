@@ -4,11 +4,11 @@
 
 namespace p3d {
 
-CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid) : grid_(grid) {}
+CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid) : grid_ptr_(&grid) {}
 
 CPUInterpolator::~CPUInterpolator() = default;
 
-CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept : grid_(other.grid_) {}
+CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept : grid_ptr_(other.grid_ptr_) {}
 
 CPUInterpolator& CPUInterpolator::operator=(CPUInterpolator&& other) noexcept {
     // const reference cannot be reassigned, nothing to do here
@@ -19,24 +19,38 @@ CPUInterpolator& CPUInterpolator::operator=(CPUInterpolator&& other) noexcept {
 InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
     InterpolationResult result;
 
+    auto& params = (*grid_ptr_).getParams();
+
+    // Special case for single point grid
+    if (params.dimensions[0] == 1 && params.dimensions[1] == 1 && params.dimensions[2] == 1) {
+        if (query_point.x == params.origin.x && query_point.y == params.origin.y && query_point.z == params.origin.z) {
+            result.data  = (*grid_ptr_).getFieldData()[0];
+            result.valid = true;
+            return result;
+        } else {
+            result.valid = false;
+            return result;
+        }
+    }
+
     // Check if point is within grid bounds
-    if (!grid_.getParams().is_point_inside(query_point)) {
+    if (!params.is_point_inside(query_point)) {
         result.valid = false;
         return result;
     }
 
     // Convert to grid coordinates
-    Point3D grid_coords = grid_.worldToGrid(query_point);
+    Point3D grid_coords = (*grid_ptr_).worldToGrid(query_point);
 
     // Check if grid coordinates are valid
-    if (!grid_.isValidGridCoords(grid_coords)) {
+    if (!(*grid_ptr_).isValidGridCoords(grid_coords)) {
         result.valid = false;
         return result;
     }
 
     // Get cell vertex indices
     uint32_t indices[8];
-    if (!grid_.getCellVertexIndices(grid_coords, indices)) {
+    if (!(*grid_ptr_).getCellVertexIndices(grid_coords, indices)) {
         result.valid = false;
         return result;
     }
@@ -157,7 +171,7 @@ MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFiel
 }
 
 void CPUInterpolator::getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const {
-    const auto& field_data = grid_.getFieldData();
+    const auto& field_data = (*grid_ptr_).getFieldData();
 
     for (int i = 0; i < 8; ++i) {
         vertex_data[i] = field_data[indices[i]];

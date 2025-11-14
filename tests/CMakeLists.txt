@@ -6,6 +6,7 @@ FetchContent_Declare(
     googletest
     URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
 )
+
 # Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
@@ -13,32 +14,79 @@ FetchContent_MakeAvailable(googletest)
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-# Test executable
-add_executable(unit_tests
+# Data-related tests
+add_executable(test_data
     test_data_loader.cpp
     test_grid_structure.cpp
-    test_cpu_interpolator.cpp
-    test_api.cpp
-    test_accuracy.cpp
-    test_edge_cases.cpp
-    benchmark.cpp
 )
 
-# Link libraries
-target_link_libraries(unit_tests
+target_link_libraries(test_data
     PRIVATE
-        point3d_interp
-        GTest::gtest_main
+    point3d_interp
+    GTest::gtest_main
 )
 
-# Set C++ standard
-set_target_properties(unit_tests PROPERTIES
+set_target_properties(test_data PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
-# Add tests
-add_test(NAME unit_tests COMMAND unit_tests)
+add_test(NAME test_data COMMAND test_data)
+
+# Interpolation tests
+add_executable(test_interpolation
+    test_cpu_interpolator.cpp
+    test_accuracy.cpp
+)
+
+target_link_libraries(test_interpolation
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_interpolation PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_interpolation COMMAND test_interpolation)
+
+# API tests
+add_executable(test_api
+    test_api.cpp
+)
+
+target_link_libraries(test_api
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_api PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_api COMMAND test_api)
+
+# Edge cases tests
+add_executable(test_edge_cases
+    test_edge_cases.cpp
+)
+
+target_link_libraries(test_edge_cases
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_edge_cases PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_edge_cases COMMAND test_edge_cases)
 
 # Benchmark
 add_executable(performance_benchmark benchmark.cpp)

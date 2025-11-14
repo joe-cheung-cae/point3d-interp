@@ -2,6 +2,8 @@
 #include "point3d_interp/cpu_interpolator.h"
 #include "point3d_interp/grid_structure.h"
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 namespace p3d {
 namespace test {
@@ -39,6 +41,10 @@ TEST_F(CPUInterpolatorTest, GridPointInterpolation) {
     Point3D             point(0.0f, 0.0f, 0.0f);
     InterpolationResult result = interpolator_->query(point);
 
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Grid point (0,0,0): valid=" << result.valid << ", Bx=" << result.data.Bx << ", By=" << result.data.By
+              << ", Bz=" << result.data.Bz << std::endl;
+
     EXPECT_TRUE(result.valid);
     EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
     EXPECT_FLOAT_EQ(result.data.By, 1.0f);
@@ -47,6 +53,10 @@ TEST_F(CPUInterpolatorTest, GridPointInterpolation) {
     // 测试网格点 (1,1,1)
     point  = Point3D(1.0f, 1.0f, 1.0f);
     result = interpolator_->query(point);
+
+    std::cout << "Grid point (1,1,1): valid=" << result.valid << ", Bx=" << result.data.Bx << ", By=" << result.data.By
+              << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
 
     EXPECT_TRUE(result.valid);
     EXPECT_FLOAT_EQ(result.data.Bx, 1.0f);
@@ -59,6 +69,11 @@ TEST_F(CPUInterpolatorTest, CellCenterInterpolation) {
     // 测试单元格中心 (0.5, 0.5, 0.5)
     Point3D             point(0.5f, 0.5f, 0.5f);
     InterpolationResult result = interpolator_->query(point);
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Cell center (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
 
     EXPECT_TRUE(result.valid);
 
@@ -96,6 +111,18 @@ TEST_F(CPUInterpolatorTest, BatchInterpolation) {
 
     EXPECT_EQ(results.size(), 4u);
 
+    std::cout << std::fixed << std::setprecision(6);
+    for (size_t i = 0; i < results.size(); ++i) {
+        std::cout << "Batch result " << i << ": point(" << query_points[i].x << "," << query_points[i].y << ","
+                  << query_points[i].z << ") -> valid=" << results[i].valid;
+        if (results[i].valid) {
+            std::cout << ", Bx=" << results[i].data.Bx << ", By=" << results[i].data.By
+                      << ", Bz=" << results[i].data.Bz;
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
     // 检查第一个结果 (网格点)
     EXPECT_TRUE(results[0].valid);
     EXPECT_FLOAT_EQ(results[0].data.Bx, 1.0f);
@@ -119,6 +146,11 @@ TEST_F(CPUInterpolatorTest, TrilinearInterpolationAccuracy) {
     // 查询点 (0.3, 0.7, 0.2) 在单元格 (0,0,0) 到 (1,1,1) 内
     Point3D             point(0.3f, 0.7f, 0.2f);
     InterpolationResult result = interpolator_->query(point);
+
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Trilinear test point (0.3,0.7,0.2): valid=" << result.valid << ", Bx=" << result.data.Bx
+              << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
+              << std::endl;
 
     EXPECT_TRUE(result.valid);
 
@@ -148,7 +180,7 @@ TEST_F(CPUInterpolatorTest, TrilinearInterpolationAccuracy) {
 }
 
 // 测试空网格
-TEST(CPUInterpolatorTest, EmptyGrid) {
+TEST(EmptyGridTest, EmptyGrid) {
     // 这应该在创建插值器时失败，但我们测试一下
     // 注意：这个测试可能需要修改，因为我们现在在SetUp中创建网格
 
@@ -168,7 +200,7 @@ TEST(CPUInterpolatorTest, EmptyGrid) {
 }
 
 // 测试单点网格
-TEST(CPUInterpolatorTest, SinglePointGrid) {
+TEST(SinglePointGridTest, SinglePointGrid) {
     GridParams params;
     params.dimensions = {1, 1, 1};
     params.update_bounds();

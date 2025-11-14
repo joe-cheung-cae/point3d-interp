@@ -7,6 +7,9 @@
 namespace p3d {
 
 RegularGrid3D::RegularGrid3D(const GridParams& params) : params_(params) {
+    if (params.dimensions[0] == 0 || params.dimensions[1] == 0 || params.dimensions[2] == 0) {
+        throw std::invalid_argument("Invalid grid dimensions");
+    }
     params_.update_bounds();
 
     // Pre-allocate memory
@@ -76,6 +79,11 @@ bool RegularGrid3D::getCellVertexIndices(const Point3D& grid_coords, uint32_t in
     int j0 = static_cast<int>(grid_coords.y);
     int k0 = static_cast<int>(grid_coords.z);
 
+    // Handle boundary case: if at the last grid point, use the previous cell
+    if (i0 == static_cast<int>(params_.dimensions[0]) - 1) i0--;
+    if (j0 == static_cast<int>(params_.dimensions[1]) - 1) j0--;
+    if (k0 == static_cast<int>(params_.dimensions[2]) - 1) k0--;
+
     int i1 = i0 + 1;
     int j1 = j0 + 1;
     int k1 = k0 + 1;
@@ -106,9 +114,9 @@ uint32_t RegularGrid3D::getDataIndex(uint32_t i, uint32_t j, uint32_t k) const {
 
 P3D_HOST_DEVICE
 bool RegularGrid3D::isValidGridCoords(const Point3D& grid_coords) const {
-    return (grid_coords.x >= 0 && grid_coords.x < params_.dimensions[0] - 1) &&
-           (grid_coords.y >= 0 && grid_coords.y < params_.dimensions[1] - 1) &&
-           (grid_coords.z >= 0 && grid_coords.z < params_.dimensions[2] - 1);
+    return (grid_coords.x >= 0 && grid_coords.x <= params_.dimensions[0] - 1) &&
+           (grid_coords.y >= 0 && grid_coords.y <= params_.dimensions[1] - 1) &&
+           (grid_coords.z >= 0 && grid_coords.z <= params_.dimensions[2] - 1);
 }
 
 size_t RegularGrid3D::getDataCount() const { return coordinates_.size(); }
@@ -137,13 +145,13 @@ void RegularGrid3D::buildFromCoordinates(const std::vector<Point3D>& coordinates
     std::sort(z_unique.begin(), z_unique.end());
 
     // Check if it's a regular grid
-    if (x_unique.size() < 2 || y_unique.size() < 2 || z_unique.size() < 2) {
-        throw std::invalid_argument("Insufficient unique coordinates for 3D grid");
+    if (x_unique.size() < 1 || y_unique.size() < 1 || z_unique.size() < 1) {
+        throw std::invalid_argument("Insufficient unique coordinates for grid");
     }
 
     // Calculate spacing
     auto calculate_spacing = [](const std::vector<Real>& coords) -> Real {
-        if (coords.size() < 2) return 0;
+        if (coords.size() < 2) return 1.0f;  // Default spacing for single point
         Real spacing = coords[1] - coords[0];
         for (size_t i = 2; i < coords.size(); ++i) {
             Real current_spacing = coords[i] - coords[i - 1];

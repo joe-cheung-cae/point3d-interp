@@ -46,7 +46,7 @@ class CPUInterpolator {
      * @brief Get grid reference
      * @return Constant reference to grid object
      */
-    const RegularGrid3D& getGrid() const { return grid_; }
+    const RegularGrid3D& getGrid() const { return *grid_ptr_; }
 
   private:
     /**
@@ -79,7 +79,7 @@ class CPUInterpolator {
     void getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const;
 
   private:
-    const RegularGrid3D& grid_;  // Grid reference
+    const RegularGrid3D* grid_ptr_;  // Grid pointer
 };
 
 }  // namespace p3d

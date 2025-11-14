@@ -3,6 +3,8 @@
 #include "point3d_interp/grid_structure.h"
 #include <vector>
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 namespace p3d {
 namespace test {
@@ -45,6 +47,17 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
         float expected_Bx = 2 * x;
         float expected_By = 2 * y;
         float expected_Bz = 2 * z;
+
+        // Log results
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "Query point: (" << point.x << ", " << point.y << ", " << point.z << ")" << std::endl;
+        std::cout << "  Expected: Bx=" << expected_Bx << ", By=" << expected_By << ", Bz=" << expected_Bz << std::endl;
+        std::cout << "  Interpolated: Bx=" << result.data.Bx << ", By=" << result.data.By << ", Bz=" << result.data.Bz
+                  << std::endl;
+        std::cout << "  Errors: Bx=" << std::abs(result.data.Bx - expected_Bx)
+                  << ", By=" << std::abs(result.data.By - expected_By)
+                  << ", Bz=" << std::abs(result.data.Bz - expected_Bz) << std::endl
+                  << std::endl;
 
         // Check interpolation accuracy
         EXPECT_NEAR(result.data.Bx, expected_Bx, 1e-3f);
@@ -90,6 +103,16 @@ TEST(AccuracyTest, BoundaryInterpolation) {
         InterpolationResult result = cpu_interp.query(point);
         ASSERT_TRUE(result.valid);
 
+        // Log results
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "Boundary test point: (" << point.x << ", " << point.y << ", " << point.z << ")" << std::endl;
+        std::cout << "  Expected: Bx=1.0, By=2.0, Bz=3.0" << std::endl;
+        std::cout << "  Interpolated: Bx=" << result.data.Bx << ", By=" << result.data.By << ", Bz=" << result.data.Bz
+                  << std::endl;
+        std::cout << "  Errors: Bx=" << std::abs(result.data.Bx - 1.0f) << ", By=" << std::abs(result.data.By - 2.0f)
+                  << ", Bz=" << std::abs(result.data.Bz - 3.0f) << std::endl
+                  << std::endl;
+
         // For linear fields, Hermite interpolation should be exact
         EXPECT_NEAR(result.data.Bx, 1.0f, 1e-6f);
         EXPECT_NEAR(result.data.By, 2.0f, 1e-6f);
@@ -128,6 +151,25 @@ TEST(AccuracyTest, GridPointExactness) {
 
         // Grid point interpolation should exactly match original data
         const MagneticFieldData& original = field_data[i];
+
+        // Log results for first few points
+        if (i < 5) {
+            std::cout << std::fixed << std::setprecision(6);
+            std::cout << "Grid point " << i << ": (" << point.x << ", " << point.y << ", " << point.z << ")"
+                      << std::endl;
+            std::cout << "  Original: Bx=" << original.Bx << ", By=" << original.By << ", Bz=" << original.Bz
+                      << std::endl;
+            std::cout << "  Interpolated: Bx=" << result.data.Bx << ", By=" << result.data.By
+                      << ", Bz=" << result.data.Bz << std::endl;
+            std::cout << "  Match: "
+                      << (result.data.Bx == original.Bx && result.data.By == original.By &&
+                                  result.data.Bz == original.Bz
+                              ? "Yes"
+                              : "No")
+                      << std::endl
+                      << std::endl;
+        }
+
         EXPECT_FLOAT_EQ(result.data.Bx, original.Bx);
         EXPECT_FLOAT_EQ(result.data.By, original.By);
         EXPECT_FLOAT_EQ(result.data.Bz, original.Bz);
@@ -162,6 +204,16 @@ TEST(AccuracyTest, NumericalStability) {
     for (const auto& point : test_points) {
         InterpolationResult result = cpu_interp.query(point);
         ASSERT_TRUE(result.valid);
+
+        // Log results
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "Stability test point: (" << point.x << ", " << point.y << ", " << point.z << ")" << std::endl;
+        std::cout << "  Expected: Bx=1.0, By=1.0, Bz=1.0" << std::endl;
+        std::cout << "  Interpolated: Bx=" << result.data.Bx << ", By=" << result.data.By << ", Bz=" << result.data.Bz
+                  << std::endl;
+        std::cout << "  Errors: Bx=" << std::abs(result.data.Bx - 1.0f) << ", By=" << std::abs(result.data.By - 1.0f)
+                  << ", Bz=" << std::abs(result.data.Bz - 1.0f) << std::endl
+                  << std::endl;
 
         // Check numerical stability
         EXPECT_NEAR(result.data.Bx, 1.0f, 1e-2f);
@@ -214,6 +266,24 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     for (size_t i = 0; i < single_results.size(); ++i) {
         const auto& single = single_results[i];
         const auto& batch  = batch_results[i];
+
+        // Log first few comparisons
+        if (i < 5) {
+            std::cout << std::fixed << std::setprecision(6);
+            std::cout << "Batch vs Single comparison " << i << ":" << std::endl;
+            std::cout << "  Single: valid=" << single.valid << ", Bx=" << single.data.Bx << ", By=" << single.data.By
+                      << ", Bz=" << single.data.Bz << std::endl;
+            std::cout << "  Batch:  valid=" << batch.valid << ", Bx=" << batch.data.Bx << ", By=" << batch.data.By
+                      << ", Bz=" << batch.data.Bz << std::endl;
+            std::cout << "  Match: "
+                      << (single.valid == batch.valid && (!single.valid || (single.data.Bx == batch.data.Bx &&
+                                                                            single.data.By == batch.data.By &&
+                                                                            single.data.Bz == batch.data.Bz))
+                              ? "Yes"
+                              : "No")
+                      << std::endl
+                      << std::endl;
+        }
 
         EXPECT_EQ(single.valid, batch.valid);
 
