@@ -26,6 +26,11 @@ class MagneticFieldInterpolator::Impl {
     Impl(bool use_gpu, int device_id);
     ~Impl();
 
+    // Move constructor
+    Impl(Impl&& other) noexcept;
+    // Move assignment
+    Impl& operator=(Impl&& other) noexcept;
+
     ErrorCode LoadFromCSV(const std::string& filepath);
     ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
     ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
@@ -74,6 +79,41 @@ MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id)
         }
     }
 #endif
+}
+
+MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
+    : grid_(std::move(other.grid_)),
+      cpu_interpolator_(std::move(other.cpu_interpolator_)),
+      use_gpu_(other.use_gpu_),
+      device_id_(other.device_id_),
+      gpu_initialized_(other.gpu_initialized_) {
+#ifdef __CUDACC__
+    gpu_points_       = std::move(other.gpu_points_);
+    gpu_field_data_   = std::move(other.gpu_field_data_);
+    gpu_query_points_ = std::move(other.gpu_query_points_);
+    gpu_results_      = std::move(other.gpu_results_);
+#endif
+    // Reset moved-from state
+    other.gpu_initialized_ = false;
+}
+
+MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl&& other) noexcept {
+    if (this != &other) {
+        grid_             = std::move(other.grid_);
+        cpu_interpolator_ = std::move(other.cpu_interpolator_);
+        use_gpu_          = other.use_gpu_;
+        device_id_        = other.device_id_;
+        gpu_initialized_  = other.gpu_initialized_;
+#ifdef __CUDACC__
+        gpu_points_       = std::move(other.gpu_points_);
+        gpu_field_data_   = std::move(other.gpu_field_data_);
+        gpu_query_points_ = std::move(other.gpu_query_points_);
+        gpu_results_      = std::move(other.gpu_results_);
+#endif
+        // Reset moved-from state
+        other.gpu_initialized_ = false;
+    }
+    return *this;
 }
 
 MagneticFieldInterpolator::Impl::~Impl() { ReleaseGPU(); }
@@ -307,10 +347,18 @@ MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInt
     return *this;
 }
 
-ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) { return impl_->LoadFromCSV(filepath); }
+ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
+    if (!impl_) {
+        impl_ = std::make_unique<Impl>(false, 0);
+    }
+    return impl_->LoadFromCSV(filepath);
+}
 
 ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
                                                     size_t count) {
+    if (!impl_) {
+        impl_ = std::make_unique<Impl>(false, 0);
+    }
     return impl_->LoadFromMemory(points, field_data, count);
 }
 
@@ -323,10 +371,13 @@ ErrorCode MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, Int
     return impl_->QueryBatch(query_points, results, count);
 }
 
-const GridParams& MagneticFieldInterpolator::GetGridParams() const { return impl_->GetGridParams(); }
+const GridParams& MagneticFieldInterpolator::GetGridParams() const {
+    static GridParams default_params;
+    return impl_ ? impl_->GetGridParams() : default_params;
+}
 
-bool MagneticFieldInterpolator::IsDataLoaded() const { return impl_->IsDataLoaded(); }
+bool MagneticFieldInterpolator::IsDataLoaded() const { return impl_ && impl_->IsDataLoaded(); }
 
-size_t MagneticFieldInterpolator::GetDataPointCount() const { return impl_->GetDataPointCount(); }
+size_t MagneticFieldInterpolator::GetDataPointCount() const { return impl_ ? impl_->GetDataPointCount() : 0; }
 
 }  // namespace p3d

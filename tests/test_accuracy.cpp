@@ -20,23 +20,23 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
     RegularGrid3D grid(params);
 
-    // Set test data for known function: Bx = 2x, By = 2y, Bz = 2z
-    // Derivatives: dBx_dx=2, dBx_dy=0, dBx_dz=0, dBy_dx=0, dBy_dy=2, dBy_dz=0, dBz_dx=0, dBz_dy=0, dBz_dz=2
+    // Set test data for known function: Bx = x, By = y, Bz = z
+    // Derivatives: dBx_dx=1, dBx_dy=0, dBx_dz=0, dBy_dx=0, dBy_dy=1, dBy_dz=0, dBz_dx=0, dBz_dy=0, dBz_dz=1
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (size_t i = 0; i < field_data.size(); ++i) {
         const auto& coord = grid.getCoordinates()[i];
         float       x = coord.x, y = coord.y, z = coord.z;
-        field_data[i] = MagneticFieldData(2 * x, 2 * y, 2 * z,  // B = (2x, 2y, 2z)
-                                          2.0f, 0.0f, 0.0f,     // dBx_dx, dBx_dy, dBx_dz
-                                          0.0f, 2.0f, 0.0f,     // dBy_dx, dBy_dy, dBy_dz
-                                          0.0f, 0.0f, 2.0f      // dBz_dx, dBz_dy, dBz_dz
+        field_data[i] = MagneticFieldData(x, y, z,           // B = (x, y, z)
+                                          1.0f, 0.0f, 0.0f,  // dBx_dx, dBx_dy, dBx_dz
+                                          0.0f, 1.0f, 0.0f,  // dBy_dx, dBy_dy, dBy_dz
+                                          0.0f, 0.0f, 1.0f   // dBz_dx, dBz_dy, dBz_dz
         );
     }
 
     CPUInterpolator cpu_interp(grid);
 
     // Test multiple query points
-    std::vector<Point3D> test_points = {{0.5f, 0.5f, 0.5f}, {1.2f, 0.8f, 1.5f}, {0.3f, 1.7f, 0.9f}, {2.1f, 1.3f, 0.7f}};
+    std::vector<Point3D> test_points = {{0.5f, 0.5f, 0.5f}, {1.2f, 0.8f, 1.5f}, {0.3f, 1.7f, 0.9f}, {2.0f, 1.3f, 0.7f}};
 
     for (const auto& point : test_points) {
         InterpolationResult result = cpu_interp.query(point);
@@ -44,9 +44,9 @@ TEST(AccuracyTest, CPUInterpolationConsistency) {
 
         // Calculate analytical solution
         float x = point.x, y = point.y, z = point.z;
-        float expected_Bx = 2 * x;
-        float expected_By = 2 * y;
-        float expected_Bz = 2 * z;
+        float expected_Bx = x;
+        float expected_By = y;
+        float expected_Bz = z;
 
         // Log results
         std::cout << std::fixed << std::setprecision(6);

@@ -60,9 +60,13 @@ InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
     getVertexData(indices, vertex_data);
 
     // Calculate local coordinates (between 0 and 1)
-    Real tx = grid_coords.x - std::floor(grid_coords.x);
-    Real ty = grid_coords.y - std::floor(grid_coords.y);
-    Real tz = grid_coords.z - std::floor(grid_coords.z);
+    // Adjust for boundary cases to ensure tx, ty, tz are correct
+    int  i0_x = std::min(static_cast<int>(std::floor(grid_coords.x)), static_cast<int>(params.dimensions[0]) - 2);
+    int  i0_y = std::min(static_cast<int>(std::floor(grid_coords.y)), static_cast<int>(params.dimensions[1]) - 2);
+    int  i0_z = std::min(static_cast<int>(std::floor(grid_coords.z)), static_cast<int>(params.dimensions[2]) - 2);
+    Real tx   = grid_coords.x - i0_x;
+    Real ty   = grid_coords.y - i0_y;
+    Real tz   = grid_coords.z - i0_z;
 
     // Perform tricubic Hermite interpolation
     result.data  = tricubicHermiteInterpolate(vertex_data, tx, ty, tz);
@@ -103,8 +107,8 @@ MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFiel
     // Interpolate along x for each of the 4 yz positions
     MagneticFieldData interp_x[4];
     for (int i = 0; i < 4; ++i) {
-        int idx0 = (i % 2) + (i / 2) * 4;  // 0,1,4,5 for i=0,1,2,3
-        int idx1 = idx0 + 1;               // 1,2,5,6
+        int idx0 = (i % 2) * 2 + (i / 2) * 4;  // 0,2,4,6 for i=0,1,2,3
+        int idx1 = idx0 + 1;                   // 1,3,5,7
 
         // For Bx, use Hermite
         interp_x[i].Bx = hermiteInterpolate(vertex_data[idx0].Bx, vertex_data[idx1].Bx, vertex_data[idx0].dBx_dx,
@@ -114,16 +118,16 @@ MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFiel
         interp_x[i].Bz = hermiteInterpolate(vertex_data[idx0].Bz, vertex_data[idx1].Bz, vertex_data[idx0].dBz_dx,
                                             vertex_data[idx1].dBz_dx, tx);
 
-        // Derivatives set to 0 (no higher-order data)
+        // Interpolate derivatives linearly
         interp_x[i].dBx_dx = 0;
-        interp_x[i].dBx_dy = 0;
-        interp_x[i].dBx_dz = 0;
-        interp_x[i].dBy_dx = 0;
-        interp_x[i].dBy_dy = 0;
-        interp_x[i].dBy_dz = 0;
-        interp_x[i].dBz_dx = 0;
-        interp_x[i].dBz_dy = 0;
-        interp_x[i].dBz_dz = 0;
+        interp_x[i].dBx_dy = (1 - tx) * vertex_data[idx0].dBx_dy + tx * vertex_data[idx1].dBx_dy;
+        interp_x[i].dBx_dz = (1 - tx) * vertex_data[idx0].dBx_dz + tx * vertex_data[idx1].dBx_dz;
+        interp_x[i].dBy_dx = (1 - tx) * vertex_data[idx0].dBy_dx + tx * vertex_data[idx1].dBy_dx;
+        interp_x[i].dBy_dy = (1 - tx) * vertex_data[idx0].dBy_dy + tx * vertex_data[idx1].dBy_dy;
+        interp_x[i].dBy_dz = (1 - tx) * vertex_data[idx0].dBy_dz + tx * vertex_data[idx1].dBy_dz;
+        interp_x[i].dBz_dx = (1 - tx) * vertex_data[idx0].dBz_dx + tx * vertex_data[idx1].dBz_dx;
+        interp_x[i].dBz_dy = (1 - tx) * vertex_data[idx0].dBz_dy + tx * vertex_data[idx1].dBz_dy;
+        interp_x[i].dBz_dz = (1 - tx) * vertex_data[idx0].dBz_dz + tx * vertex_data[idx1].dBz_dz;
     }
 
     // Interpolate along y for the 2 z layers
@@ -139,16 +143,16 @@ MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFiel
         interp_y[i].Bz =
             hermiteInterpolate(interp_x[idx0].Bz, interp_x[idx1].Bz, interp_x[idx0].dBz_dy, interp_x[idx1].dBz_dy, ty);
 
-        // Derivatives 0
-        interp_y[i].dBx_dx = 0;
+        // Interpolate derivatives linearly
+        interp_y[i].dBx_dx = (1 - ty) * interp_x[idx0].dBx_dx + ty * interp_x[idx1].dBx_dx;
         interp_y[i].dBx_dy = 0;
-        interp_y[i].dBx_dz = 0;
-        interp_y[i].dBy_dx = 0;
+        interp_y[i].dBx_dz = (1 - ty) * interp_x[idx0].dBx_dz + ty * interp_x[idx1].dBx_dz;
+        interp_y[i].dBy_dx = (1 - ty) * interp_x[idx0].dBy_dx + ty * interp_x[idx1].dBy_dx;
         interp_y[i].dBy_dy = 0;
-        interp_y[i].dBy_dz = 0;
-        interp_y[i].dBz_dx = 0;
+        interp_y[i].dBy_dz = (1 - ty) * interp_x[idx0].dBy_dz + ty * interp_x[idx1].dBy_dz;
+        interp_y[i].dBz_dx = (1 - ty) * interp_x[idx0].dBz_dx + ty * interp_x[idx1].dBz_dx;
         interp_y[i].dBz_dy = 0;
-        interp_y[i].dBz_dz = 0;
+        interp_y[i].dBz_dz = (1 - ty) * interp_x[idx0].dBz_dz + ty * interp_x[idx1].dBz_dz;
     }
 
     // Interpolate along z

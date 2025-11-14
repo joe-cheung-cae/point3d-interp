@@ -75,14 +75,17 @@ Point3D RegularGrid3D::gridToWorld(const Point3D& grid_point) const {
 P3D_HOST_DEVICE
 bool RegularGrid3D::getCellVertexIndices(const Point3D& grid_coords, uint32_t indices[8]) const {
     // Get cell starting indices (floor)
-    int i0 = static_cast<int>(grid_coords.x);
-    int j0 = static_cast<int>(grid_coords.y);
-    int k0 = static_cast<int>(grid_coords.z);
+    int i0 = static_cast<int>(std::floor(grid_coords.x));
+    int j0 = static_cast<int>(std::floor(grid_coords.y));
+    int k0 = static_cast<int>(std::floor(grid_coords.z));
 
-    // Handle boundary case: if at the last grid point, use the previous cell
-    if (i0 == static_cast<int>(params_.dimensions[0]) - 1) i0--;
-    if (j0 == static_cast<int>(params_.dimensions[1]) - 1) j0--;
-    if (k0 == static_cast<int>(params_.dimensions[2]) - 1) k0--;
+    // Ensure i0 is within valid cell range
+    int max_i = static_cast<int>(params_.dimensions[0]) - 1;
+    int max_j = static_cast<int>(params_.dimensions[1]) - 1;
+    int max_k = static_cast<int>(params_.dimensions[2]) - 1;
+    i0        = std::min(i0, max_i - 1);
+    j0        = std::min(j0, max_j - 1);
+    k0        = std::min(k0, max_k - 1);
 
     int i1 = i0 + 1;
     int j1 = j0 + 1;

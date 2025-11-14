@@ -22,7 +22,7 @@ class MagneticFieldInterpolator {
      * @param use_gpu Whether to use GPU acceleration (default true)
      * @param device_id GPU device ID (default 0)
      */
-    explicit MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
+    explicit MagneticFieldInterpolator(bool use_gpu = false, int device_id = 0);
 
     ~MagneticFieldInterpolator();
 
