@@ -14,43 +14,77 @@ FetchContent_MakeAvailable(googletest)
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-# Data-related tests
-add_executable(test_data
+# Data loader tests
+add_executable(test_data_loader
     test_data_loader.cpp
+)
+
+target_link_libraries(test_data_loader
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_data_loader PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_data_loader COMMAND test_data_loader)
+
+# Grid structure tests
+add_executable(test_grid_structure
     test_grid_structure.cpp
 )
 
-target_link_libraries(test_data
+target_link_libraries(test_grid_structure
     PRIVATE
     point3d_interp
     GTest::gtest_main
 )
 
-set_target_properties(test_data PROPERTIES
+set_target_properties(test_grid_structure PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
-add_test(NAME test_data COMMAND test_data)
+add_test(NAME test_grid_structure COMMAND test_grid_structure)
 
-# Interpolation tests
-add_executable(test_interpolation
+# CPU interpolator tests
+add_executable(test_cpu_interpolator
     test_cpu_interpolator.cpp
+)
+
+target_link_libraries(test_cpu_interpolator
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_cpu_interpolator PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_cpu_interpolator COMMAND test_cpu_interpolator)
+
+# Accuracy tests
+add_executable(test_accuracy
     test_accuracy.cpp
 )
 
-target_link_libraries(test_interpolation
+target_link_libraries(test_accuracy
     PRIVATE
     point3d_interp
     GTest::gtest_main
 )
 
-set_target_properties(test_interpolation PROPERTIES
+set_target_properties(test_accuracy PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
 
-add_test(NAME test_interpolation COMMAND test_interpolation)
+add_test(NAME test_accuracy COMMAND test_accuracy)
 
 # API tests
 add_executable(test_api
