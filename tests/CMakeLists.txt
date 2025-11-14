@@ -120,6 +120,25 @@ set_target_properties(test_edge_cases PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
+# GPU interpolator tests
+add_executable(test_gpu_interpolator
+    test_gpu_interpolator.cpp
+)
+
+target_link_libraries(test_gpu_interpolator
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_gpu_interpolator PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_gpu_interpolator COMMAND test_gpu_interpolator)
+
+# Benchmark
 add_test(NAME test_edge_cases COMMAND test_edge_cases)
 
 # Benchmark
