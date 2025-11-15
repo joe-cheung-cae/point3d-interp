@@ -7,10 +7,6 @@
 #include <vector>
 #include <memory>
 
-#ifdef __CUDACC__
-    #include <cuda_runtime.h>
-#endif
-
 // CUDA-compatible types for public API
 struct KernelConfig {
     unsigned int block_x, block_y, block_z;
