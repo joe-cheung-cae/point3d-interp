@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <mutex>
 
 #ifdef __CUDACC__
     #include <cuda_runtime.h>
@@ -41,10 +42,15 @@ class MagneticFieldInterpolator::Impl {
     ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
 
     const GridParams& GetGridParams() const {
+        std::lock_guard<std::mutex> lock(mutex_);
         return (data_type_ == DataStructureType::RegularGrid && grid_) ? grid_->getParams() : default_params_;
     }
-    bool   IsDataLoaded() const { return data_type_ != DataStructureType::RegularGrid || grid_ != nullptr; }
+    bool IsDataLoaded() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return data_type_ != DataStructureType::RegularGrid || grid_ != nullptr;
+    }
     size_t GetDataPointCount() const {
+        std::lock_guard<std::mutex> lock(mutex_);
         if (data_type_ == DataStructureType::RegularGrid && grid_) {
             return grid_->getDataCount();
         } else if (data_type_ == DataStructureType::Unstructured && unstructured_interpolator_) {
@@ -54,6 +60,7 @@ class MagneticFieldInterpolator::Impl {
     }
 
     const Point3D* GetDeviceGridPoints() const {
+        std::lock_guard<std::mutex> lock(mutex_);
 #ifdef __CUDACC__
         return gpu_grid_points_ ? gpu_grid_points_->getDevicePtr() : nullptr;
 #else
@@ -62,6 +69,7 @@ class MagneticFieldInterpolator::Impl {
     }
 
     const MagneticFieldData* GetDeviceFieldData() const {
+        std::lock_guard<std::mutex> lock(mutex_);
 #ifdef __CUDACC__
         return gpu_grid_field_data_ ? gpu_grid_field_data_->getDevicePtr() : nullptr;
 #else
@@ -70,6 +78,7 @@ class MagneticFieldInterpolator::Impl {
     }
 
     const GridParams* GetDeviceGridParams() const {
+        std::lock_guard<std::mutex> lock(mutex_);
         // Note: GridParams is stored on host, need to upload to GPU if needed
         // For now, return nullptr as we don't maintain a GPU copy of GridParams
         return nullptr;
@@ -77,6 +86,7 @@ class MagneticFieldInterpolator::Impl {
 
     ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
                                         void* stream) {
+        std::lock_guard<std::mutex> lock(mutex_);
         if (!IsDataLoaded()) {
             return ErrorCode::DataNotLoaded;
         }
@@ -122,6 +132,7 @@ class MagneticFieldInterpolator::Impl {
     }
 
     void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
+        std::lock_guard<std::mutex> lock(mutex_);
         // Use same configuration as internal batch query
         const int BLOCK_SIZE = 512;
         const int MIN_BLOCKS = 4;
@@ -140,9 +151,10 @@ class MagneticFieldInterpolator::Impl {
     }
 
   private:
-    bool InitializeGPU(int device_id);
-    void ReleaseGPU();
-    bool UploadDataToGPU();
+    mutable std::mutex mutex_;
+    bool               InitializeGPU(int device_id);
+    void               ReleaseGPU();
+    bool               UploadDataToGPU();
 
     // Data structure type
     DataStructureType data_type_;
@@ -257,7 +269,8 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
 MagneticFieldInterpolator::Impl::~Impl() { ReleaseGPU(); }
 
 ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepath) {
-    DataLoader loader;
+    std::lock_guard<std::mutex> lock(mutex_);
+    DataLoader                  loader;
 
     std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
@@ -273,6 +286,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepa
 
 ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
                                                           size_t count) {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!points || !field_data || count == 0) {
         return ErrorCode::InvalidParameter;
     }
@@ -313,11 +327,13 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, InterpolationResult& result) {
+    std::lock_guard<std::mutex> lock(mutex_);
     return QueryBatch(&query_point, &result, 1);
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,
                                                       size_t count) {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!IsDataLoaded()) {
         return ErrorCode::DataNotLoaded;
     }
