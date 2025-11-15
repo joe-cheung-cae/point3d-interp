@@ -2,7 +2,9 @@
 #define POINTER3D_INTERP_TYPES_H
 
 #include <cstdint>
+#include <cstddef>
 #include <array>
+#include <vector>
 
 namespace p3d {
 
@@ -177,6 +179,37 @@ struct InterpolationResult {
 enum class InterpolationMethod { Trilinear, TricubicHermite, IDW };
 
 enum class ExtrapolationMethod { None, NearestNeighbor, LinearExtrapolation };
+
+// Spatial grid for GPU-accelerated neighbor finding
+struct SpatialGrid {
+    Point3D                 origin;        // Grid origin
+    Point3D                 cell_size;     // Size of each cell (dx, dy, dz)
+    std::array<uint32_t, 3> dimensions;    // Number of cells in each dimension (nx, ny, nz)
+    std::vector<uint32_t>   cell_offsets;  // Offset array: cell_offsets[i] = start index of points in cell i
+    std::vector<uint32_t>   cell_points;   // Point indices sorted by cell
+
+    SpatialGrid() : origin(0, 0, 0), cell_size(1, 1, 1), dimensions{0, 0, 0} {}
+
+    // Get total number of cells
+    size_t get_num_cells() const { return dimensions[0] * dimensions[1] * dimensions[2]; }
+
+    // Get cell index from 3D coordinates
+    size_t get_cell_index(int ix, int iy, int iz) const {
+        return ix + iy * dimensions[0] + iz * dimensions[0] * dimensions[1];
+    }
+
+    // Get 3D cell coordinates from world point
+    void get_cell_coords(const Point3D& point, int& ix, int& iy, int& iz) const {
+        ix = static_cast<int>((point.x - origin.x) / cell_size.x);
+        iy = static_cast<int>((point.y - origin.y) / cell_size.y);
+        iz = static_cast<int>((point.z - origin.z) / cell_size.z);
+
+        // Clamp to bounds
+        ix = std::max(0, std::min(ix, static_cast<int>(dimensions[0]) - 1));
+        iy = std::max(0, std::min(iy, static_cast<int>(dimensions[1]) - 1));
+        iz = std::max(0, std::min(iz, static_cast<int>(dimensions[2]) - 1));
+    }
+};
 
 }  // namespace p3d
 

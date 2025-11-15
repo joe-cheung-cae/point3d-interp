@@ -1,21 +1,28 @@
-#include "point3d_interp/types.h"
-#include <cuda_runtime.h>
-#include <iostream>
+#ifndef POINTER3D_INTERP_MEMORY_MANAGER_H
+#define POINTER3D_INTERP_MEMORY_MANAGER_H
+
+#include "types.h"
+#ifdef __CUDACC__
+    #include <cuda_runtime.h>
+#endif
 
 namespace p3d {
 namespace cuda {
 
-/**
- * @brief CUDA error checking macro
- */
-#define CUDA_CHECK(call)            \
-    do {                            \
-        cudaError_t error = call;   \
-        if (error != cudaSuccess) { \
-            return false;           \
-        }                           \
-    } while (0)
+#ifdef __CUDACC__
+    /**
+     * @brief CUDA error checking macro
+     */
+    #define CUDA_CHECK(call)            \
+        do {                            \
+            cudaError_t error = call;   \
+            if (error != cudaSuccess) { \
+                return false;           \
+            }                           \
+        } while (0)
+#endif
 
+#ifdef __CUDACC__
 /**
  * @brief GPU memory manager
  *
@@ -168,13 +175,13 @@ class GpuMemory {
 
 // Implementation of GpuMemoryManager
 
-GpuMemoryManager::GpuMemoryManager(GpuMemoryManager&& other) noexcept
+inline GpuMemoryManager::GpuMemoryManager(GpuMemoryManager&& other) noexcept
     : device_ptr_(other.device_ptr_), size_(other.size_) {
     other.device_ptr_ = nullptr;
     other.size_       = 0;
 }
 
-GpuMemoryManager& GpuMemoryManager::operator=(GpuMemoryManager&& other) noexcept {
+inline GpuMemoryManager& GpuMemoryManager::operator=(GpuMemoryManager&& other) noexcept {
     if (this != &other) {
         cleanup();
         device_ptr_       = other.device_ptr_;
@@ -185,7 +192,7 @@ GpuMemoryManager& GpuMemoryManager::operator=(GpuMemoryManager&& other) noexcept
     return *this;
 }
 
-bool GpuMemoryManager::allocate(size_t size) {
+inline bool GpuMemoryManager::allocate(size_t size) {
     if (isAllocated()) {
         deallocate();
     }
@@ -195,7 +202,7 @@ bool GpuMemoryManager::allocate(size_t size) {
     return true;
 }
 
-void GpuMemoryManager::deallocate() {
+inline void GpuMemoryManager::deallocate() {
     if (device_ptr_) {
         cudaFree(device_ptr_);
         device_ptr_ = nullptr;
@@ -203,7 +210,7 @@ void GpuMemoryManager::deallocate() {
     }
 }
 
-bool GpuMemoryManager::copyToDevice(const void* host_data, size_t size) {
+inline bool GpuMemoryManager::copyToDevice(const void* host_data, size_t size) {
     if (!isAllocated() || size > size_) {
         return false;
     }
@@ -212,7 +219,7 @@ bool GpuMemoryManager::copyToDevice(const void* host_data, size_t size) {
     return true;
 }
 
-bool GpuMemoryManager::copyToHost(void* host_data, size_t size) {
+inline bool GpuMemoryManager::copyToHost(void* host_data, size_t size) {
     if (!isAllocated() || size > size_) {
         return false;
     }
@@ -221,7 +228,7 @@ bool GpuMemoryManager::copyToHost(void* host_data, size_t size) {
     return true;
 }
 
-void GpuMemoryManager::cleanup() { deallocate(); }
+inline void GpuMemoryManager::cleanup() { deallocate(); }
 
 // Implementation of GpuMemory<T>
 
@@ -284,11 +291,8 @@ bool GpuMemory<T>::copyToHost(T* host_data, size_t count) {
     return true;
 }
 
-// Explicit instantiation of commonly used types
-template class GpuMemory<Point3D>;
-template class GpuMemory<MagneticFieldData>;
-template class GpuMemory<InterpolationResult>;
-template class GpuMemory<uint32_t>;
-
 }  // namespace cuda
+#endif  // __CUDACC__
 }  // namespace p3d
+
+#endif  // POINTER3D_INTERP_MEMORY_MANAGER_H
