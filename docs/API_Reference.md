@@ -13,12 +13,16 @@ The main interface class for magnetic field interpolation.
 #### Constructor
 
 ```cpp
-MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0);
+MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
+                         InterpolationMethod method = InterpolationMethod::TricubicHermite,
+                         ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
 ```
 
 **Parameters:**
 - `use_gpu`: Whether to use GPU acceleration (default: true)
 - `device_id`: CUDA device ID (default: 0)
+- `method`: Interpolation method (default: TricubicHermite)
+- `extrapolation_method`: Extrapolation method for unstructured data (default: None)
 
 #### Methods
 
@@ -211,6 +215,26 @@ struct GridParams {
     Point3D max_bound;                 // Maximum bounds
 };
 ```
+
+### ExtrapolationMethod
+
+Enum specifying the extrapolation strategy for points outside the data bounds (applicable to unstructured data).
+
+```cpp
+enum class ExtrapolationMethod {
+    None,              // No special extrapolation (IDW interpolates naturally)
+    NearestNeighbor,   // Use value of nearest data point
+    LinearExtrapolation // Linear extrapolation (placeholder, uses nearest for now)
+};
+```
+
+#### Extrapolation Methods
+
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| `None` | IDW interpolation continues naturally outside data bounds | Default behavior, suitable when data covers the query region |
+| `NearestNeighbor` | Returns the magnetic field values of the closest data point | Simple and fast extrapolation for points far from data |
+| `LinearExtrapolation` | Performs linear extrapolation based on nearby points (currently uses nearest neighbor) | Planned for future implementation of true linear extrapolation |
 
 ## Error Codes
 

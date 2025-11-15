@@ -176,6 +176,8 @@ struct InterpolationResult {
 
 enum class InterpolationMethod { Trilinear, TricubicHermite, IDW };
 
+enum class ExtrapolationMethod { None, NearestNeighbor, LinearExtrapolation };
+
 }  // namespace p3d
 
 #endif  // POINTER3D_INTERP_TYPES_H

@@ -20,9 +20,11 @@ class UnstructuredInterpolator {
      * @param field_data Magnetic field data at each point
      * @param power IDW power parameter (default 2.0)
      * @param max_neighbors Maximum number of neighbors to consider (0 = all points)
+     * @param extrapolation_method Method for extrapolation outside data bounds (default None)
      */
     UnstructuredInterpolator(const std::vector<Point3D>& coordinates, const std::vector<MagneticFieldData>& field_data,
-                             Real power = 2.0, size_t max_neighbors = 0);
+                             Real power = 2.0, size_t max_neighbors = 0,
+                             ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
 
     ~UnstructuredInterpolator();
 
@@ -65,6 +67,12 @@ class UnstructuredInterpolator {
     size_t getMaxNeighbors() const { return max_neighbors_; }
 
     /**
+     * @brief Get extrapolation method
+     * @return Extrapolation method
+     */
+    ExtrapolationMethod getExtrapolationMethod() const { return extrapolation_method_; }
+
+    /**
      * @brief Get all coordinate points
      * @return Array of coordinate points
      */
@@ -86,6 +94,20 @@ class UnstructuredInterpolator {
     Real distance(const Point3D& p1, const Point3D& p2) const;
 
     /**
+     * @brief Check if point is inside bounding box
+     * @param point Query point
+     * @return True if inside bounds
+     */
+    bool isPointInsideBounds(const Point3D& point) const;
+
+    /**
+     * @brief Apply extrapolation for points outside bounds
+     * @param query_point Query point
+     * @return Extrapolated result
+     */
+    InterpolationResult extrapolate(const Point3D& query_point) const;
+
+    /**
      * @brief Find k nearest neighbors (if max_neighbors > 0)
      * @param query_point Query point
      * @param indices Output array of neighbor indices
@@ -94,10 +116,13 @@ class UnstructuredInterpolator {
      */
     size_t findNeighbors(const Point3D& query_point, std::vector<size_t>& indices, std::vector<Real>& distances) const;
 
-    std::vector<Point3D>           coordinates_;    // Point coordinates
-    std::vector<MagneticFieldData> field_data_;     // Magnetic field data
-    Real                           power_;          // IDW power parameter
-    size_t                         max_neighbors_;  // Maximum neighbors (0 = all)
+    std::vector<Point3D>           coordinates_;           // Point coordinates
+    std::vector<MagneticFieldData> field_data_;            // Magnetic field data
+    Real                           power_;                 // IDW power parameter
+    size_t                         max_neighbors_;         // Maximum neighbors (0 = all)
+    ExtrapolationMethod            extrapolation_method_;  // Extrapolation method
+    Point3D                        min_bound_;             // Minimum bounds of data
+    Point3D                        max_bound_;             // Maximum bounds of data
 };
 
 }  // namespace p3d

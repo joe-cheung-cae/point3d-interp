@@ -35,7 +35,8 @@ TEST_F(UnstructuredInterpolatorTest, ConstructorWithPower) {
 }
 
 TEST_F(UnstructuredInterpolatorTest, ConstructorWithMaxNeighbors) {
-    EXPECT_NO_THROW({ UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 3); });
+    EXPECT_NO_THROW(
+        { UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 3, ExtrapolationMethod::None); });
 }
 
 TEST_F(UnstructuredInterpolatorTest, ConstructorMismatchedSizes) {
@@ -117,7 +118,7 @@ TEST_F(UnstructuredInterpolatorTest, GetPower) {
 
 TEST_F(UnstructuredInterpolatorTest, GetMaxNeighbors) {
     size_t                   max_neighbors = 3;
-    UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, max_neighbors);
+    UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, max_neighbors, ExtrapolationMethod::None);
     EXPECT_EQ(interp.getMaxNeighbors(), max_neighbors);
 }
 
@@ -211,7 +212,7 @@ TEST_F(UnstructuredInterpolatorTest, AccuracyTestKNearestNeighbors) {
     };
 
     // Use only 2 nearest neighbors
-    UnstructuredInterpolator interp(coords, data, 2.0f, 2);
+    UnstructuredInterpolator interp(coords, data, 2.0f, 2, ExtrapolationMethod::None);
 
     // Query at (1.5, 0, 0) - closest are points 1 and 2 at distances 0.5 and 0.5
     InterpolationResult result = interp.query({1.5f, 0.0f, 0.0f});
@@ -221,6 +222,36 @@ TEST_F(UnstructuredInterpolatorTest, AccuracyTestKNearestNeighbors) {
     EXPECT_NEAR(result.data.Bx, 0.0f, 1e-6f);
     EXPECT_NEAR(result.data.By, 0.5f, 1e-6f);
     EXPECT_NEAR(result.data.Bz, 0.5f, 1e-6f);
+}
+
+TEST_F(UnstructuredInterpolatorTest, ExtrapolationNearestNeighbor) {
+    // Test extrapolation with nearest neighbor
+    UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 0, ExtrapolationMethod::NearestNeighbor);
+
+    // Query point far outside the data bounds
+    Point3D             query_point(10.0f, 10.0f, 10.0f);
+    InterpolationResult result = interp.query(query_point);
+
+    EXPECT_TRUE(result.valid);
+    // Should return the value of the nearest point, which is the last point at (0.5, 0.5, 1.0)
+    EXPECT_NEAR(result.data.Bx, 0.5f, 1e-6f);
+    EXPECT_NEAR(result.data.By, 0.5f, 1e-6f);
+    EXPECT_NEAR(result.data.Bz, 0.5f, 1e-6f);
+}
+
+TEST_F(UnstructuredInterpolatorTest, ExtrapolationNone) {
+    // Test with no extrapolation - should interpolate even outside bounds
+    UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 0, ExtrapolationMethod::None);
+
+    // Query point outside bounds
+    Point3D             query_point(10.0f, 10.0f, 10.0f);
+    InterpolationResult result = interp.query(query_point);
+
+    EXPECT_TRUE(result.valid);
+    // IDW will still interpolate
+    EXPECT_GE(result.data.Bx, 0.0f);
+    EXPECT_GE(result.data.By, 0.0f);
+    EXPECT_GE(result.data.Bz, 0.0f);
 }
 
 }  // namespace p3d

@@ -204,8 +204,8 @@ __device__ Real Distance(const Point3D& p1, const Point3D& p2) {
 __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
                                        const Point3D* __restrict__ data_points,
                                        const MagneticFieldData* __restrict__ field_data, const size_t data_count,
-                                       const Real   power, InterpolationResult* __restrict__ results,
-                                       const size_t query_count) {
+                                       const Real power, const int                             extrapolation_method,
+                                       InterpolationResult* __restrict__ results, const size_t query_count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid >= query_count) {

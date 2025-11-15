@@ -31,7 +31,8 @@ enum class DataStructureType { RegularGrid, Unstructured };
  */
 class MagneticFieldInterpolator::Impl {
   public:
-    Impl(bool use_gpu, int device_id, InterpolationMethod method);
+    Impl(bool use_gpu, int device_id, InterpolationMethod method,
+         ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
     ~Impl();
 
     // Move constructor
@@ -161,6 +162,7 @@ class MagneticFieldInterpolator::Impl {
     int                 device_id_;
     bool                gpu_initialized_;
     InterpolationMethod method_;
+    ExtrapolationMethod extrapolation_method_;
 
 #ifdef __CUDACC__
     // GPU memory manager for regular grids
@@ -182,12 +184,14 @@ class MagneticFieldInterpolator::Impl {
 
 // Implementation
 
-MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, InterpolationMethod method)
+MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, InterpolationMethod method,
+                                      ExtrapolationMethod extrapolation_method)
     : data_type_(DataStructureType::RegularGrid),
       use_gpu_(use_gpu),
       device_id_(device_id),
       gpu_initialized_(false),
-      method_(method) {
+      method_(method),
+      extrapolation_method_(extrapolation_method) {
 #ifdef __CUDACC__
     if (use_gpu_) {
         gpu_initialized_ = InitializeGPU(device_id);
@@ -207,7 +211,8 @@ MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
       use_gpu_(other.use_gpu_),
       device_id_(other.device_id_),
       gpu_initialized_(other.gpu_initialized_),
-      method_(other.method_) {
+      method_(other.method_),
+      extrapolation_method_(other.extrapolation_method_) {
 #ifdef __CUDACC__
     gpu_grid_points_             = std::move(other.gpu_grid_points_);
     gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -230,6 +235,7 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
         device_id_                 = other.device_id_;
         gpu_initialized_           = other.gpu_initialized_;
         method_                    = other.method_;
+        extrapolation_method_      = other.extrapolation_method_;
 #ifdef __CUDACC__
         gpu_grid_points_             = std::move(other.gpu_grid_points_);
         gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -284,8 +290,9 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
             }
         } catch (const std::invalid_argument&) {
             // Not a regular grid, use unstructured interpolator
-            unstructured_interpolator_ = std::make_unique<UnstructuredInterpolator>(coordinates, field_values);
-            data_type_                 = DataStructureType::Unstructured;
+            unstructured_interpolator_ =
+                std::make_unique<UnstructuredInterpolator>(coordinates, field_values, 2.0f, 0, extrapolation_method_);
+            data_type_ = DataStructureType::Unstructured;
 
             // Upload data to GPU for unstructured data
             if (use_gpu_ && !UploadDataToGPU()) {
@@ -359,7 +366,8 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
                     gpu_unstructured_field_data_->getDevicePtr(), unstructured_interpolator_->getDataCount(),
-                    unstructured_interpolator_->getPower(), gpu_results_->getDevicePtr(), count);
+                    unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_),
+                    gpu_results_->getDevicePtr(), count);
 
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
@@ -561,8 +569,9 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
 
 // MagneticFieldInterpolator implementation
 
-MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id, InterpolationMethod method)
-    : impl_(std::make_unique<Impl>(use_gpu, device_id, method)) {}
+MagneticFieldInterpolator::MagneticFieldInterpolator(bool use_gpu, int device_id, InterpolationMethod method,
+                                                     ExtrapolationMethod extrapolation_method)
+    : impl_(std::make_unique<Impl>(use_gpu, device_id, method, extrapolation_method)) {}
 
 MagneticFieldInterpolator::~MagneticFieldInterpolator() = default;
 
@@ -578,7 +587,7 @@ MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInt
 
 ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
     if (!impl_) {
-        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite);
+        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite, ExtrapolationMethod::None);
     }
     return impl_->LoadFromCSV(filepath);
 }
@@ -586,7 +595,7 @@ ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
 ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
                                                     size_t count) {
     if (!impl_) {
-        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite);
+        impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite, ExtrapolationMethod::None);
     }
     return impl_->LoadFromMemory(points, field_data, count);
 }

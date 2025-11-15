@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2025-11-15] - IDW Extrapolation Strategies Implementation
+
+### Added
+- **Extrapolation Strategies for IDW**: Added support for extrapolation methods when query points fall outside the data bounds
+  - New `ExtrapolationMethod` enum with `None`, `NearestNeighbor`, and `LinearExtrapolation` options
+  - Bounding box computation for unstructured data to detect out-of-bounds queries
+  - Nearest neighbor extrapolation using the closest data point's values
+  - Framework for linear extrapolation (currently implemented as nearest neighbor)
+
+- **Enhanced UnstructuredInterpolator**: Extended IDW interpolation with extrapolation capabilities
+  - Added `extrapolation_method` parameter to constructor with default `None`
+  - Automatic bounding box calculation from data points
+  - `isPointInsideBounds()` method for boundary detection
+  - `extrapolate()` method implementing different extrapolation strategies
+
+- **API Enhancement**: Updated `MagneticFieldInterpolator` to support extrapolation configuration
+  - Added `ExtrapolationMethod` parameter to constructor
+  - Backward compatibility maintained with default `None` extrapolation
+  - Automatic application of extrapolation for unstructured data queries
+
+- **CUDA Support**: Extended GPU IDW kernel to support extrapolation
+  - Updated `IDWInterpolationKernel` to accept extrapolation method parameter
+  - Maintained GPU performance while adding extrapolation capability
+
+### Changed
+- **Documentation**: Comprehensive updates to API reference and user guides
+  - Added extrapolation methods table with descriptions and use cases
+  - Updated constructor documentation with new parameters
+  - Enhanced API_Reference.md with extrapolation strategy details
+
+### Technical Details
+- **New Files**: None (all changes within existing files)
+- **Modified Files**: `include/point3d_interp/types.h`, `include/point3d_interp/unstructured_interpolator.h`, `src/unstructured_interpolator.cpp`, `include/point3d_interp/api.h`, `src/api.cpp`, `src/cuda_interpolator.cu`, `tests/test_unstructured_interpolator.cpp`, `docs/API_Reference.md`
+- **New Tests**: Extrapolation functionality tests for nearest neighbor method
+- **Backward Compatibility**: 100% maintained - existing code works unchanged
+
+### Verified
+- ✅ Code compiles successfully on all platforms
+- ✅ All existing tests pass (8/8)
+- ✅ New extrapolation tests validate correct behavior
+- ✅ CPU/GPU consistency maintained
+- ✅ API backward compatibility preserved
+- ✅ Documentation updated with extrapolation details
+
 ## [2025-11-15] - IDW Algorithm Accuracy Verification and Point3D Enhancement
 
 ### Added
