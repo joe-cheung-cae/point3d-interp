@@ -53,7 +53,6 @@ ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point
         MagneticFieldData field;
 
         if (!ParseLine(line, point, field)) {
-            std::cerr << "Error parsing line " << line_number << ": " << line << std::endl;
             return ErrorCode::InvalidFileFormat;
         }
 
