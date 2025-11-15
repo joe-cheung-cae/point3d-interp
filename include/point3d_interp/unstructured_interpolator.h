@@ -84,6 +84,18 @@ class UnstructuredInterpolator {
      */
     const std::vector<MagneticFieldData>& getFieldData() const { return field_data_; }
 
+    /**
+     * @brief Get minimum bound of data
+     * @return Minimum bound point
+     */
+    const Point3D& getMinBound() const { return min_bound_; }
+
+    /**
+     * @brief Get maximum bound of data
+     * @return Maximum bound point
+     */
+    const Point3D& getMaxBound() const { return max_bound_; }
+
   private:
     /**
      * @brief Calculate Euclidean distance between two points

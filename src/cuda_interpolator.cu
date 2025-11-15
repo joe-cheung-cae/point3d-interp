@@ -188,6 +188,14 @@ __device__ Real Distance(const Point3D& p1, const Point3D& p2) {
 }
 
 /**
+ * @brief Check if a point is inside the bounding box
+ */
+__device__ bool IsPointInsideBounds(const Point3D& point, const Point3D& min_bound, const Point3D& max_bound) {
+    return (point.x >= min_bound.x && point.x <= max_bound.x) && (point.y >= min_bound.y && point.y <= max_bound.y) &&
+           (point.z >= min_bound.z && point.z <= max_bound.z);
+}
+
+/**
  * @brief CUDA kernel: IDW interpolation for unstructured point clouds
  *
  * Each thread handles interpolation calculation for one query point
@@ -204,8 +212,9 @@ __device__ Real Distance(const Point3D& p1, const Point3D& p2) {
 __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
                                        const Point3D* __restrict__ data_points,
                                        const MagneticFieldData* __restrict__ field_data, const size_t data_count,
-                                       const Real power, const int                             extrapolation_method,
-                                       InterpolationResult* __restrict__ results, const size_t query_count) {
+                                       const Real power, const int extrapolation_method, const Point3D min_bound,
+                                       const Point3D max_bound, InterpolationResult* __restrict__ results,
+                                       const size_t  query_count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid >= query_count) {
@@ -215,6 +224,26 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
     const Point3D       query_point = query_points[tid];
     InterpolationResult result      = {};
     result.valid                    = true;
+
+    // Check if point is outside bounds and extrapolation is needed
+    const bool inside_bounds = IsPointInsideBounds(query_point, min_bound, max_bound);
+    if (!inside_bounds && extrapolation_method != 0) {  // 0 = None
+        // Apply extrapolation - find nearest neighbor
+        size_t nearest_idx = 0;
+        Real   min_dist    = 1e10f;  // Large number
+
+        for (size_t i = 0; i < data_count; ++i) {
+            Real dist = Distance(query_point, data_points[i]);
+            if (dist < min_dist) {
+                min_dist    = dist;
+                nearest_idx = i;
+            }
+        }
+
+        result.data  = field_data[nearest_idx];
+        results[tid] = result;
+        return;
+    }
 
     Real              weight_sum   = 0.0f;
     MagneticFieldData weighted_sum = {};

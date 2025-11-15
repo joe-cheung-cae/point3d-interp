@@ -363,11 +363,15 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 const int BLOCK_SIZE = 256;
                 const int num_blocks = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
+                // Get bounding box from unstructured interpolator
+                Point3D min_bound = unstructured_interpolator_->getMinBound();
+                Point3D max_bound = unstructured_interpolator_->getMaxBound();
+
                 cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
                     gpu_unstructured_field_data_->getDevicePtr(), unstructured_interpolator_->getDataCount(),
-                    unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_),
-                    gpu_results_->getDevicePtr(), count);
+                    unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_), min_bound,
+                    max_bound, gpu_results_->getDevicePtr(), count);
 
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
