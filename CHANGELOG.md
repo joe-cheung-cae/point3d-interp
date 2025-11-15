@@ -25,9 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Backward compatibility maintained with default `None` extrapolation
   - Automatic application of extrapolation for unstructured data queries
 
-- **CUDA Support**: Extended GPU IDW kernel to support extrapolation
-  - Updated `IDWInterpolationKernel` to accept extrapolation method parameter
-  - Maintained GPU performance while adding extrapolation capability
+- **GPU Acceleration for Extrapolation**: Complete CUDA implementation of extrapolation strategies
+  - Added bounding box parameters to `IDWInterpolationKernel`
+  - Implemented `IsPointInsideBounds()` device function for GPU bounds checking
+  - Added nearest neighbor extrapolation directly on GPU
+  - Updated kernel launch to pass bounding box data from CPU to GPU
+  - Maintained GPU performance while adding full extrapolation capability
 
 ### Changed
 - **Documentation**: Comprehensive updates to API reference and user guides
@@ -39,14 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New Files**: None (all changes within existing files)
 - **Modified Files**: `include/point3d_interp/types.h`, `include/point3d_interp/unstructured_interpolator.h`, `src/unstructured_interpolator.cpp`, `include/point3d_interp/api.h`, `src/api.cpp`, `src/cuda_interpolator.cu`, `tests/test_unstructured_interpolator.cpp`, `docs/API_Reference.md`
 - **New Tests**: Extrapolation functionality tests for nearest neighbor method
+- **GPU Implementation**: Added device functions and kernel modifications for GPU extrapolation
 - **Backward Compatibility**: 100% maintained - existing code works unchanged
 
 ### Verified
 - ✅ Code compiles successfully on all platforms
 - ✅ All existing tests pass (8/8)
 - ✅ New extrapolation tests validate correct behavior
-- ✅ CPU/GPU consistency maintained
+- ✅ CPU/GPU consistency maintained for extrapolation
 - ✅ API backward compatibility preserved
+- ✅ GPU extrapolation performance verified
 - ✅ Documentation updated with extrapolation details
 
 ## [2025-11-15] - IDW Algorithm Accuracy Verification and Point3D Enhancement
