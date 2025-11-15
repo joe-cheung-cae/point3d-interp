@@ -50,6 +50,12 @@ class DataLoader {
      */
     void SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 12>& field_cols);
 
+    /**
+     * @brief Set tolerance for floating point comparisons
+     * @param tolerance Tolerance value (default 1e-6)
+     */
+    void SetTolerance(Real tolerance) { tolerance_ = tolerance; }
+
   private:
     /**
      * @brief Parse single line data
@@ -96,6 +102,7 @@ class DataLoader {
   private:
     char                   delimiter_;    // Delimiter
     bool                   skip_header_;  // Whether to skip header row
+    Real                   tolerance_;    // Tolerance for floating point comparisons
     std::array<size_t, 3>  coord_cols_;   // Coordinate column indices
     std::array<size_t, 12> field_cols_;   // Magnetic field data column indices
 };

@@ -11,6 +11,7 @@ namespace p3d {
 DataLoader::DataLoader()
     : delimiter_(','),
       skip_header_(true),
+      tolerance_(1e-6),
       coord_cols_{0, 1, 2},  // x, y, z
       field_cols_{3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
 // Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz
@@ -144,12 +145,12 @@ bool DataLoader::DetectGridParams(const std::vector<Point3D>& coordinates, GridP
     }
 
     // Calculate spacing (check if uniform)
-    auto calculate_spacing = [](const std::vector<Real>& coords) -> Real {
+    auto calculate_spacing = [this](const std::vector<Real>& coords) -> Real {
         if (coords.size() < 2) return 0;
         Real spacing = coords[1] - coords[0];
         for (size_t i = 2; i < coords.size(); ++i) {
             Real current_spacing = coords[i] - coords[i - 1];
-            if (std::abs(current_spacing - spacing) > 1e-6) {
+            if (std::abs(current_spacing - spacing) > this->tolerance_) {
                 return 0;  // Non-uniform
             }
         }
@@ -202,8 +203,8 @@ bool DataLoader::ValidateGridRegularity(const std::vector<Point3D>& coordinates,
         Real expected_y = grid_params.origin.y + iy * grid_params.spacing.y;
         Real expected_z = grid_params.origin.z + iz * grid_params.spacing.z;
 
-        if (std::abs(coord.x - expected_x) > 1e-6 || std::abs(coord.y - expected_y) > 1e-6 ||
-            std::abs(coord.z - expected_z) > 1e-6) {
+        if (std::abs(coord.x - expected_x) > this->tolerance_ || std::abs(coord.y - expected_y) > this->tolerance_ ||
+            std::abs(coord.z - expected_z) > this->tolerance_) {
             return false;
         }
     }

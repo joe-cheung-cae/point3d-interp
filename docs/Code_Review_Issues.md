@@ -16,6 +16,9 @@ This document summarizes the issues identified during the code review of the Poi
 ### 5. Memory Manager Error Handling (RESOLVED)
 **Resolution**: Modified CUDA_CHECK macro to log detailed error messages including file, line number, and CUDA error string when CUDA calls fail, improving debugging capabilities.
 
+### 6. Floating Point Tolerance Issues (RESOLVED)
+**Resolution**: Made floating point tolerance configurable in DataLoader class by adding a tolerance_ member variable and SetTolerance() method. Replaced hardcoded 1e-6 values in DetectGridParams and ValidateGridRegularity functions with the configurable tolerance.
+
 ### 11. Compilation Errors Due to Namespace Conflicts (RESOLVED)
 **Resolution**: Moved CUDA header inclusion inside conditional compilation blocks to prevent namespace pollution. Added missing forward declarations for CUDA kernels.
 
@@ -26,15 +29,6 @@ This document summarizes the issues identified during the code review of the Poi
 **Status**: GetDeviceGridParams() properly documented as returning nullptr by design (parameters stored on host for simplicity). No functional impact.
 
 ## Open Issues
-
-### 6. Floating Point Tolerance Issues
-**Location**: [`src/data_loader.cpp:DetectGridParams`](src/data_loader.cpp:DetectGridParams), [`src/data_loader.cpp:ValidateGridRegularity`](src/data_loader.cpp:ValidateGridRegularity)
-
-**Issue**: Hardcoded 1e-6 tolerance for grid regularity detection.
-
-**Suggestion**:
-- Make tolerance configurable or adaptive based on data scale
-- Document tolerance behavior
 
 ### 7. Linear Extrapolation Approximation
 **Location**: [`src/cuda_interpolator.cu:LinearExtrapolate`](src/cuda_interpolator.cu:LinearExtrapolate)
