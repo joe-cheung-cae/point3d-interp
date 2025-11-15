@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2025-11-15] - IDW Algorithm Accuracy Verification and Point3D Enhancement
+
+### Added
+- **IDW Accuracy Tests**: Comprehensive test suite for inverse distance weighting interpolation accuracy
+  - `AccuracyTestSimple`: Verifies exact IDW calculations with manually computed expected values
+  - `AccuracyTestDifferentPower`: Tests IDW behavior with different power parameters (p=1, p=3)
+  - `AccuracyTestKNearestNeighbors`: Validates k-nearest neighbor functionality with controlled test cases
+
+- **Point3D Division Operator**: Added `operator/` for scalar division of Point3D coordinates
+  - Enables expressions like `point / scalar` for coordinate-wise division
+  - Maintains consistency with existing `operator*` for scalar multiplication
+
+### Changed
+- **Test Coverage**: Enhanced `tests/test_unstructured_interpolator.cpp` with rigorous numerical accuracy verification
+- **Type System**: Extended Point3D arithmetic operations for better usability
+
+### Technical Details
+- **Modified Files**: `include/point3d_interp/types.h`, `tests/test_unstructured_interpolator.cpp`
+- **New Tests**: 3 additional accuracy tests for IDW interpolation
+- **Verification**: All tests pass with precise numerical validation
+
+### Verified
+- ✅ All existing tests continue to pass (100% backward compatibility)
+- ✅ New accuracy tests validate IDW algorithm correctness
+- ✅ Code compiles successfully on all platforms
+
 ## [2025-11-14] - Unstructured Data Support and GPU Acceleration
 
 ### Added

@@ -43,6 +43,9 @@ struct Point3D {
 
     P3D_HOST_DEVICE
     Point3D operator*(Real scalar) const { return Point3D(x * scalar, y * scalar, z * scalar); }
+
+    P3D_HOST_DEVICE
+    Point3D operator/(Real scalar) const { return Point3D(x / scalar, y / scalar, z / scalar); }
 };
 
 // Magnetic field data structure
