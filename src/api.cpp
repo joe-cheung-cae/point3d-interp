@@ -11,11 +11,10 @@
 
 #ifdef __CUDACC__
     #include <cuda_runtime.h>
+    #include "point3d_interp/memory_manager.h"
 #endif
 
 namespace p3d {
-
-#include "point3d_interp/memory_manager.h"
 
 /**
  * @brief Data structure type

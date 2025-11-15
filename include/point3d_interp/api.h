@@ -29,7 +29,22 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
                                                    const MagneticFieldData* __restrict__ grid_data,
                                                    GridParams grid_params, InterpolationResult* __restrict__ results,
                                                    size_t     count);
-}
+
+__global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, const Point3D* __restrict__ data_points,
+                                     const MagneticFieldData* __restrict__ field_data,
+                                     const uint32_t* __restrict__ cell_offsets,
+                                     const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
+                                     const Point3D grid_cell_size, const uint32_t grid_dimensions[3], const Real power,
+                                     const int extrapolation_method, const Point3D min_bound, const Point3D max_bound,
+                                     InterpolationResult* __restrict__ results, const size_t query_count);
+
+__global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
+                                       const Point3D* __restrict__ data_points,
+                                       const MagneticFieldData* __restrict__ field_data, const size_t data_count,
+                                       const Real power, const int extrapolation_method, const Point3D min_bound,
+                                       const Point3D max_bound, InterpolationResult* __restrict__ results,
+                                       const size_t  query_count);
+}  // namespace cuda
 }  // namespace p3d
 #endif
 
