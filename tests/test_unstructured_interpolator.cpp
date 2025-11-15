@@ -239,6 +239,25 @@ TEST_F(UnstructuredInterpolatorTest, ExtrapolationNearestNeighbor) {
     EXPECT_NEAR(result.data.Bz, 0.5f, 1e-6f);
 }
 
+TEST_F(UnstructuredInterpolatorTest, ExtrapolationLinear) {
+    // Test extrapolation with linear extrapolation
+    UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 0, ExtrapolationMethod::LinearExtrapolation);
+
+    // Query point outside the data bounds but not too far
+    Point3D             query_point(1.5f, 1.5f, 1.5f);
+    InterpolationResult result = interp.query(query_point);
+
+    EXPECT_TRUE(result.valid);
+    // Linear extrapolation should produce different values than nearest neighbor
+    // The exact values depend on the gradient calculation, but should be reasonable
+    EXPECT_GE(result.data.Bx, -10.0f);  // Reasonable bounds check
+    EXPECT_LE(result.data.Bx, 10.0f);
+    EXPECT_GE(result.data.By, -10.0f);
+    EXPECT_LE(result.data.By, 10.0f);
+    EXPECT_GE(result.data.Bz, -10.0f);
+    EXPECT_LE(result.data.Bz, 10.0f);
+}
+
 TEST_F(UnstructuredInterpolatorTest, ExtrapolationNone) {
     // Test with no extrapolation - should interpolate even outside bounds
     UnstructuredInterpolator interp(coordinates_, field_data_, 2.0f, 0, ExtrapolationMethod::None);

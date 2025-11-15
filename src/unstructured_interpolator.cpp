@@ -207,21 +207,83 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
         result.data  = field_data_[nearest_idx];
         result.valid = true;
     } else if (extrapolation_method_ == ExtrapolationMethod::LinearExtrapolation) {
-        // Simple linear extrapolation: use nearest point for now (placeholder)
-        // TODO: Implement proper linear extrapolation
-        size_t nearest_idx = 0;
-        Real   min_dist    = std::numeric_limits<Real>::max();
+        // Linear extrapolation using nearest neighbors
+        const size_t num_neighbors = std::min(size_t(5), coordinates_.size());  // Use up to 5 nearest neighbors
+
+        // Find nearest neighbors
+        std::vector<std::pair<Real, size_t>> dist_idx_pairs;
+        dist_idx_pairs.reserve(coordinates_.size());
 
         for (size_t i = 0; i < coordinates_.size(); ++i) {
             Real dist = distance(query_point, coordinates_[i]);
-            if (dist < min_dist) {
-                min_dist    = dist;
-                nearest_idx = i;
-            }
+            dist_idx_pairs.emplace_back(dist, i);
         }
 
-        result.data  = field_data_[nearest_idx];
-        result.valid = true;
+        std::sort(dist_idx_pairs.begin(), dist_idx_pairs.end());
+        size_t actual_neighbors = std::min(num_neighbors, dist_idx_pairs.size());
+
+        if (actual_neighbors >= 2) {
+            // Use linear extrapolation based on nearest neighbors
+            // Simple approach: extrapolate from nearest point using average gradient
+            size_t            nearest_idx   = dist_idx_pairs[0].second;
+            Point3D           nearest_point = coordinates_[nearest_idx];
+            MagneticFieldData nearest_data  = field_data_[nearest_idx];
+
+            // Calculate average gradient from nearest neighbors
+            Real   avg_dBx_dx = 0, avg_dBx_dy = 0, avg_dBx_dz = 0;
+            Real   avg_dBy_dx = 0, avg_dBy_dy = 0, avg_dBy_dz = 0;
+            Real   avg_dBz_dx = 0, avg_dBz_dy = 0, avg_dBz_dz = 0;
+            size_t gradient_count = 0;
+
+            for (size_t i = 1; i < actual_neighbors; ++i) {
+                size_t            idx = dist_idx_pairs[i].second;
+                Point3D           p   = coordinates_[idx];
+                MagneticFieldData d   = field_data_[idx];
+
+                Real dx = p.x - nearest_point.x;
+                Real dy = p.y - nearest_point.y;
+                Real dz = p.z - nearest_point.z;
+
+                if (std::abs(dx) > 1e-8 || std::abs(dy) > 1e-8 || std::abs(dz) > 1e-8) {
+                    Real dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+                    avg_dBx_dx += (d.Bx - nearest_data.Bx) / dist;
+                    avg_dBy_dx += (d.By - nearest_data.By) / dist;
+                    avg_dBz_dx += (d.Bz - nearest_data.Bz) / dist;
+                    gradient_count++;
+                }
+            }
+
+            if (gradient_count > 0) {
+                avg_dBx_dx /= gradient_count;
+                avg_dBy_dx /= gradient_count;
+                avg_dBz_dx /= gradient_count;
+
+                // Extrapolate from nearest point
+                Real dx   = query_point.x - nearest_point.x;
+                Real dy   = query_point.y - nearest_point.y;
+                Real dz   = query_point.z - nearest_point.z;
+                Real dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+                if (dist > 1e-8) {
+                    result.data.Bx = nearest_data.Bx + avg_dBx_dx * dist;
+                    result.data.By = nearest_data.By + avg_dBy_dx * dist;
+                    result.data.Bz = nearest_data.Bz + avg_dBz_dx * dist;
+                    result.valid   = true;
+                } else {
+                    result.data  = nearest_data;
+                    result.valid = true;
+                }
+            } else {
+                // Fallback to nearest neighbor if no gradient available
+                result.data  = nearest_data;
+                result.valid = true;
+            }
+        } else {
+            // Fallback to nearest neighbor
+            size_t nearest_idx = dist_idx_pairs[0].second;
+            result.data        = field_data_[nearest_idx];
+            result.valid       = true;
+        }
     }
     // For None, already handled
 

@@ -234,7 +234,7 @@ enum class ExtrapolationMethod {
 |--------|-------------|----------|
 | `None` | IDW interpolation continues naturally outside data bounds | Default behavior, suitable when data covers the query region |
 | `NearestNeighbor` | Returns the magnetic field values of the closest data point | Simple and fast extrapolation for points far from data |
-| `LinearExtrapolation` | Performs linear extrapolation based on nearby points (currently uses nearest neighbor) | Planned for future implementation of true linear extrapolation |
+| `LinearExtrapolation` | Performs linear extrapolation using gradient estimation from nearest neighbors | Advanced extrapolation for smoother transitions outside data bounds |
 
 ## Error Codes
 

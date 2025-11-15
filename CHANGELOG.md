@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added bounding box parameters to `IDWInterpolationKernel`
   - Implemented `IsPointInsideBounds()` device function for GPU bounds checking
   - Added nearest neighbor extrapolation directly on GPU
+  - Implemented linear extrapolation on GPU using gradient estimation from nearest neighbors
+  - Added `LinearExtrapolate()` device function for advanced extrapolation
   - Updated kernel launch to pass bounding box data from CPU to GPU
   - Maintained GPU performance while adding full extrapolation capability
 

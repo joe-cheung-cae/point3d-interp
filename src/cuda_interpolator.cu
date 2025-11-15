@@ -196,6 +196,122 @@ __device__ bool IsPointInsideBounds(const Point3D& point, const Point3D& min_bou
 }
 
 /**
+ * @brief Find k nearest neighbors and compute linear extrapolation
+ */
+__device__ MagneticFieldData LinearExtrapolate(const Point3D& query_point, const Point3D* data_points,
+                                               const MagneticFieldData* field_data, size_t data_count) {
+    const size_t max_neighbors    = 5;
+    size_t       actual_neighbors = min(max_neighbors, data_count);
+
+    // Find nearest neighbors (simple bubble sort for small k)
+    size_t nearest_indices[5];
+    Real   nearest_distances[5];
+
+    // Initialize with first few points
+    for (size_t i = 0; i < actual_neighbors; ++i) {
+        nearest_indices[i]   = i;
+        nearest_distances[i] = Distance(query_point, data_points[i]);
+    }
+
+    // Simple selection sort for nearest neighbors
+    for (size_t i = 0; i < actual_neighbors - 1; ++i) {
+        for (size_t j = i + 1; j < actual_neighbors; ++j) {
+            if (nearest_distances[j] < nearest_distances[i]) {
+                // Swap
+                Real   temp_dist     = nearest_distances[i];
+                size_t temp_idx      = nearest_indices[i];
+                nearest_distances[i] = nearest_distances[j];
+                nearest_indices[i]   = nearest_indices[j];
+                nearest_distances[j] = temp_dist;
+                nearest_indices[j]   = temp_idx;
+            }
+        }
+    }
+
+    // Check remaining points
+    for (size_t i = actual_neighbors; i < data_count; ++i) {
+        Real dist = Distance(query_point, data_points[i]);
+        // Check if this point is closer than the farthest in our list
+        if (dist < nearest_distances[actual_neighbors - 1]) {
+            // Replace the farthest
+            nearest_distances[actual_neighbors - 1] = dist;
+            nearest_indices[actual_neighbors - 1]   = i;
+
+            // Re-sort the last element
+            for (size_t j = actual_neighbors - 2; j < actual_neighbors - 1; --j) {
+                if (nearest_distances[j + 1] < nearest_distances[j]) {
+                    Real   temp_dist         = nearest_distances[j];
+                    size_t temp_idx          = nearest_indices[j];
+                    nearest_distances[j]     = nearest_distances[j + 1];
+                    nearest_indices[j]       = nearest_indices[j + 1];
+                    nearest_distances[j + 1] = temp_dist;
+                    nearest_indices[j + 1]   = temp_idx;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    MagneticFieldData result = {};
+
+    if (actual_neighbors >= 2) {
+        // Use nearest point as base
+        size_t            nearest_idx   = nearest_indices[0];
+        Point3D           nearest_point = data_points[nearest_idx];
+        MagneticFieldData nearest_data  = field_data[nearest_idx];
+
+        // Calculate average gradient from neighbors
+        Real   avg_dBx = 0, avg_dBy = 0, avg_dBz = 0;
+        size_t gradient_count = 0;
+
+        for (size_t i = 1; i < actual_neighbors; ++i) {
+            size_t            idx = nearest_indices[i];
+            Point3D           p   = data_points[idx];
+            MagneticFieldData d   = field_data[idx];
+
+            Real dx = p.x - nearest_point.x;
+            Real dy = p.y - nearest_point.y;
+            Real dz = p.z - nearest_point.z;
+
+            Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
+            if (dist > 1e-8f) {
+                avg_dBx += (d.Bx - nearest_data.Bx) / dist;
+                avg_dBy += (d.By - nearest_data.By) / dist;
+                avg_dBz += (d.Bz - nearest_data.Bz) / dist;
+                gradient_count++;
+            }
+        }
+
+        if (gradient_count > 0) {
+            avg_dBx /= gradient_count;
+            avg_dBy /= gradient_count;
+            avg_dBz /= gradient_count;
+
+            // Extrapolate from nearest point
+            Real dx   = query_point.x - nearest_point.x;
+            Real dy   = query_point.y - nearest_point.y;
+            Real dz   = query_point.z - nearest_point.z;
+            Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
+
+            if (dist > 1e-8f) {
+                result.Bx = nearest_data.Bx + avg_dBx * dist;
+                result.By = nearest_data.By + avg_dBy * dist;
+                result.Bz = nearest_data.Bz + avg_dBz * dist;
+            } else {
+                result = nearest_data;
+            }
+        } else {
+            result = nearest_data;
+        }
+    } else {
+        // Fallback to nearest neighbor
+        result = field_data[nearest_indices[0]];
+    }
+
+    return result;
+}
+/**
  * @brief CUDA kernel: IDW interpolation for unstructured point clouds
  *
  * Each thread handles interpolation calculation for one query point
@@ -228,19 +344,25 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
     // Check if point is outside bounds and extrapolation is needed
     const bool inside_bounds = IsPointInsideBounds(query_point, min_bound, max_bound);
     if (!inside_bounds && extrapolation_method != 0) {  // 0 = None
-        // Apply extrapolation - find nearest neighbor
-        size_t nearest_idx = 0;
-        Real   min_dist    = 1e10f;  // Large number
+        if (extrapolation_method == 1) {                // 1 = NearestNeighbor
+            // Apply nearest neighbor extrapolation
+            size_t nearest_idx = 0;
+            Real   min_dist    = 1e10f;  // Large number
 
-        for (size_t i = 0; i < data_count; ++i) {
-            Real dist = Distance(query_point, data_points[i]);
-            if (dist < min_dist) {
-                min_dist    = dist;
-                nearest_idx = i;
+            for (size_t i = 0; i < data_count; ++i) {
+                Real dist = Distance(query_point, data_points[i]);
+                if (dist < min_dist) {
+                    min_dist    = dist;
+                    nearest_idx = i;
+                }
             }
+
+            result.data = field_data[nearest_idx];
+        } else if (extrapolation_method == 2) {  // 2 = LinearExtrapolation
+            // Apply linear extrapolation
+            result.data = LinearExtrapolate(query_point, data_points, field_data, data_count);
         }
 
-        result.data  = field_data[nearest_idx];
         results[tid] = result;
         return;
     }
