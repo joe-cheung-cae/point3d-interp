@@ -13,6 +13,9 @@ This document summarizes the issues identified during the code review of the Poi
 ### 4. Aggressive GPU Resource Management (RESOLVED)
 **Resolution**: Removed cudaDeviceReset() call from ReleaseGPU function to prevent destroying CUDA contexts used by other code in the same process. Proper cleanup is still performed via unique_ptr resets.
 
+### 5. Memory Manager Error Handling (RESOLVED)
+**Resolution**: Modified CUDA_CHECK macro to log detailed error messages including file, line number, and CUDA error string when CUDA calls fail, improving debugging capabilities.
+
 ### 11. Compilation Errors Due to Namespace Conflicts (RESOLVED)
 **Resolution**: Moved CUDA header inclusion inside conditional compilation blocks to prevent namespace pollution. Added missing forward declarations for CUDA kernels.
 
@@ -23,15 +26,6 @@ This document summarizes the issues identified during the code review of the Poi
 **Status**: GetDeviceGridParams() properly documented as returning nullptr by design (parameters stored on host for simplicity). No functional impact.
 
 ## Open Issues
-
-### 5. Memory Manager Error Handling
-**Location**: [`src/memory_manager.cu`](src/memory_manager.cu)
-
-**Issue**: CUDA_CHECK macro returns false but doesn't log errors, making debugging difficult.
-
-**Suggestion**:
-- Add error logging or propagate error information
-- Provide detailed error messages with CUDA error codes
 
 ### 6. Floating Point Tolerance Issues
 **Location**: [`src/data_loader.cpp:DetectGridParams`](src/data_loader.cpp:DetectGridParams), [`src/data_loader.cpp:ValidateGridRegularity`](src/data_loader.cpp:ValidateGridRegularity)

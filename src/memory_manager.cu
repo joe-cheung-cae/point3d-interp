@@ -8,12 +8,14 @@ namespace cuda {
 /**
  * @brief CUDA error checking macro
  */
-#define CUDA_CHECK(call)            \
-    do {                            \
-        cudaError_t error = call;   \
-        if (error != cudaSuccess) { \
-            return false;           \
-        }                           \
+#define CUDA_CHECK(call)                                                                                      \
+    do {                                                                                                      \
+        cudaError_t error = call;                                                                             \
+        if (error != cudaSuccess) {                                                                           \
+            std::cerr << "CUDA error in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString(error) \
+                      << std::endl;                                                                           \
+            return false;                                                                                     \
+        }                                                                                                     \
     } while (0)
 
 /**
