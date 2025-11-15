@@ -2,6 +2,7 @@
 #define POINTER3D_INTERP_UNSTRUCTURED_INTERPOLATOR_H
 
 #include "types.h"
+#include "kd_tree.h"
 #include <vector>
 #include <memory>
 
@@ -135,6 +136,7 @@ class UnstructuredInterpolator {
     ExtrapolationMethod            extrapolation_method_;  // Extrapolation method
     Point3D                        min_bound_;             // Minimum bounds of data
     Point3D                        max_bound_;             // Maximum bounds of data
+    std::unique_ptr<KDTree>        kd_tree_;               // KD-tree for spatial indexing
 };
 
 }  // namespace p3d

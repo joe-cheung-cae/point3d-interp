@@ -13,7 +13,8 @@ UnstructuredInterpolator::UnstructuredInterpolator(const std::vector<Point3D>&  
       field_data_(field_data),
       power_(power),
       max_neighbors_(max_neighbors),
-      extrapolation_method_(extrapolation_method) {
+      extrapolation_method_(extrapolation_method),
+      kd_tree_(nullptr) {
     if (coordinates.size() != field_data.size()) {
         throw std::invalid_argument("Coordinates and field data size mismatch");
     }
@@ -37,6 +38,11 @@ UnstructuredInterpolator::UnstructuredInterpolator(const std::vector<Point3D>&  
             max_bound_.z = std::max(max_bound_.z, point.z);
         }
     }
+
+    // Build KD-tree for efficient neighbor finding
+    if (!coordinates.empty()) {
+        kd_tree_ = std::make_unique<KDTree>(coordinates);
+    }
 }
 
 UnstructuredInterpolator::~UnstructuredInterpolator() = default;
@@ -48,7 +54,8 @@ UnstructuredInterpolator::UnstructuredInterpolator(UnstructuredInterpolator&& ot
       max_neighbors_(other.max_neighbors_),
       extrapolation_method_(other.extrapolation_method_),
       min_bound_(other.min_bound_),
-      max_bound_(other.max_bound_) {}
+      max_bound_(other.max_bound_),
+      kd_tree_(std::move(other.kd_tree_)) {}
 
 UnstructuredInterpolator& UnstructuredInterpolator::operator=(UnstructuredInterpolator&& other) noexcept {
     if (this != &other) {
@@ -144,7 +151,7 @@ size_t UnstructuredInterpolator::findNeighbors(const Point3D& query_point, std::
     distances.clear();
 
     if (max_neighbors_ == 0) {
-        // Use all points
+        // Use all points - fall back to brute force for this case
         indices.reserve(coordinates_.size());
         distances.reserve(coordinates_.size());
 
@@ -154,29 +161,11 @@ size_t UnstructuredInterpolator::findNeighbors(const Point3D& query_point, std::
             distances.push_back(dist);
         }
     } else {
-        // Find k nearest neighbors
-        // Simple implementation: calculate all distances and sort
-        // TODO: Optimize with KD-tree for large datasets
-        std::vector<std::pair<Real, size_t>> dist_idx_pairs;
-        dist_idx_pairs.reserve(coordinates_.size());
-
-        for (size_t i = 0; i < coordinates_.size(); ++i) {
-            Real dist = distance(query_point, coordinates_[i]);
-            dist_idx_pairs.emplace_back(dist, i);
+        // Use KD-tree for efficient k-nearest neighbor search
+        if (!kd_tree_) {
+            return 0;
         }
-
-        // Sort by distance
-        std::sort(dist_idx_pairs.begin(), dist_idx_pairs.end());
-
-        // Take first max_neighbors
-        size_t num_to_take = std::min(max_neighbors_, dist_idx_pairs.size());
-        indices.reserve(num_to_take);
-        distances.reserve(num_to_take);
-
-        for (size_t i = 0; i < num_to_take; ++i) {
-            distances.push_back(dist_idx_pairs[i].first);
-            indices.push_back(dist_idx_pairs[i].second);
-        }
+        kd_tree_->findKNearestNeighbors(query_point, max_neighbors_, indices, distances);
     }
 
     return indices.size();

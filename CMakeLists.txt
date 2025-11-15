@@ -39,6 +39,7 @@ set(SOURCES
     src/grid_structure.cpp
     src/cpu_interpolator.cpp
     src/unstructured_interpolator.cpp
+    src/kd_tree.cpp
     src/api.cpp
 )
 

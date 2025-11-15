@@ -188,6 +188,37 @@ __device__ Real Distance(const Point3D& p1, const Point3D& p2) {
 }
 
 /**
+ * @brief Fast power function optimized for common IDW powers
+ * Replaces slow powf() with optimized implementations for common cases
+ */
+__device__ Real FastPow(Real base, Real exponent) {
+    // Handle common integer powers efficiently
+    if (exponent == 2.0f) {
+        return base * base;
+    } else if (exponent == 1.0f) {
+        return base;
+    } else if (exponent == 0.5f) {
+        return sqrtf(base);
+    } else if (exponent == 3.0f) {
+        return base * base * base;
+    } else if (exponent == 4.0f) {
+        Real base_sq = base * base;
+        return base_sq * base_sq;
+    } else if (exponent == 0.0f) {
+        return 1.0f;
+    }
+
+    // For other powers, use exp/log approximation (faster than powf for some cases)
+    // Only use for reasonable ranges to avoid numerical issues
+    if (base > 1e-8f && base < 1e8f && exponent > 0.1f && exponent < 10.0f) {
+        return expf(exponent * logf(base));
+    }
+
+    // Fallback to standard powf for edge cases
+    return powf(base, exponent);
+}
+
+/**
  * @brief Check if a point is inside the bounding box
  */
 __device__ bool IsPointInsideBounds(const Point3D& point, const Point3D& min_bound, const Point3D& max_bound) {
@@ -370,31 +401,71 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
     Real              weight_sum   = 0.0f;
     MagneticFieldData weighted_sum = {};
 
-    // Compute IDW from all data points
-    for (size_t i = 0; i < data_count; ++i) {
-        Real dist = Distance(query_point, data_points[i]);
+    // Use shared memory optimization for small datasets
+    extern __shared__ char shared_mem[];
+    Point3D*               shared_points = reinterpret_cast<Point3D*>(shared_mem);
+    MagneticFieldData*     shared_field_data =
+        reinterpret_cast<MagneticFieldData*>(shared_mem + blockDim.x * 4 * sizeof(Point3D));
 
-        // Handle exact match (avoid division by zero)
-        if (dist < 1e-8f) {
-            result.data  = field_data[i];
-            results[tid] = result;
-            return;
+    const size_t block_size        = blockDim.x;
+    const size_t shared_data_count = min(data_count, block_size * 4);  // Limit shared memory usage
+
+    // Load data into shared memory cooperatively
+    for (size_t i = threadIdx.x; i < shared_data_count; i += block_size) {
+        shared_points[i]     = data_points[i];
+        shared_field_data[i] = field_data[i];
+    }
+    __syncthreads();
+
+    // Compute IDW from all data points with optimized power calculation
+    const size_t loop_count = (data_count + block_size - 1) / block_size;
+
+#pragma unroll 4
+    for (size_t block = 0; block < loop_count; ++block) {
+        const size_t base_idx = block * block_size;
+        const size_t end_idx  = min(base_idx + block_size, data_count);
+
+        for (size_t i = base_idx; i < end_idx; ++i) {
+            Real                     dist;
+            const MagneticFieldData* field_ptr;
+
+            // Use shared memory for frequently accessed data
+            if (i < shared_data_count) {
+                const Point3D& data_point = shared_points[i];
+                Real           dx         = query_point.x - data_point.x;
+                Real           dy         = query_point.y - data_point.y;
+                Real           dz         = query_point.z - data_point.z;
+                dist                      = sqrtf(dx * dx + dy * dy + dz * dz);
+                field_ptr                 = &shared_field_data[i];
+            } else {
+                dist      = Distance(query_point, data_points[i]);
+                field_ptr = &field_data[i];
+            }
+
+            // Handle exact match (avoid division by zero)
+            if (dist < 1e-8f) {
+                result.data  = *field_ptr;
+                results[tid] = result;
+                return;
+            }
+
+            // Use optimized power function instead of slow powf
+            Real inv_dist_power = 1.0f / FastPow(dist, power);
+            weight_sum += inv_dist_power;
+
+            // Accumulate weighted field values
+            weighted_sum.Bx += field_ptr->Bx * inv_dist_power;
+            weighted_sum.By += field_ptr->By * inv_dist_power;
+            weighted_sum.Bz += field_ptr->Bz * inv_dist_power;
         }
-
-        Real weight = 1.0f / powf(dist, power);
-        weight_sum += weight;
-
-        // Accumulate weighted field values
-        weighted_sum.Bx += field_data[i].Bx * weight;
-        weighted_sum.By += field_data[i].By * weight;
-        weighted_sum.Bz += field_data[i].Bz * weight;
     }
 
     // Normalize by weight sum
     if (weight_sum > 0.0f) {
-        weighted_sum.Bx /= weight_sum;
-        weighted_sum.By /= weight_sum;
-        weighted_sum.Bz /= weight_sum;
+        Real inv_weight_sum = 1.0f / weight_sum;
+        weighted_sum.Bx *= inv_weight_sum;
+        weighted_sum.By *= inv_weight_sum;
+        weighted_sum.Bz *= inv_weight_sum;
     }
 
     // Derivatives are not computed for IDW (set to 0)

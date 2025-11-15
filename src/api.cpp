@@ -367,11 +367,15 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 Point3D min_bound = unstructured_interpolator_->getMinBound();
                 Point3D max_bound = unstructured_interpolator_->getMaxBound();
 
-                cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE>>>(
+                // Calculate shared memory size for optimization
+                const size_t data_count        = unstructured_interpolator_->getDataCount();
+                const size_t shared_data_count = std::min(data_count, static_cast<size_t>(BLOCK_SIZE * 4));
+                const size_t shared_mem_size   = shared_data_count * (sizeof(Point3D) + sizeof(MagneticFieldData));
+
+                cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE, shared_mem_size>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
-                    gpu_unstructured_field_data_->getDevicePtr(), unstructured_interpolator_->getDataCount(),
-                    unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_), min_bound,
-                    max_bound, gpu_results_->getDevicePtr(), count);
+                    gpu_unstructured_field_data_->getDevicePtr(), data_count, unstructured_interpolator_->getPower(),
+                    static_cast<int>(extrapolation_method_), min_bound, max_bound, gpu_results_->getDevicePtr(), count);
 
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
