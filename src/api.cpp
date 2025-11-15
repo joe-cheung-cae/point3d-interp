@@ -313,19 +313,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, InterpolationResult& result) {
-    if (!IsDataLoaded()) {
-        return ErrorCode::DataNotLoaded;
-    }
-
-    if (data_type_ == DataStructureType::RegularGrid) {
-        // Use CPU interpolator for regular grid
-        result = cpu_interpolator_->query(query_point);
-    } else if (data_type_ == DataStructureType::Unstructured) {
-        // Use unstructured interpolator
-        result = unstructured_interpolator_->query(query_point);
-    }
-
-    return ErrorCode::Success;
+    return QueryBatch(&query_point, &result, 1);
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,

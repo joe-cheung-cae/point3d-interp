@@ -7,6 +7,9 @@ This document summarizes the issues identified during the code review of the Poi
 ### 1. Inefficient Unstructured Interpolation (RESOLVED)
 **Resolution**: Implemented KD-tree spatial indexing, reducing complexity from O(N log N) to O(log N) for k-nearest neighbor queries. Added GPU spatial grid optimization for constant-time neighbor lookup.
 
+### 2. Inconsistent CPU/GPU Usage (RESOLVED)
+**Resolution**: Modified single query function to call batch query with count=1, ensuring both single and batch queries use GPU when available for regular grids. This resolves the inconsistency and provides uniform behavior.
+
 ### 11. Compilation Errors Due to Namespace Conflicts (RESOLVED)
 **Resolution**: Moved CUDA header inclusion inside conditional compilation blocks to prevent namespace pollution. Added missing forward declarations for CUDA kernels.
 
@@ -17,15 +20,6 @@ This document summarizes the issues identified during the code review of the Poi
 **Status**: GetDeviceGridParams() properly documented as returning nullptr by design (parameters stored on host for simplicity). No functional impact.
 
 ## Open Issues
-
-### 2. Inconsistent CPU/GPU Usage
-**Location**: [`src/api.cpp:Query`](src/api.cpp:Query), [`src/api.cpp:QueryBatch`](src/api.cpp:QueryBatch)
-
-**Issue**: Single queries use CPU for regular grids, batch queries use GPU. This inconsistency may confuse users.
-
-**Suggestion**:
-- Document the behavior clearly
-- Consider allowing GPU for single queries based on data size
 
 ### 4. Aggressive GPU Resource Management
 **Location**: [`src/api.cpp:ReleaseGPU`](src/api.cpp:ReleaseGPU)
