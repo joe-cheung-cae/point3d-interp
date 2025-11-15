@@ -409,4 +409,4 @@ The `MagneticFieldInterpolator` class is not thread-safe. Create separate instan
 - For unstructured data, IDW interpolation supports GPU acceleration
 - Memory layout should be contiguous for optimal performance
 - Avoid frequent CPU-GPU data transfers
-- For large unstructured datasets, consider using spatial indexing (future enhancement)
+- For large unstructured datasets, spatial indexing with KD-trees is automatically used

@@ -167,8 +167,16 @@ Main interface class providing data loading and interpolation functionality.
 #### Constructor
 
 ```cpp
-MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0, InterpolationMethod method = InterpolationMethod::TricubicHermite);
+MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
+                         InterpolationMethod method = InterpolationMethod::TricubicHermite,
+                         ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
 ```
+
+**Parameters:**
+- `use_gpu`: Whether to use GPU acceleration (default: true)
+- `device_id`: CUDA device ID (default: 0)
+- `method`: Interpolation method (default: TricubicHermite)
+- `extrapolation_method`: Extrapolation method for unstructured data (default: None)
 
 #### Methods
 
@@ -189,7 +197,8 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0, InterpolationM
 - `MagneticFieldData`: Magnetic field data structure (Bx, By, Bz, dBx_dx, dBx_dy, dBx_dz, dBy_dx, dBy_dy, dBy_dz, dBz_dx, dBz_dy, dBz_dz)
 - `InterpolationResult`: Interpolation result (data, valid)
 - `GridParams`: Grid parameters (origin, spacing, dimensions, bounds)
-- `InterpolationMethod`: Interpolation method enum (Trilinear, TricubicHermite)
+- `InterpolationMethod`: Interpolation method enum (TricubicHermite, IDW)
+- `ExtrapolationMethod`: Extrapolation method enum (None, NearestNeighbor, LinearExtrapolation)
 
 ## Performance Characteristics
 
@@ -221,12 +230,19 @@ point3d_interp/
 │       ├── error_codes.h            # Error codes
 │       ├── data_loader.h            # Data loader
 │       ├── grid_structure.h         # Grid structure
-│       └── cpu_interpolator.h       # CPU interpolator
+│       ├── cpu_interpolator.h       # CPU interpolator
+│       ├── unstructured_interpolator.h # Unstructured data interpolator
+│       ├── kd_tree.h                # KD-tree spatial indexing
+│       ├── spatial_grid.h           # GPU spatial grid
+│       └── memory_manager.h         # GPU memory management
 ├── src/              # Implementation files
 │   ├── api.cpp                      # API implementation
 │   ├── data_loader.cpp              # CSV parsing
 │   ├── grid_structure.cpp           # Grid management
 │   ├── cpu_interpolator.cpp         # CPU interpolation
+│   ├── unstructured_interpolator.cpp # IDW interpolation
+│   ├── kd_tree.cpp                  # KD-tree implementation
+│   ├── spatial_grid.cpp             # GPU spatial grid
 │   ├── cuda_interpolator.cu         # CUDA kernels
 │   └── memory_manager.cu            # GPU memory management
 ├── examples/         # Example programs
