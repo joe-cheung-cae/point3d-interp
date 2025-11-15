@@ -41,28 +41,26 @@ size_t KDTree::findKNearestNeighbors(const Point3D& query_point, size_t k, std::
     indices.clear();
     distances.clear();
 
-    if (k == 0) {
+    if (k == 0 || !root_) {
         return 0;
     }
 
-    // Temporary: brute force implementation for debugging
-    std::vector<std::pair<Real, size_t>> all_distances;
-    for (size_t i = 0; i < points_.size(); ++i) {
-        Real dist = std::sqrt(squaredDistance(query_point, points_[i]));
-        all_distances.emplace_back(dist, i);
-    }
+    // Use priority queue to maintain k nearest neighbors (max-heap by distance squared)
+    std::priority_queue<std::pair<Real, size_t>> neighbors;
 
-    // Sort by distance
-    std::sort(all_distances.begin(), all_distances.end());
+    // Perform KD-tree search
+    searchKNearest(root_, query_point, k, 0, neighbors);
 
-    // Take first k
-    size_t num_to_take = std::min(k, all_distances.size());
-    indices.reserve(num_to_take);
-    distances.reserve(num_to_take);
+    // Extract results from priority queue (reverse order since it's max-heap)
+    size_t num_found = neighbors.size();
+    indices.resize(num_found);
+    distances.resize(num_found);
 
-    for (size_t i = 0; i < num_to_take; ++i) {
-        distances.push_back(all_distances[i].first);
-        indices.push_back(all_distances[i].second);
+    for (size_t i = 0; i < num_found; ++i) {
+        auto [dist_sq, idx] = neighbors.top();
+        neighbors.pop();
+        distances[num_found - 1 - i] = std::sqrt(dist_sq);
+        indices[num_found - 1 - i]   = idx;
     }
 
     return indices.size();
@@ -93,14 +91,34 @@ KDNode* KDTree::buildTree(const std::vector<size_t>& indices, int depth) {
         return new KDNode(indices[0], -1, 0.0f);
     }
 
-    // For now, just create a simple tree structure without complex partitioning
-    // This is a placeholder - the actual KD-tree search is using brute force
-    size_t  root_idx = indices[0];
-    KDNode* node     = new KDNode(root_idx, 0, 0.0f);
+    // Choose splitting dimension
+    int split_dim = depth % 3;
 
-    // Don't build subtrees for now to avoid recursion issues
-    node->left  = nullptr;
-    node->right = nullptr;
+    // Find median point along the splitting dimension
+    size_t median_idx  = findMedian(indices, split_dim);
+    Real   split_value = getCoordinate(median_idx, split_dim);
+
+    KDNode* node = new KDNode(median_idx, split_dim, split_value);
+
+    // Split remaining points into left and right subtrees
+    std::vector<size_t> left_indices, right_indices;
+    left_indices.reserve(indices.size() / 2);
+    right_indices.reserve(indices.size() / 2);
+
+    for (size_t idx : indices) {
+        if (idx == median_idx) continue;  // Skip the median point itself
+
+        Real coord = getCoordinate(idx, split_dim);
+        if (coord <= split_value) {
+            left_indices.push_back(idx);
+        } else {
+            right_indices.push_back(idx);
+        }
+    }
+
+    // Recursively build subtrees
+    node->left  = buildTree(left_indices, depth + 1);
+    node->right = buildTree(right_indices, depth + 1);
 
     return node;
 }
@@ -136,9 +154,9 @@ void KDTree::searchKNearest(KDNode* node, const Point3D& query_point, size_t k, 
     }
 
     // Determine which subtree to search first
-    int  split_dim   = depth % 3;
+    int  split_dim   = node->split_dim;
     Real query_coord = (split_dim == 0) ? query_point.x : (split_dim == 1) ? query_point.y : query_point.z;
-    Real split_value = (node->split_dim == split_dim) ? node->split_value : query_coord;
+    Real split_value = node->split_value;
 
     KDNode* first_subtree  = (query_coord <= split_value) ? node->left : node->right;
     KDNode* second_subtree = (query_coord <= split_value) ? node->right : node->left;
@@ -168,9 +186,9 @@ void KDTree::searchRadius(KDNode* node, const Point3D& query_point, Real radius_
     }
 
     // Determine which subtree to search first
-    int  split_dim   = depth % 3;
+    int  split_dim   = node->split_dim;
     Real query_coord = (split_dim == 0) ? query_point.x : (split_dim == 1) ? query_point.y : query_point.z;
-    Real split_value = (node->split_dim == split_dim) ? node->split_value : query_coord;
+    Real split_value = node->split_value;
 
     KDNode* first_subtree  = (query_coord <= split_value) ? node->left : node->right;
     KDNode* second_subtree = (query_coord <= split_value) ? node->right : node->left;
