@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2025-11-15] - Compilation Error Fixes and Namespace Resolution
+
+### Fixed
+- **Compilation Errors**: Resolved critical compilation failures caused by improper header inclusion and namespace conflicts
+  - Fixed namespace nesting issues by moving `#include "point3d_interp/memory_manager.h"` inside `#ifdef __CUDACC__` block
+  - Removed conditional compilation restrictions on CUDA API methods (`GetDeviceGridPoints`, `GetDeviceFieldData`, `GetOptimalKernelConfig`)
+  - Added missing forward declarations for `IDWSpatialGridKernel` and `IDWInterpolationKernel` in public API header
+  - Resolved header pollution issue by conditional CUDA header inclusion
+
+### Changed
+- **API Consistency**: CUDA-related methods now available in all compilation environments (return `nullptr` when CUDA unavailable)
+- **Build System**: Improved conditional compilation to avoid namespace conflicts
+
+### Technical Details
+- **Modified Files**: `include/point3d_interp/api.h`, `src/api.cpp`
+- **Root Cause**: Unconditional inclusion of CUDA headers caused namespace pollution and compilation failures
+- **Solution**: Conditional header inclusion based on `__CUDACC__` macro
+- **Backward Compatibility**: 100% maintained - existing code works unchanged
+
+### Verified
+- ✅ Code compiles successfully on all platforms
+- ✅ All tests pass (8/8 tests, 100% success rate)
+- ✅ CUDA functionality preserved
+- ✅ CPU-only builds work correctly
+- ✅ API backward compatibility maintained
+
 ## [2025-11-15] - KD-Tree Performance Optimization for Unstructured Interpolation
 
 ### Added

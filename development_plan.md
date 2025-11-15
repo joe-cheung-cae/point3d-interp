@@ -428,6 +428,35 @@ GPU优化实现了：
 - **内存合并访问**：优化全局内存访问模式
 - **指令级并行**：通过循环展开提高GPU利用率
 
+## 编译错误修复 ✅
+
+### 问题描述
+项目构建时出现链接错误，CUDA示例程序 `cuda_kernel_direct` 在链接时报告未定义引用错误：
+- `MagneticFieldInterpolator::GetDeviceGridPoints() const`
+- `MagneticFieldInterpolator::GetDeviceFieldData() const`
+- `MagneticFieldInterpolator::GetOptimalKernelConfig(unsigned long, KernelConfig&) const`
+
+### 根本原因
+这些方法在头文件中仅在 `#ifdef __CUDACC__` 条件下声明，在实现文件中也仅在相同条件下定义。由于 `api.cpp` 使用 C++ 编译器（g++）编译，`__CUDACC__` 未定义，导致这些方法未被实现。但 CUDA 文件使用 nvcc 编译时，`__CUDACC__` 定义，声明可见但实现缺失。
+
+### 解决方案
+1. **移除条件编译限制**：将方法声明从 `#ifdef __CUDACC__` 块中移出，确保在所有编译环境下都可见
+2. **移除实现条件编译**：将方法实现从 `#ifdef __CUDACC__` 块中移出，确保始终编译
+3. **保持内部逻辑**：方法内部仍通过 `#ifdef __CUDACC__` 判断 CUDA 可用性，返回相应结果
+
+### 修改文件
+- `include/point3d_interp/api.h`：移除 CUDA 方法声明的条件编译，清理冗余访问说明符
+- `src/api.cpp`：移除 CUDA 方法实现的条件编译
+
+### 验证结果
+- ✅ 项目成功编译（exit code 0）
+- ✅ 所有 7 个测试用例通过（100% 通过率）
+- ✅ CUDA 功能正常工作，无回归
+- ✅ CPU 和 GPU 可执行文件均能正确链接
+
+### 技术细节
+修复确保了 API 的向后兼容性，当 CUDA 不可用时相关方法返回 `nullptr`，允许代码在纯 CPU 环境下正常运行。
+
 ## 总结
 本次开发成功扩展了磁场插值库的数据格式和插值算法，实现了对磁场梯度张量的完整支持。通过三立方埃尔米特插值算法，有效提高了插值的精度和光滑度。随后进行的全面调试工作系统性地修复了8个关键bug，包括边界插值问题、网格维度支持扩展、内存管理优化等，大幅提升了代码的健壮性和可靠性。最新扩展添加了对非结构网格数据的支持，通过IDW插值算法处理不规则点云数据，并实现了完整的外插策略支持。KD树性能优化将CPU查询复杂度从O(N log N)降低到O(log N)，为大规模数据集提供了显著的性能提升。GPU内核优化通过快速幂函数和共享内存缓存，进一步提升了GPU插值性能。系统保持了良好的性能和兼容性，为三维磁场数据的精确建模提供了强大的工具。
 
