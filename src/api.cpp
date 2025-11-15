@@ -566,10 +566,7 @@ void MagneticFieldInterpolator::Impl::ReleaseGPU() {
     gpu_query_points_.reset();
     gpu_results_.reset();
 
-    if (gpu_initialized_) {
-        cudaDeviceReset();
-        gpu_initialized_ = false;
-    }
+    gpu_initialized_ = false;
 #endif
 }
 

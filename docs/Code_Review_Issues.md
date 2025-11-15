@@ -10,6 +10,9 @@ This document summarizes the issues identified during the code review of the Poi
 ### 2. Inconsistent CPU/GPU Usage (RESOLVED)
 **Resolution**: Modified single query function to call batch query with count=1, ensuring both single and batch queries use GPU when available for regular grids. This resolves the inconsistency and provides uniform behavior.
 
+### 4. Aggressive GPU Resource Management (RESOLVED)
+**Resolution**: Removed cudaDeviceReset() call from ReleaseGPU function to prevent destroying CUDA contexts used by other code in the same process. Proper cleanup is still performed via unique_ptr resets.
+
 ### 11. Compilation Errors Due to Namespace Conflicts (RESOLVED)
 **Resolution**: Moved CUDA header inclusion inside conditional compilation blocks to prevent namespace pollution. Added missing forward declarations for CUDA kernels.
 
@@ -20,15 +23,6 @@ This document summarizes the issues identified during the code review of the Poi
 **Status**: GetDeviceGridParams() properly documented as returning nullptr by design (parameters stored on host for simplicity). No functional impact.
 
 ## Open Issues
-
-### 4. Aggressive GPU Resource Management
-**Location**: [`src/api.cpp:ReleaseGPU`](src/api.cpp:ReleaseGPU)
-
-**Issue**: `cudaDeviceReset()` destroys all CUDA context, affecting other CUDA code in the same process.
-
-**Suggestion**:
-- Use proper cleanup without reset, or make it optional
-- Consider reference counting for CUDA context management
 
 ### 5. Memory Manager Error Handling
 **Location**: [`src/memory_manager.cu`](src/memory_manager.cu)
