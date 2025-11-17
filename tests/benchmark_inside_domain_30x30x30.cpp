@@ -8,6 +8,8 @@ class Benchmark : public p3d::BenchmarkBase {
     std::array<size_t, 3> GetDataDimensions() const override {
         return {30, 30, 30};  // 27,000 points
     }
+
+    std::string GetBenchmarkType() const override { return "_in_domain"; }
 };
 
 int main() {

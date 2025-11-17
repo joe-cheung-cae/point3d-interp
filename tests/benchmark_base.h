@@ -84,6 +84,12 @@ class BenchmarkBase {
      */
     virtual std::array<size_t, 3> GetDataDimensions() const = 0;
 
+    /**
+     * @brief Get the benchmark type suffix for file naming
+     * @return String suffix to append to filenames (e.g., "_out_of_domain")
+     */
+    virtual std::string GetBenchmarkType() const { return ""; }
+
     std::mt19937 rng_;
 
     /**
@@ -121,13 +127,16 @@ class BenchmarkBase {
         // Create output directory
         std::filesystem::create_directories("benchmark_output");
 
+        std::string type_suffix = GetBenchmarkType();
+
         // Export input data points
         {
             MagneticFieldInterpolator temp_interp(false);
             temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                        test_data.coordinates.size());
             std::string filename = "benchmark_output/input_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + ".vtk";
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
+                                   ".vtk";
             temp_interp.ExportInputPoints(ExportFormat::ParaviewVTK, filename);
         }
 
@@ -137,8 +146,8 @@ class BenchmarkBase {
             temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                        test_data.coordinates.size());
             std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + "_q" +
-                                   std::to_string(query_size) + ".vtk";
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
+                                   "_q" + std::to_string(query_size) + ".vtk";
             temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
         }
 
@@ -148,8 +157,8 @@ class BenchmarkBase {
             temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                        test_data.coordinates.size());
             std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + "_q" +
-                                   std::to_string(query_size) + ".vtk";
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
+                                   "_q" + std::to_string(query_size) + ".vtk";
             temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
         }
     }

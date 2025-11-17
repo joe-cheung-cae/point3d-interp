@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New benchmark executables for multiple data scales: 10×10×10, 20×20×20, 30×30×30, and 50×50×50 grids
   - Query points generated outside the bounding box to test extrapolation performance
   - Consistent naming convention matching existing in-domain benchmarks
+  - VTK output files include "_in_domain" and "_out_of_domain" suffixes for clear distinction
   - Performance metrics include CPU/GPU timing, speedup ratios, and throughput measurements
 
 ### Changed
