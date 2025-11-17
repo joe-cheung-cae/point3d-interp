@@ -68,12 +68,12 @@ class MagneticFieldInterpolator::Impl {
     }
 
     /**
-     * @brief Validate magnetic field data for finiteness
+     * @brief Validate magnetic field data for finiteness (allows NaN, rejects Inf)
      * @param field_data Field data to validate
-     * @return true if all field values are finite
+     * @return true if all field values are not infinite
      */
     static bool ValidateFieldData(const MagneticFieldData& field_data) {
-        return IsFinite(field_data.Bx) && IsFinite(field_data.By) && IsFinite(field_data.Bz);
+        return !std::isinf(field_data.Bx) && !std::isinf(field_data.By) && !std::isinf(field_data.Bz);
     }
 
     /**
