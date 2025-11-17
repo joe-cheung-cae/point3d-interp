@@ -107,6 +107,39 @@ Returns the number of data points.
 
 **Returns:** Number of data points
 
+##### Export Methods
+
+```cpp
+ErrorCode ExportInputPoints(ExportFormat format, const std::string& filename);
+```
+
+Exports the input sampling points with their magnetic field data to a visualization file.
+
+**Parameters:**
+- `format`: Export format (currently supports ParaviewVTK)
+- `filename`: Output filename
+
+**Returns:** Error code
+
+**Note:** Data must be loaded first. Exports both coordinates and magnetic field data including derivatives.
+
+```cpp
+ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                           const std::vector<InterpolationResult>& results, const std::string& filename);
+```
+
+Exports the output interpolation points with their results to a visualization file.
+
+**Parameters:**
+- `format`: Export format (currently supports ParaviewVTK)
+- `query_points`: Query points used for interpolation
+- `results`: Interpolation results
+- `filename`: Output filename
+
+**Returns:** Error code
+
+**Note:** Exports query points with interpolated magnetic field data, derivatives, and validity flags.
+
 ##### Direct CUDA Kernel Access Methods
 
 ```cpp
@@ -235,6 +268,17 @@ enum class ExtrapolationMethod {
 | `None` | IDW interpolation continues naturally outside data bounds | Default behavior, suitable when data covers the query region |
 | `NearestNeighbor` | Returns the magnetic field values of the closest data point | Simple and fast extrapolation for points far from data |
 | `LinearExtrapolation` | Performs linear extrapolation using gradient estimation from nearest neighbors | Advanced extrapolation for smoother transitions outside data bounds |
+
+### ExportFormat
+
+Enum specifying the visualization format for data export.
+
+```cpp
+enum class ExportFormat {
+    ParaviewVTK,  // VTK legacy format for Paraview
+    Tecplot       // Reserved for future implementation
+};
+```
 
 ## Error Codes
 
@@ -395,6 +439,44 @@ int main() {
     return 0;
 }
 ```
+
+### Exporting Data for Visualization
+
+```cpp
+#include "point3d_interp/api.h"
+#include <vector>
+
+int main() {
+    p3d::MagneticFieldInterpolator interp;
+    interp.LoadFromCSV("data.csv");
+
+    // Export input sampling points
+    auto err = interp.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, "input_points.vtk");
+    if (err != p3d::ErrorCode::Success) {
+        // Handle error
+        return 1;
+    }
+
+    // Perform some queries
+    std::vector<p3d::Point3D> queries = {
+        {1.0, 1.0, 1.0},
+        {2.0, 2.0, 2.0}
+    };
+    std::vector<p3d::InterpolationResult> results;
+    interp.QueryBatch(queries, results);
+
+    // Export output interpolation points
+    err = interp.ExportOutputPoints(p3d::ExportFormat::ParaviewVTK, queries, results, "output_points.vtk");
+    if (err != p3d::ErrorCode::Success) {
+        // Handle error
+        return 1;
+    }
+
+    return 0;
+}
+```
+
+**Note:** The exported VTK files can be opened in Paraview for visualization. Input points contain the original magnetic field data with derivatives, while output points contain interpolated values with validity information.
 
 **Note:** Direct CUDA kernel access requires CUDA programming knowledge and manual memory management. The kernel function `TricubicHermiteInterpolationKernel` is declared in the public header for external use.
 

@@ -41,6 +41,7 @@ set(SOURCES
     src/unstructured_interpolator.cpp
     src/kd_tree.cpp
     src/api.cpp
+    src/exporter.cpp
 )
 
 set(CUDA_SOURCES

@@ -100,6 +100,9 @@ class MagneticFieldInterpolator::Impl {
     ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
     ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
     ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
+    ErrorCode ExportInputPoints(ExportFormat format, const std::string& filename);
+    ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                 const std::vector<InterpolationResult>& results, const std::string& filename);
 
     const GridParams& GetGridParams() const {
         return (data_type_ == DataStructureType::RegularGrid && grid_) ? grid_->getParams() : default_params_;
@@ -247,6 +250,70 @@ class MagneticFieldInterpolator::Impl {
     // Default parameters
     GridParams default_params_;
 };
+
+ErrorCode MagneticFieldInterpolator::Impl::ExportInputPoints(ExportFormat format, const std::string& filename) {
+    if (!IsDataLoaded()) {
+        return ErrorCode::DataNotLoaded;
+    }
+
+    auto exporter = CreateExporter(format);
+    if (!exporter) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    try {
+        std::vector<Point3D>           coordinates;
+        std::vector<MagneticFieldData> field_data;
+
+        if (data_type_ == DataStructureType::RegularGrid && grid_) {
+            coordinates = grid_->getCoordinates();
+            field_data  = grid_->getFieldData();
+        } else if (data_type_ == DataStructureType::Unstructured && unstructured_interpolator_) {
+            coordinates = unstructured_interpolator_->getCoordinates();
+            field_data  = unstructured_interpolator_->getFieldData();
+        } else {
+            return ErrorCode::DataNotLoaded;
+        }
+
+        if (!exporter->ExportInputPoints(coordinates, field_data, filename)) {
+            return ErrorCode::InvalidParameter;
+        }
+
+        return ErrorCode::Success;
+    } catch (const std::exception& e) {
+        LogError("Export input points", e.what());
+        return ErrorCode::InvalidParameter;
+    }
+}
+
+ErrorCode MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat                            format,
+                                                              const std::vector<Point3D>&             query_points,
+                                                              const std::vector<InterpolationResult>& results,
+                                                              const std::string&                      filename) {
+    if (query_points.size() != results.size()) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    if (query_points.empty()) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    auto exporter = CreateExporter(format);
+    if (!exporter) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    try {
+        if (!exporter->ExportOutputPoints(query_points, results, filename)) {
+            return ErrorCode::InvalidParameter;
+        }
+
+        return ErrorCode::Success;
+    } catch (const std::exception& e) {
+        LogError("Export output points", e.what());
+        return ErrorCode::InvalidParameter;
+    }
+}
 
 // Implementation
 
@@ -872,6 +939,22 @@ void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, Kerne
         config.grid_y        = 1;
         config.grid_z        = 1;
     }
+}
+
+ErrorCode MagneticFieldInterpolator::ExportInputPoints(ExportFormat format, const std::string& filename) {
+    if (!impl_) {
+        return ErrorCode::DataNotLoaded;
+    }
+    return impl_->ExportInputPoints(format, filename);
+}
+
+ErrorCode MagneticFieldInterpolator::ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                                        const std::vector<InterpolationResult>& results,
+                                                        const std::string&                      filename) {
+    if (!impl_) {
+        return ErrorCode::DataNotLoaded;
+    }
+    return impl_->ExportOutputPoints(format, query_points, results, filename);
 }
 
 }  // namespace p3d

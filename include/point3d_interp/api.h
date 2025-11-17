@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "error_codes.h"
+#include "exporter.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -208,6 +209,27 @@ class MagneticFieldInterpolator {
      * @param config Output kernel configuration
      */
     void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const;
+
+    /**
+     * @brief Export input sampling points to visualization format
+     * @param format Export format
+     * @param filename Output filename
+     * @return Error code
+     *
+     * @note Data must be loaded first (call LoadFromCSV or LoadFromMemory)
+     */
+    ErrorCode ExportInputPoints(ExportFormat format, const std::string& filename);
+
+    /**
+     * @brief Export output interpolation points to visualization format
+     * @param format Export format
+     * @param query_points Query points used for interpolation
+     * @param results Interpolation results
+     * @param filename Output filename
+     * @return Error code
+     */
+    ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                 const std::vector<InterpolationResult>& results, const std::string& filename);
 
   private:
     /**

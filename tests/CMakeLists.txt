@@ -156,6 +156,24 @@ set_target_properties(test_unstructured_interpolator PROPERTIES
 
 add_test(NAME test_unstructured_interpolator COMMAND test_unstructured_interpolator)
 
+# Exporter tests
+add_executable(test_exporter
+    test_exporter.cpp
+)
+
+target_link_libraries(test_exporter
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_exporter PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_exporter COMMAND test_exporter)
+
 # Benchmark
 add_test(NAME test_edge_cases COMMAND test_edge_cases)
 
