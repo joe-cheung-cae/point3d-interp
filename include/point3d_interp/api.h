@@ -27,7 +27,7 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
                                                    size_t     count);
 
 __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, const Point3D* __restrict__ data_points,
-                                     const MagneticFieldData* __restrict__ field_data,
+                                     const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
                                      const Point3D grid_cell_size, const uint32_t grid_dimensions[3], const Real power,
@@ -85,27 +85,43 @@ class MagneticFieldInterpolator {
 
     /**
      * @brief Load data from memory
-     * @param points Coordinate array
-     * @param field_data Magnetic field data array
-     * @param count Number of data points
+     * @param points Coordinate array (must not be null, coordinates must be finite, not NaN)
+     * @param field_data Magnetic field data array (must not be null, field values must be finite, not NaN)
+     * @param count Number of data points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
      * @return Error code
+     *
+     * @note Input validation:
+     * - points and field_data must not be null
+     * - count must be > 0 and <= SIZE_MAX/2
+     * - All coordinate values (x, y, z) must be finite (not NaN or infinite)
+     * - All magnetic field values (Bx, By, Bz) must be finite (not NaN or infinite)
      */
     ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
 
     /**
      * @brief Single point interpolation query
-     * @param query_point Query point coordinates
+     * @param query_point Query point coordinates (must be finite, not NaN)
      * @param result Output result
      * @return Error code
+     *
+     * @note Input validation:
+     * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
+     * - query_point coordinates must be finite (not NaN or infinite)
      */
     ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
 
     /**
      * @brief Batch interpolation query
-     * @param query_points Query point array
-     * @param results Output result array
-     * @param count Number of query points
+     * @param query_points Query point array (must not be null, coordinates must be finite, not NaN)
+     * @param results Output result array (must not be null)
+     * @param count Number of query points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
      * @return Error code
+     *
+     * @note Input validation:
+     * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
+     * - query_points and results must not be null
+     * - count must be > 0 and <= SIZE_MAX/2
+     * - All query point coordinates must be finite (not NaN or infinite)
      */
     ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
 
@@ -171,11 +187,17 @@ class MagneticFieldInterpolator {
 
     /**
      * @brief Launch interpolation kernel directly with custom device pointers
-     * @param d_query_points Device pointer to query points array
-     * @param d_results Device pointer to results array
-     * @param count Number of query points
+     * @param d_query_points Device pointer to query points array (must not be null)
+     * @param d_results Device pointer to results array (must not be null)
+     * @param count Number of query points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
      * @param stream CUDA stream for asynchronous execution (default nullptr)
      * @return Error code
+     *
+     * @note Input validation:
+     * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
+     * - d_query_points and d_results must not be null
+     * - count must be > 0 and <= SIZE_MAX/2
+     * - Only works with regular grid data (not unstructured)
      */
     ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
                                         void* stream = nullptr);

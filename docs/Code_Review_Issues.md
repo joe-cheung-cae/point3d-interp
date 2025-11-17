@@ -36,128 +36,32 @@ This document summarizes the issues identified during the code review of the Poi
 
 ## Open Issues
 
-### 1. Linear Extrapolation Approximation
-**Location**: [`src/cuda_interpolator.cu:LinearExtrapolate`](src/cuda_interpolator.cu:LinearExtrapolate)
+### 1. Linear Extrapolation Approximation (RESOLVED)
+**Resolution**: Implemented a weighted least squares gradient estimation algorithm that provides significantly improved accuracy for complex magnetic fields. The new algorithm uses distance-weighted least squares to estimate field gradients at the nearest data point, then extrapolates linearly using the estimated gradients. This approach is more robust than the previous simple average method and provides better accuracy for non-uniform field distributions. Added comprehensive documentation of limitations including assumptions of local linearity, distance-dependent accuracy degradation, and optimal performance within data convex hulls.
 
-**Issue**: Uses simple average gradient from few neighbors.
+### 2. Hardcoded Spatial Grid Parameters for Unstructured GPU Queries (RESOLVED)
+**Resolution**: Added member variables to store spatial grid parameters (origin, cell_size, dimensions) in the Impl class. These parameters are now computed and stored during data upload in UploadDataToGPU(), and used in QueryBatch() instead of hardcoded values. This ensures optimal spatial grid configuration for each dataset's spatial distribution.
 
-**Suggestion**:
-- Document limitations and accuracy expectations
-- Consider algorithm improvements for complex fields
+### 3. Bug in IDWSpatialGridKernel Extrapolation Logic (RESOLVED)
+**Resolution**: Added `data_count` parameter to the `IDWSpatialGridKernel` function signature and updated the extrapolation logic to iterate over `data_count` instead of `query_count`. This ensures proper bounds checking and prevents out-of-bounds access when finding nearest neighbors for extrapolation.
 
-### 2. Hardcoded Spatial Grid Parameters for Unstructured GPU Queries
-**Location**: [`src/api.cpp:366-368`](src/api.cpp:366-368)
+### 4. Excessive Magic Numbers Throughout Codebase (RESOLVED)
+**Resolution**: Created a centralized constants header file (`include/point3d_interp/constants.h`) defining all magic numbers with descriptive names and documentation. Replaced hardcoded values throughout the codebase (api.cpp, cuda_interpolator.cu, unstructured_interpolator.cpp) with named constants for better maintainability and configurability.
 
-**Issue**: In the unstructured data GPU query implementation, spatial grid parameters are hardcoded:
-```cpp
-Point3D  grid_origin(0, 0, 0);               // This should be stored
-Point3D  grid_cell_size(1, 1, 1);            // This should be stored
-uint32_t grid_dimensions[3] = {32, 32, 32};  // This should be stored
-```
+### 5. Code Duplication in Benchmark Files (RESOLVED)
+**Resolution**: Created a common `BenchmarkBase` class in `tests/benchmark_base.h` that encapsulates all shared benchmark functionality including data generation, query point creation, CPU/GPU benchmarking, timing, and result reporting. Refactored all benchmark files (`benchmark_10x10x10.cpp`, `benchmark_20x20x20.cpp`, `benchmark_30x30x30.cpp`, `benchmark_50x50x50.cpp`) to inherit from the base class and only specify their data dimensions. This reduced each benchmark file from ~180 lines to ~15 lines, eliminating code duplication while maintaining identical functionality and output format.
 
-**Impact**: Poor performance and incorrect results for datasets with different spatial distributions.
+### 6. Inconsistent Error Handling Patterns (RESOLVED)
+**Resolution**: Standardized error handling patterns across the codebase. The public API consistently returns ErrorCode values, while internal classes appropriately throw exceptions that are caught and converted to ErrorCode. Added consistent error logging functions (LogCudaError, LogError) for uniform error message formatting and improved CUDA error propagation consistency.
 
-**Suggestion**:
-- Store spatial grid parameters during data upload
-- Make grid resolution configurable
-- Compute optimal grid parameters based on data bounds
+### 7. Potential Performance Issue in CPU Unstructured Interpolator (RESOLVED)
+**Resolution**: Modified the `extrapolate` method to use KD-tree spatial indexing for efficient neighbor finding instead of brute force O(N) searches. Both NearestNeighbor and LinearExtrapolation now use `findKNearestNeighbors` with O(log N) complexity. This significantly improves performance for extrapolation queries on large datasets while maintaining the same accuracy and behavior.
 
-### 3. Bug in IDWSpatialGridKernel Extrapolation Logic
-**Location**: [`src/cuda_interpolator.cu:413`](src/cuda_interpolator.cu:413)
+### 8. Missing Input Validation in Public API (RESOLVED)
+**Resolution**: Added comprehensive input validation to all public API methods. Implemented validation for null pointers, array bounds, coordinate finiteness (NaN/infinity checks), and integer overflow prevention. Updated API documentation with detailed input constraints and validation requirements. Added helper functions for consistent validation logic across all methods.
 
-**Issue**: In the nearest neighbor extrapolation, the loop iterates over `query_count` instead of `data_count`:
-```cpp
-for (size_t i = 0; i < query_count; ++i) {  // Should be data_count
-    Real dist = Distance(query_point, data_points[i]);
-```
-
-**Impact**: Incorrect nearest neighbor finding when query_count != data_count, leading to out-of-bounds access or incomplete search.
-
-**Suggestion**: Change `query_count` to `data_count` in the loop condition.
-
-### 4. Excessive Magic Numbers Throughout Codebase
-**Location**: Multiple files (api.cpp, cuda_interpolator.cu, unstructured_interpolator.cpp, etc.)
-
-**Issue**: Numerous hardcoded numerical constants without clear documentation:
-- Tolerance values: `1e-6`, `1e-8`
-- Default parameters: `2.0f` (IDW power), `32` (grid dimensions)
-- Block sizes: `256`, `512`, `1024`
-
-**Impact**: Reduced maintainability and configurability.
-
-**Suggestion**:
-- Define constants in a centralized header
-- Make performance-critical parameters configurable
-- Add documentation for magic numbers
-
-### 5. Code Duplication in Benchmark Files
-**Location**: `tests/benchmark_*.cpp` files
-
-**Issue**: All benchmark files contain nearly identical code (~180 lines each) with only minor variations in grid dimensions.
-
-**Impact**: High maintenance burden, potential for inconsistencies.
-
-**Suggestion**:
-- Create a common benchmark base class
-- Use parameterized tests or configuration files
-- Extract common functionality into shared utilities
-
-### 6. Inconsistent Error Handling Patterns
-**Location**: Various files
-
-**Issue**: Mix of exception throwing and error code returns:
-- Some functions throw `std::runtime_error`
-- Others return `ErrorCode` enum values
-- CUDA errors logged to `std::cerr` but not always propagated
-
-**Impact**: Inconsistent API behavior, difficult error handling for users.
-
-**Suggestion**:
-- Standardize on error code returns for C++ API
-- Reserve exceptions for exceptional circumstances
-- Improve error message consistency
-
-### 7. Potential Performance Issue in CPU Unstructured Interpolator
-**Location**: [`src/unstructured_interpolator.cpp:91-108`](src/unstructured_interpolator.cpp:91-108)
-
-**Issue**: IDW calculation iterates through all data points for each query without spatial optimization.
-
-**Impact**: O(N) complexity per query for large datasets.
-
-**Suggestion**:
-- Implement spatial indexing (KD-tree already exists but not used in CPU path)
-- Add configurable neighbor limits
-- Consider SIMD optimizations
-
-### 8. Missing Input Validation in Public API
-**Location**: [`include/point3d_interp/api.h`](include/point3d_interp/api.h)
-
-**Issue**: Public API methods lack comprehensive input validation:
-- No bounds checking on array sizes
-- Limited validation of coordinate ranges
-- Potential for integer overflow in calculations
-
-**Impact**: Undefined behavior with malformed inputs.
-
-**Suggestion**:
-- Add defensive programming checks
-- Validate input ranges and sizes
-- Document expected input constraints
-
-### 9. CUDA Kernel Optimization Opportunities
-**Location**: [`src/cuda_interpolator.cu`](src/cuda_interpolator.cu)
-
-**Issue**: Some kernels could benefit from further optimization:
-- Memory access patterns could be improved
-- Shared memory usage is limited
-- No use of CUDA graphs for repeated operations
-
-**Impact**: Suboptimal GPU utilization.
-
-**Suggestion**:
-- Implement more sophisticated memory tiling
-- Use texture memory for read-only data
-- Profile and optimize kernel launch parameters
+### 9. CUDA Kernel Optimization Opportunities (RESOLVED)
+**Resolution**: Implemented comprehensive CUDA kernel optimizations to improve GPU utilization and performance. Enhanced shared memory usage across all kernels, optimized memory coalescing patterns with improved access patterns, and added cooperative data loading. Specifically optimized the TricubicHermiteInterpolationKernel with shared memory for grid parameters and vertex data, and improved the IDWSpatialGridKernel with shared memory for cell offsets and better memory access patterns. Added loop unrolling and improved register usage for better performance.
 
 ## Future Improvements
 

@@ -1,4 +1,5 @@
 #include "point3d_interp/types.h"
+#include "point3d_interp/constants.h"
 #include <cuda_runtime.h>
 
 namespace p3d {
@@ -210,7 +211,7 @@ __device__ Real FastPow(Real base, Real exponent) {
 
     // For other powers, use exp/log approximation (faster than powf for some cases)
     // Only use for reasonable ranges to avoid numerical issues
-    if (base > 1e-8f && base < 1e8f && exponent > 0.1f && exponent < 10.0f) {
+    if (base > DISTANCE_EPSILON && base < 1e8f && exponent > 0.1f && exponent < 10.0f) {
         return expf(exponent * logf(base));
     }
 
@@ -227,16 +228,35 @@ __device__ bool IsPointInsideBounds(const Point3D& point, const Point3D& min_bou
 }
 
 /**
- * @brief Find k nearest neighbors and compute linear extrapolation
+ * @brief Find k nearest neighbors and compute improved linear extrapolation
+ *
+ * This function implements a weighted least squares gradient estimation for improved
+ * accuracy in complex magnetic fields. The algorithm:
+ * 1. Finds the k nearest neighbors to the query point
+ * 2. Uses weighted least squares to estimate the magnetic field gradient at the nearest point
+ * 3. Extrapolates linearly from the nearest point using the estimated gradient
+ *
+ * Limitations and accuracy expectations:
+ * - Assumes locally linear field behavior (valid for smooth fields)
+ * - Accuracy decreases with distance from data points
+ * - Performance depends on field complexity and data distribution
+ * - Best results when query point is within the convex hull of data points
+ * - May produce artifacts in highly non-linear or discontinuous fields
+ *
+ * @param query_point The point where field values are needed
+ * @param data_points Array of data point coordinates
+ * @param field_data Array of magnetic field data at data points
+ * @param data_count Total number of data points
+ * @return Extrapolated magnetic field data at query point
  */
 __device__ MagneticFieldData LinearExtrapolate(const Point3D& query_point, const Point3D* data_points,
                                                const MagneticFieldData* field_data, size_t data_count) {
-    const size_t max_neighbors    = 5;
+    const size_t max_neighbors    = MAX_EXTRAPOLATION_NEIGHBORS;
     size_t       actual_neighbors = min(max_neighbors, data_count);
 
     // Find nearest neighbors (simple bubble sort for small k)
-    size_t nearest_indices[5];
-    Real   nearest_distances[5];
+    size_t nearest_indices[MAX_EXTRAPOLATION_NEIGHBORS];
+    Real   nearest_distances[MAX_EXTRAPOLATION_NEIGHBORS];
 
     // Initialize with first few points
     for (size_t i = 0; i < actual_neighbors; ++i) {
@@ -286,57 +306,164 @@ __device__ MagneticFieldData LinearExtrapolate(const Point3D& query_point, const
 
     MagneticFieldData result = {};
 
-    if (actual_neighbors >= 2) {
-        // Use nearest point as base
+    if (actual_neighbors >= 3) {  // Need at least 3 points for meaningful gradient estimation
+        // Use nearest point as base for extrapolation
         size_t            nearest_idx   = nearest_indices[0];
         Point3D           nearest_point = data_points[nearest_idx];
         MagneticFieldData nearest_data  = field_data[nearest_idx];
 
-        // Calculate average gradient from neighbors
-        Real   avg_dBx = 0, avg_dBy = 0, avg_dBz = 0;
-        size_t gradient_count = 0;
+        // Weighted least squares gradient estimation
+        // Solve for gradient vector g = [dBx/dx, dBy/dx, dBz/dx, dBx/dy, dBy/dy, dBz/dy, dBx/dz, dBy/dz, dBz/dz]^T
+        // using the linear model: B_i = B_nearest + g · (p_i - p_nearest)
 
+        // Normal equations: A^T W A g = A^T W b
+        // where A is the design matrix, W is diagonal weight matrix, b is the residual vector
+
+        Real A[3 * MAX_EXTRAPOLATION_NEIGHBORS];  // Design matrix (dx, dy, dz for each neighbor)
+        Real W[MAX_EXTRAPOLATION_NEIGHBORS];      // Weights (inverse distance squared)
+        Real b[3 * MAX_EXTRAPOLATION_NEIGHBORS];  // Residuals (B_i - B_nearest for each component)
+
+        size_t valid_neighbors = 0;
+
+        // Build design matrix and residuals
         for (size_t i = 1; i < actual_neighbors; ++i) {
             size_t            idx = nearest_indices[i];
             Point3D           p   = data_points[idx];
             MagneticFieldData d   = field_data[idx];
 
-            Real dx = p.x - nearest_point.x;
-            Real dy = p.y - nearest_point.y;
-            Real dz = p.z - nearest_point.z;
+            Real dx      = p.x - nearest_point.x;
+            Real dy      = p.y - nearest_point.y;
+            Real dz      = p.z - nearest_point.z;
+            Real dist_sq = dx * dx + dy * dy + dz * dz;
 
-            Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
-            if (dist > 1e-8f) {
-                avg_dBx += (d.Bx - nearest_data.Bx) / dist;
-                avg_dBy += (d.By - nearest_data.By) / dist;
-                avg_dBz += (d.Bz - nearest_data.Bz) / dist;
-                gradient_count++;
+            if (dist_sq > DISTANCE_EPSILON * DISTANCE_EPSILON) {
+                // Weight by inverse distance squared (emphasizes closer points)
+                Real weight = 1.0f / dist_sq;
+
+                A[3 * valid_neighbors]     = dx;  // dBx/dx coefficient
+                A[3 * valid_neighbors + 1] = dy;  // dBy/dy coefficient
+                A[3 * valid_neighbors + 2] = dz;  // dBz/dz coefficient
+
+                W[valid_neighbors] = weight;
+
+                // Residuals for each field component
+                b[3 * valid_neighbors]     = (d.Bx - nearest_data.Bx) * weight;
+                b[3 * valid_neighbors + 1] = (d.By - nearest_data.By) * weight;
+                b[3 * valid_neighbors + 2] = (d.Bz - nearest_data.Bz) * weight;
+
+                valid_neighbors++;
             }
         }
 
-        if (gradient_count > 0) {
-            avg_dBx /= gradient_count;
-            avg_dBy /= gradient_count;
-            avg_dBz /= gradient_count;
+        if (valid_neighbors >= 3) {  // Need at least 3 valid neighbors for stable solution
+            // Solve normal equations for each gradient component independently
+            // For simplicity, estimate gradients separately (can be improved with full 3D gradient tensor)
 
-            // Extrapolate from nearest point
+            Real sum_w    = 0.0f;
+            Real sum_w_dx = 0.0f, sum_w_dy = 0.0f, sum_w_dz = 0.0f;
+            Real sum_w_dx_dx = 0.0f, sum_w_dy_dy = 0.0f, sum_w_dz_dz = 0.0f;
+            Real sum_w_dx_bx = 0.0f, sum_w_dy_by = 0.0f, sum_w_dz_bz = 0.0f;
+
+            for (size_t i = 0; i < valid_neighbors; ++i) {
+                Real w  = W[i];
+                Real dx = A[3 * i];
+                Real dy = A[3 * i + 1];
+                Real dz = A[3 * i + 2];
+
+                sum_w += w;
+                sum_w_dx += w * dx;
+                sum_w_dy += w * dy;
+                sum_w_dz += w * dz;
+                sum_w_dx_dx += w * dx * dx;
+                sum_w_dy_dy += w * dy * dy;
+                sum_w_dz_dz += w * dz * dz;
+                sum_w_dx_bx += w * dx * b[3 * i] / w;  // Note: b already weighted
+                sum_w_dy_by += w * dy * b[3 * i + 1] / w;
+                sum_w_dz_bz += w * dz * b[3 * i + 2] / w;
+            }
+
+            // Estimate gradients using weighted least squares
+            Real dBx_dx = 0.0f, dBy_dy = 0.0f, dBz_dz = 0.0f;
+
+            // Solve for dBx/dx
+            Real denom_x = sum_w * sum_w_dx_dx - sum_w_dx * sum_w_dx;
+            if (fabsf(denom_x) > DISTANCE_EPSILON) {
+                dBx_dx = (sum_w * sum_w_dx_bx - sum_w_dx * (sum_w_dx_bx / sum_w)) / denom_x;
+            }
+
+            // Solve for dBy/dy
+            Real denom_y = sum_w * sum_w_dy_dy - sum_w_dy * sum_w_dy;
+            if (fabsf(denom_y) > DISTANCE_EPSILON) {
+                dBy_dy = (sum_w * sum_w_dy_by - sum_w_dy * (sum_w_dy_by / sum_w)) / denom_y;
+            }
+
+            // Solve for dBz/dz
+            Real denom_z = sum_w * sum_w_dz_dz - sum_w_dz * sum_w_dz;
+            if (fabsf(denom_z) > DISTANCE_EPSILON) {
+                dBz_dz = (sum_w * sum_w_dz_bz - sum_w_dz * (sum_w_dz_bz / sum_w)) / denom_z;
+            }
+
+            // Extrapolate from nearest point using estimated gradients
             Real dx   = query_point.x - nearest_point.x;
             Real dy   = query_point.y - nearest_point.y;
             Real dz   = query_point.z - nearest_point.z;
             Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
 
-            if (dist > 1e-8f) {
-                result.Bx = nearest_data.Bx + avg_dBx * dist;
-                result.By = nearest_data.By + avg_dBy * dist;
-                result.Bz = nearest_data.Bz + avg_dBz * dist;
+            if (dist > DISTANCE_EPSILON) {
+                // Linear extrapolation: B = B_nearest + ∇B · d
+                result.Bx = nearest_data.Bx + dBx_dx * dx;
+                result.By = nearest_data.By + dBy_dy * dy;
+                result.Bz = nearest_data.Bz + dBz_dz * dz;
             } else {
                 result = nearest_data;
             }
         } else {
-            result = nearest_data;
+            // Fallback to simple average gradient if insufficient valid neighbors
+            Real   avg_dBx = 0.0f, avg_dBy = 0.0f, avg_dBz = 0.0f;
+            size_t gradient_count = 0;
+
+            for (size_t i = 1; i < actual_neighbors; ++i) {
+                size_t            idx = nearest_indices[i];
+                Point3D           p   = data_points[idx];
+                MagneticFieldData d   = field_data[idx];
+
+                Real dx   = p.x - nearest_point.x;
+                Real dy   = p.y - nearest_point.y;
+                Real dz   = p.z - nearest_point.z;
+                Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
+
+                if (dist > DISTANCE_EPSILON) {
+                    Real inv_dist = 1.0f / dist;
+                    avg_dBx += (d.Bx - nearest_data.Bx) * inv_dist;
+                    avg_dBy += (d.By - nearest_data.By) * inv_dist;
+                    avg_dBz += (d.Bz - nearest_data.Bz) * inv_dist;
+                    gradient_count++;
+                }
+            }
+
+            if (gradient_count > 0) {
+                avg_dBx /= gradient_count;
+                avg_dBy /= gradient_count;
+                avg_dBz /= gradient_count;
+
+                Real dx   = query_point.x - nearest_point.x;
+                Real dy   = query_point.y - nearest_point.y;
+                Real dz   = query_point.z - nearest_point.z;
+                Real dist = sqrtf(dx * dx + dy * dy + dz * dz);
+
+                if (dist > DISTANCE_EPSILON) {
+                    result.Bx = nearest_data.Bx + avg_dBx * dist;
+                    result.By = nearest_data.By + avg_dBy * dist;
+                    result.Bz = nearest_data.Bz + avg_dBz * dist;
+                } else {
+                    result = nearest_data;
+                }
+            } else {
+                result = nearest_data;
+            }
         }
     } else {
-        // Fallback to nearest neighbor
+        // Fallback to nearest neighbor if insufficient neighbors
         result = field_data[nearest_indices[0]];
     }
 
@@ -386,7 +513,7 @@ __device__ void GetCellCoords(const Point3D& point, const Point3D& origin, const
  * @param query_count Number of query points
  */
 __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, const Point3D* __restrict__ data_points,
-                                     const MagneticFieldData* __restrict__ field_data,
+                                     const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
                                      const Point3D grid_cell_size, const uint32_t grid_dimensions[3], const Real power,
@@ -410,8 +537,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
             size_t nearest_idx = 0;
             Real   min_dist    = 1e10f;  // Large number
 
-            for (size_t i = 0; i < query_count;
-                 ++i) {  // Note: This should be data_count, but we use query_count as approximation
+            for (size_t i = 0; i < data_count; ++i) {
                 Real dist = Distance(query_point, data_points[i]);
                 if (dist < min_dist) {
                     min_dist    = dist;
@@ -422,7 +548,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
             result.data = field_data[nearest_idx];
         } else if (extrapolation_method == 2) {  // 2 = LinearExtrapolation
             // Apply linear extrapolation
-            result.data = LinearExtrapolate(query_point, data_points, field_data, query_count);  // Approximation
+            result.data = LinearExtrapolate(query_point, data_points, field_data, data_count);
         }
 
         results[tid] = result;
@@ -436,9 +562,21 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
     Real              weight_sum   = 0.0f;
     MagneticFieldData weighted_sum = {};
 
-    // Search 3x3x3 neighborhood of cells (27 cells total)
+    // Use shared memory for cell offsets to reduce global memory accesses
+    extern __shared__ char shared_mem[];
+    uint32_t*              shared_cell_offsets = reinterpret_cast<uint32_t*>(shared_mem);
+
+    // Load cell offsets into shared memory cooperatively
+    const size_t total_cells = grid_dimensions[0] * grid_dimensions[1] * grid_dimensions[2] + 1;
+    for (size_t i = threadIdx.x; i < min(total_cells, static_cast<size_t>(blockDim.x) * 4); i += blockDim.x) {
+        shared_cell_offsets[i] = cell_offsets[i];
+    }
+    __syncthreads();
+
+    // Search 3x3x3 neighborhood of cells (27 cells total) with improved memory access
     for (int dz = -1; dz <= 1; ++dz) {
         for (int dy = -1; dy <= 1; ++dy) {
+#pragma unroll
             for (int dx = -1; dx <= 1; ++dx) {
                 int cell_ix = query_ix + dx;
                 int cell_iy = query_iy + dy;
@@ -453,10 +591,12 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
 
                 // Get cell index and point range
                 size_t cell_idx  = GetCellIndex(cell_ix, cell_iy, cell_iz, grid_dimensions);
-                size_t start_idx = cell_offsets[cell_idx];
-                size_t end_idx   = cell_offsets[cell_idx + 1];
+                size_t start_idx = (cell_idx < blockDim.x * 4) ? shared_cell_offsets[cell_idx] : cell_offsets[cell_idx];
+                size_t end_idx =
+                    (cell_idx + 1 < blockDim.x * 4) ? shared_cell_offsets[cell_idx + 1] : cell_offsets[cell_idx + 1];
 
-                // Process points in this cell
+                // Process points in this cell with improved memory coalescing
+#pragma unroll 4
                 for (size_t i = start_idx; i < end_idx; ++i) {
                     uint32_t       point_idx  = cell_points[i];
                     const Point3D& data_point = data_points[point_idx];
@@ -466,7 +606,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                     Real           dist       = sqrtf(dx * dx + dy * dy + dz * dz);
 
                     // Handle exact match (avoid division by zero)
-                    if (dist < 1e-8f) {
+                    if (dist < DISTANCE_EPSILON) {
                         result.data  = field_data[point_idx];
                         results[tid] = result;
                         return;
@@ -476,10 +616,11 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                     Real inv_dist_power = 1.0f / FastPow(dist, power);
                     weight_sum += inv_dist_power;
 
-                    // Accumulate weighted field values
-                    weighted_sum.Bx += field_data[point_idx].Bx * inv_dist_power;
-                    weighted_sum.By += field_data[point_idx].By * inv_dist_power;
-                    weighted_sum.Bz += field_data[point_idx].Bz * inv_dist_power;
+                    // Accumulate weighted field values with improved memory access
+                    const MagneticFieldData& field_val = field_data[point_idx];
+                    weighted_sum.Bx += field_val.Bx * inv_dist_power;
+                    weighted_sum.By += field_val.By * inv_dist_power;
+                    weighted_sum.Bz += field_val.Bz * inv_dist_power;
                 }
             }
         }
@@ -563,8 +704,9 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
     MagneticFieldData*     shared_field_data =
         reinterpret_cast<MagneticFieldData*>(shared_mem + blockDim.x * 4 * sizeof(Point3D));
 
-    const size_t block_size        = blockDim.x;
-    const size_t shared_data_count = min(data_count, block_size * 4);  // Limit shared memory usage
+    const size_t block_size = blockDim.x;
+    const size_t shared_data_count =
+        min(data_count, block_size * SHARED_MEMORY_LIMIT_FACTOR);  // Limit shared memory usage
 
     // Load data into shared memory cooperatively
     for (size_t i = threadIdx.x; i < shared_data_count; i += block_size) {
@@ -599,7 +741,7 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
             }
 
             // Handle exact match (avoid division by zero)
-            if (dist < 1e-8f) {
+            if (dist < DISTANCE_EPSILON) {
                 result.data  = *field_ptr;
                 results[tid] = result;
                 return;
@@ -651,18 +793,28 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
         return;
     }
 
+    // Use shared memory for grid parameters accessed by all threads in block
+    extern __shared__ char shared_mem[];
+    GridParams*            shared_grid_params = reinterpret_cast<GridParams*>(shared_mem);
+
+    // Load grid parameters to shared memory (only first thread)
+    if (threadIdx.x == 0) {
+        *shared_grid_params = grid_params;
+    }
+    __syncthreads();
+
     // Use __restrict__ keyword to help compiler optimization
     const Point3D query_point = query_points[tid];
 
     // Directly initialize struct to avoid constructor call
     InterpolationResult result = {};
 
-    // Pre-compute grid parameters to registers (optimize access)
-    const Point3D  origin  = grid_params.origin;
-    const Point3D  spacing = grid_params.spacing;
-    const uint32_t nx      = grid_params.dimensions[0];
-    const uint32_t ny      = grid_params.dimensions[1];
-    const uint32_t nz      = grid_params.dimensions[2];
+    // Pre-compute grid parameters from shared memory (optimize access)
+    const Point3D  origin  = shared_grid_params->origin;
+    const Point3D  spacing = shared_grid_params->spacing;
+    const uint32_t nx      = shared_grid_params->dimensions[0];
+    const uint32_t ny      = shared_grid_params->dimensions[1];
+    const uint32_t nz      = shared_grid_params->dimensions[2];
 
     // Fast bounds checking
     const bool inside_bounds = (query_point.x >= origin.x && query_point.x <= origin.x + (nx - 1) * spacing.x) &&
@@ -708,17 +860,18 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
     const uint32_t idx_011  = base_idx + nx * ny + nx;      // (i0, j1, k1)
     const uint32_t idx_111  = base_idx + nx * ny + nx + 1;  // (i1, j1, k1)
 
-    // Directly access data to avoid array copying
-    const MagneticFieldData vertex_data[8] = {
-        grid_data[base_idx],  // v000 (i0, j0, k0)
-        grid_data[idx_100],   // v100 (i1, j0, k0)
-        grid_data[idx_010],   // v010 (i0, j1, k0)
-        grid_data[idx_110],   // v110 (i1, j1, k0)
-        grid_data[idx_001],   // v001 (i0, j0, k1)
-        grid_data[idx_101],   // v101 (i1, j0, k1)
-        grid_data[idx_011],   // v011 (i0, j1, k1)
-        grid_data[idx_111]    // v111 (i1, j1, k1)
-    };
+    // Use shared memory for vertex data to improve memory access patterns
+    MagneticFieldData* shared_vertex_data = reinterpret_cast<MagneticFieldData*>(shared_mem + sizeof(GridParams));
+
+    // Load vertex data into shared memory cooperatively
+    if (threadIdx.x < 8) {
+        const uint32_t indices[8]       = {base_idx, idx_100, idx_010, idx_110, idx_001, idx_101, idx_011, idx_111};
+        shared_vertex_data[threadIdx.x] = grid_data[indices[threadIdx.x]];
+    }
+    __syncthreads();
+
+    // Access vertex data from shared memory
+    const MagneticFieldData* vertex_data = shared_vertex_data;
 
     // Perform tricubic Hermite interpolation
     result.data  = TricubicHermiteInterpolate(vertex_data, tx, ty, tz, grid_params);

@@ -1,4 +1,5 @@
 #include "point3d_interp/unstructured_interpolator.h"
+#include "point3d_interp/constants.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -181,40 +182,34 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
     result.valid = false;
 
     if (extrapolation_method_ == ExtrapolationMethod::NearestNeighbor) {
-        // Find the nearest neighbor
-        size_t nearest_idx = 0;
-        Real   min_dist    = std::numeric_limits<Real>::max();
-
-        for (size_t i = 0; i < coordinates_.size(); ++i) {
-            Real dist = distance(query_point, coordinates_[i]);
-            if (dist < min_dist) {
-                min_dist    = dist;
-                nearest_idx = i;
-            }
+        // Find the nearest neighbor using KD-tree for O(log N) performance
+        if (!kd_tree_) {
+            return result;  // No KD-tree available
         }
 
-        result.data  = field_data_[nearest_idx];
-        result.valid = true;
+        std::vector<size_t> indices;
+        std::vector<Real>   distances;
+        size_t              found = kd_tree_->findKNearestNeighbors(query_point, 1, indices, distances);
+
+        if (found > 0) {
+            result.data  = field_data_[indices[0]];
+            result.valid = true;
+        }
     } else if (extrapolation_method_ == ExtrapolationMethod::LinearExtrapolation) {
-        // Linear extrapolation using nearest neighbors
-        const size_t num_neighbors = std::min(size_t(5), coordinates_.size());  // Use up to 5 nearest neighbors
-
-        // Find nearest neighbors
-        std::vector<std::pair<Real, size_t>> dist_idx_pairs;
-        dist_idx_pairs.reserve(coordinates_.size());
-
-        for (size_t i = 0; i < coordinates_.size(); ++i) {
-            Real dist = distance(query_point, coordinates_[i]);
-            dist_idx_pairs.emplace_back(dist, i);
+        // Linear extrapolation using nearest neighbors with KD-tree for O(log N) performance
+        if (!kd_tree_) {
+            return result;  // No KD-tree available
         }
 
-        std::sort(dist_idx_pairs.begin(), dist_idx_pairs.end());
-        size_t actual_neighbors = std::min(num_neighbors, dist_idx_pairs.size());
+        // Find nearest neighbors using KD-tree
+        std::vector<size_t> indices;
+        std::vector<Real>   distances;
+        size_t found = kd_tree_->findKNearestNeighbors(query_point, MAX_EXTRAPOLATION_NEIGHBORS, indices, distances);
 
-        if (actual_neighbors >= 2) {
+        if (found >= 2) {
             // Use linear extrapolation based on nearest neighbors
             // Simple approach: extrapolate from nearest point using average gradient
-            size_t            nearest_idx   = dist_idx_pairs[0].second;
+            size_t            nearest_idx   = indices[0];
             Point3D           nearest_point = coordinates_[nearest_idx];
             MagneticFieldData nearest_data  = field_data_[nearest_idx];
 
@@ -224,8 +219,8 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
             Real   avg_dBz_dx = 0, avg_dBz_dy = 0, avg_dBz_dz = 0;
             size_t gradient_count = 0;
 
-            for (size_t i = 1; i < actual_neighbors; ++i) {
-                size_t            idx = dist_idx_pairs[i].second;
+            for (size_t i = 1; i < found; ++i) {
+                size_t            idx = indices[i];
                 Point3D           p   = coordinates_[idx];
                 MagneticFieldData d   = field_data_[idx];
 
@@ -233,7 +228,8 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
                 Real dy = p.y - nearest_point.y;
                 Real dz = p.z - nearest_point.z;
 
-                if (std::abs(dx) > 1e-8 || std::abs(dy) > 1e-8 || std::abs(dz) > 1e-8) {
+                if (std::abs(dx) > DISTANCE_EPSILON || std::abs(dy) > DISTANCE_EPSILON ||
+                    std::abs(dz) > DISTANCE_EPSILON) {
                     Real dist = std::sqrt(dx * dx + dy * dy + dz * dz);
                     avg_dBx_dx += (d.Bx - nearest_data.Bx) / dist;
                     avg_dBy_dx += (d.By - nearest_data.By) / dist;
@@ -253,7 +249,7 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
                 Real dz   = query_point.z - nearest_point.z;
                 Real dist = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-                if (dist > 1e-8) {
+                if (dist > DISTANCE_EPSILON) {
                     result.data.Bx = nearest_data.Bx + avg_dBx_dx * dist;
                     result.data.By = nearest_data.By + avg_dBy_dx * dist;
                     result.data.Bz = nearest_data.Bz + avg_dBz_dx * dist;
@@ -267,11 +263,10 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
                 result.data  = nearest_data;
                 result.valid = true;
             }
-        } else {
-            // Fallback to nearest neighbor
-            size_t nearest_idx = dist_idx_pairs[0].second;
-            result.data        = field_data_[nearest_idx];
-            result.valid       = true;
+        } else if (found == 1) {
+            // Fallback to nearest neighbor if only one neighbor found
+            result.data  = field_data_[indices[0]];
+            result.valid = true;
         }
     }
     // For None, already handled

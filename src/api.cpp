@@ -1,4 +1,5 @@
 #include "point3d_interp/api.h"
+#include "point3d_interp/constants.h"
 #include "point3d_interp/data_loader.h"
 #include "point3d_interp/grid_structure.h"
 #include "point3d_interp/cpu_interpolator.h"
@@ -9,6 +10,9 @@
 #include <stdexcept>
 #include <algorithm>
 #include <mutex>
+#include <string>
+#include <cmath>
+#include <limits>
 
 #ifdef __CUDACC__
     #include <cuda_runtime.h>
@@ -26,6 +30,62 @@ enum class DataStructureType { RegularGrid, Unstructured };
  * @brief API implementation class (Pimpl pattern)
  */
 class MagneticFieldInterpolator::Impl {
+  private:
+#ifdef __CUDACC__
+    /**
+     * @brief Log CUDA error with consistent formatting
+     * @param operation Description of the operation that failed
+     * @param cuda_err CUDA error code
+     */
+    static void LogCudaError(const std::string& operation, cudaError_t cuda_err) {
+        std::cerr << "CUDA " << operation << " error: " << cudaGetErrorString(cuda_err) << std::endl;
+    }
+#endif
+
+    /**
+     * @brief Log general error with consistent formatting
+     * @param operation Description of the operation that failed
+     * @param message Error message
+     */
+    static void LogError(const std::string& operation, const std::string& message) {
+        std::cerr << operation << " failed: " << message << std::endl;
+    }
+
+    /**
+     * @brief Check if a floating point value is finite (not NaN or infinite)
+     * @param value Value to check
+     * @return true if finite
+     */
+    static bool IsFinite(Real value) { return std::isfinite(static_cast<double>(value)); }
+
+    /**
+     * @brief Validate coordinate values for finiteness
+     * @param point Point to validate
+     * @return true if all coordinates are finite
+     */
+    static bool ValidatePoint(const Point3D& point) {
+        return IsFinite(point.x) && IsFinite(point.y) && IsFinite(point.z);
+    }
+
+    /**
+     * @brief Validate magnetic field data for finiteness
+     * @param field_data Field data to validate
+     * @return true if all field values are finite
+     */
+    static bool ValidateFieldData(const MagneticFieldData& field_data) {
+        return IsFinite(field_data.Bx) && IsFinite(field_data.By) && IsFinite(field_data.Bz);
+    }
+
+    /**
+     * @brief Check for potential integer overflow in size calculations
+     * @param count Size to validate
+     * @return true if safe from overflow
+     */
+    static bool ValidateSize(size_t count) {
+        // Prevent overflow in common calculations by limiting to SIZE_MAX/2
+        return count > 0 && count <= SIZE_MAX / 2;
+    }
+
   public:
     Impl(bool use_gpu, int device_id, InterpolationMethod method,
          ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
@@ -105,13 +165,13 @@ class MagneticFieldInterpolator::Impl {
                 // Check for kernel launch errors
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
-                    std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(cuda_err) << std::endl;
+                    LogCudaError("kernel launch", cuda_err);
                     return ErrorCode::CudaError;
                 }
 
                 return ErrorCode::Success;
             } catch (const std::exception& e) {
-                std::cerr << "GPU kernel launch failed: " << e.what() << std::endl;
+                LogError("GPU kernel launch", e.what());
                 return ErrorCode::CudaError;
             }
         } else {
@@ -124,12 +184,12 @@ class MagneticFieldInterpolator::Impl {
 
     void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
         // Use same configuration as internal batch query
-        const int BLOCK_SIZE = 512;
-        const int MIN_BLOCKS = 4;
+        const int BLOCK_SIZE = CUDA_DEFAULT_BLOCK_SIZE;
+        const int MIN_BLOCKS = CUDA_MIN_BLOCKS;
 
         int num_blocks       = (query_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
         num_blocks           = std::max(num_blocks, MIN_BLOCKS);
-        const int MAX_BLOCKS = 1024;
+        const int MAX_BLOCKS = CUDA_MAX_BLOCKS;
         num_blocks           = std::min(num_blocks, MAX_BLOCKS);
 
         config.block_x = BLOCK_SIZE;
@@ -159,6 +219,11 @@ class MagneticFieldInterpolator::Impl {
     bool                gpu_initialized_;
     InterpolationMethod method_;
     ExtrapolationMethod extrapolation_method_;
+
+    // Stored spatial grid parameters for GPU queries
+    Point3D                 spatial_grid_origin_;
+    Point3D                 spatial_grid_cell_size_;
+    std::array<uint32_t, 3> spatial_grid_dimensions_;
 
 #ifdef __CUDACC__
     // GPU memory manager for regular grids
@@ -192,12 +257,15 @@ MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, Interpolation
       device_id_(device_id),
       gpu_initialized_(false),
       method_(method),
-      extrapolation_method_(extrapolation_method) {
+      extrapolation_method_(extrapolation_method),
+      spatial_grid_origin_(0, 0, 0),
+      spatial_grid_cell_size_(1, 1, 1),
+      spatial_grid_dimensions_{0, 0, 0} {
 #ifdef __CUDACC__
     if (use_gpu_) {
         gpu_initialized_ = InitializeGPU(device_id);
         if (!gpu_initialized_) {
-            std::cerr << "Warning: GPU initialization failed, falling back to CPU" << std::endl;
+            LogError("GPU initialization", "falling back to CPU");
             use_gpu_ = false;
         }
     }
@@ -213,7 +281,10 @@ MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
       device_id_(other.device_id_),
       gpu_initialized_(other.gpu_initialized_),
       method_(other.method_),
-      extrapolation_method_(other.extrapolation_method_) {
+      extrapolation_method_(other.extrapolation_method_),
+      spatial_grid_origin_(other.spatial_grid_origin_),
+      spatial_grid_cell_size_(other.spatial_grid_cell_size_),
+      spatial_grid_dimensions_(other.spatial_grid_dimensions_) {
 #ifdef __CUDACC__
     gpu_grid_points_             = std::move(other.gpu_grid_points_);
     gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -239,6 +310,9 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
         gpu_initialized_           = other.gpu_initialized_;
         method_                    = other.method_;
         extrapolation_method_      = other.extrapolation_method_;
+        spatial_grid_origin_       = other.spatial_grid_origin_;
+        spatial_grid_cell_size_    = other.spatial_grid_cell_size_;
+        spatial_grid_dimensions_   = other.spatial_grid_dimensions_;
 #ifdef __CUDACC__
         gpu_grid_points_             = std::move(other.gpu_grid_points_);
         gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -274,8 +348,23 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepa
 
 ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
                                                           size_t count) {
-    if (!points || !field_data || count == 0) {
+    // Basic null pointer and size validation
+    if (!points || !field_data) {
         return ErrorCode::InvalidParameter;
+    }
+
+    if (!ValidateSize(count)) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    // Validate coordinate and field data values
+    for (size_t i = 0; i < count; ++i) {
+        if (!ValidatePoint(points[i])) {
+            return ErrorCode::InvalidParameter;
+        }
+        if (!ValidateFieldData(field_data[i])) {
+            return ErrorCode::InvalidParameter;
+        }
     }
 
     try {
@@ -295,8 +384,8 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
             }
         } catch (const std::invalid_argument&) {
             // Not a regular grid, use unstructured interpolator
-            unstructured_interpolator_ =
-                std::make_unique<UnstructuredInterpolator>(coordinates, field_values, 2.0f, 0, extrapolation_method_);
+            unstructured_interpolator_ = std::make_unique<UnstructuredInterpolator>(
+                coordinates, field_values, DEFAULT_IDW_POWER, DEFAULT_MAX_NEIGHBORS, extrapolation_method_);
             data_type_ = DataStructureType::Unstructured;
 
             // Upload data to GPU for unstructured data
@@ -308,12 +397,17 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
 
         return ErrorCode::Success;
     } catch (const std::exception& e) {
-        std::cerr << "Error loading data: " << e.what() << std::endl;
+        LogError("Data loading", e.what());
         return ErrorCode::InvalidGridData;
     }
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, InterpolationResult& result) {
+    // Validate query point coordinates
+    if (!ValidatePoint(query_point)) {
+        return ErrorCode::InvalidParameter;
+    }
+
     return QueryBatch(&query_point, &result, 1);
 }
 
@@ -323,8 +417,19 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         return ErrorCode::DataNotLoaded;
     }
 
-    if (!query_points || !results || count == 0) {
+    if (!query_points || !results) {
         return ErrorCode::InvalidParameter;
+    }
+
+    if (!ValidateSize(count)) {
+        return ErrorCode::InvalidParameter;
+    }
+
+    // Validate all query points
+    for (size_t i = 0; i < count; ++i) {
+        if (!ValidatePoint(query_points[i])) {
+            return ErrorCode::InvalidParameter;
+        }
     }
 
     if (data_type_ == DataStructureType::Unstructured) {
@@ -354,30 +459,30 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 }
 
                 // Launch optimized IDW kernel with spatial grid
-                const int BLOCK_SIZE = 256;
+                const int BLOCK_SIZE = CUDA_BLOCK_SIZE_256;
                 const int num_blocks = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
                 // Get bounding box from unstructured interpolator
                 Point3D min_bound = unstructured_interpolator_->getMinBound();
                 Point3D max_bound = unstructured_interpolator_->getMaxBound();
 
-                // Get spatial grid parameters (assuming we stored them, for now use defaults)
-                // In a full implementation, we'd store the spatial grid parameters
-                Point3D  grid_origin(0, 0, 0);               // This should be stored
-                Point3D  grid_cell_size(1, 1, 1);            // This should be stored
-                uint32_t grid_dimensions[3] = {32, 32, 32};  // This should be stored
+                // Get stored spatial grid parameters
+                Point3D  grid_origin        = spatial_grid_origin_;
+                Point3D  grid_cell_size     = spatial_grid_cell_size_;
+                uint32_t grid_dimensions[3] = {spatial_grid_dimensions_[0], spatial_grid_dimensions_[1],
+                                               spatial_grid_dimensions_[2]};
 
                 cuda::IDWSpatialGridKernel<<<num_blocks, BLOCK_SIZE>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
-                    gpu_unstructured_field_data_->getDevicePtr(), gpu_cell_offsets_->getDevicePtr(),
-                    gpu_cell_points_->getDevicePtr(), grid_origin, grid_cell_size, grid_dimensions,
-                    unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_), min_bound,
-                    max_bound, gpu_results_->getDevicePtr(), count);
+                    gpu_unstructured_field_data_->getDevicePtr(), unstructured_interpolator_->getDataCount(),
+                    gpu_cell_offsets_->getDevicePtr(), gpu_cell_points_->getDevicePtr(), grid_origin, grid_cell_size,
+                    grid_dimensions, unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_),
+                    min_bound, max_bound, gpu_results_->getDevicePtr(), count);
 
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
-                    std::cerr << "CUDA IDW spatial grid kernel error: " << cudaGetErrorString(cuda_err) << std::endl;
+                    LogCudaError("IDW spatial grid kernel", cuda_err);
                     return ErrorCode::CudaError;
                 }
 
@@ -388,7 +493,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
                 return ErrorCode::Success;
             } catch (const std::exception& e) {
-                std::cerr << "GPU IDW spatial grid query failed: " << e.what() << ", falling back to CPU" << std::endl;
+                LogError("GPU IDW spatial grid query", std::string(e.what()) + ", falling back to CPU");
                 use_gpu_ = false;
             }
         } else if (use_gpu_ && gpu_initialized_ && gpu_unstructured_points_ && gpu_unstructured_field_data_) {
@@ -415,7 +520,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 }
 
                 // Launch IDW kernel
-                const int BLOCK_SIZE = 256;
+                const int BLOCK_SIZE = CUDA_BLOCK_SIZE_256;
                 const int num_blocks = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
                 // Get bounding box from unstructured interpolator
@@ -423,9 +528,10 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 Point3D max_bound = unstructured_interpolator_->getMaxBound();
 
                 // Calculate shared memory size for optimization
-                const size_t data_count        = unstructured_interpolator_->getDataCount();
-                const size_t shared_data_count = std::min(data_count, static_cast<size_t>(BLOCK_SIZE * 4));
-                const size_t shared_mem_size   = shared_data_count * (sizeof(Point3D) + sizeof(MagneticFieldData));
+                const size_t data_count = unstructured_interpolator_->getDataCount();
+                const size_t shared_data_count =
+                    std::min(data_count, static_cast<size_t>(BLOCK_SIZE * SHARED_MEMORY_LIMIT_FACTOR));
+                const size_t shared_mem_size = shared_data_count * (sizeof(Point3D) + sizeof(MagneticFieldData));
 
                 cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE, shared_mem_size>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
@@ -435,7 +541,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
-                    std::cerr << "CUDA IDW kernel error: " << cudaGetErrorString(cuda_err) << std::endl;
+                    LogCudaError("IDW kernel", cuda_err);
                     return ErrorCode::CudaError;
                 }
 
@@ -446,7 +552,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
                 return ErrorCode::Success;
             } catch (const std::exception& e) {
-                std::cerr << "GPU IDW query failed: " << e.what() << ", falling back to CPU" << std::endl;
+                LogError("GPU IDW query", std::string(e.what()) + ", falling back to CPU");
                 use_gpu_ = false;
             }
         }
@@ -485,15 +591,15 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
             // Launch CUDA kernel - optimized configuration
             // Use larger thread blocks for better occupancy
-            const int BLOCK_SIZE = 512;  // Increased to 512 for better performance
-            const int MIN_BLOCKS = 4;    // Minimum 4 blocks to hide latency
+            const int BLOCK_SIZE = CUDA_DEFAULT_BLOCK_SIZE;  // Increased to 512 for better performance
+            const int MIN_BLOCKS = CUDA_MIN_BLOCKS;          // Minimum 4 blocks to hide latency
 
             // Calculate required number of blocks, ensure at least minimum blocks
             int num_blocks = (count + BLOCK_SIZE - 1) / BLOCK_SIZE;
             num_blocks     = std::max(num_blocks, MIN_BLOCKS);
 
             // Limit maximum blocks to avoid excessive resource usage
-            const int MAX_BLOCKS = 1024;
+            const int MAX_BLOCKS = CUDA_MAX_BLOCKS;
             num_blocks           = std::min(num_blocks, MAX_BLOCKS);
 
             // Configure kernel
@@ -507,7 +613,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             // Check CUDA errors
             cudaError_t cuda_err = cudaGetLastError();
             if (cuda_err != cudaSuccess) {
-                std::cerr << "CUDA kernel error: " << cudaGetErrorString(cuda_err) << std::endl;
+                LogCudaError("kernel", cuda_err);
                 return ErrorCode::CudaError;
             }
 
@@ -518,7 +624,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
             return ErrorCode::Success;
         } catch (const std::exception& e) {
-            std::cerr << "GPU query failed: " << e.what() << ", falling back to CPU" << std::endl;
+            LogError("GPU query", std::string(e.what()) + ", falling back to CPU");
             use_gpu_ = false;
         }
     }
@@ -537,7 +643,7 @@ bool MagneticFieldInterpolator::Impl::InitializeGPU(int device_id) {
 #ifdef __CUDACC__
     cudaError_t err = cudaSetDevice(device_id);
     if (err != cudaSuccess) {
-        std::cerr << "Failed to set CUDA device " << device_id << ": " << cudaGetErrorString(err) << std::endl;
+        LogCudaError("set device " + std::to_string(device_id), err);
         return false;
     }
 
@@ -545,7 +651,7 @@ bool MagneticFieldInterpolator::Impl::InitializeGPU(int device_id) {
     cudaDeviceProp prop;
     err = cudaGetDeviceProperties(&prop, device_id);
     if (err != cudaSuccess) {
-        std::cerr << "Failed to get device properties: " << cudaGetErrorString(err) << std::endl;
+        LogCudaError("get device properties", err);
         return false;
     }
 
@@ -623,6 +729,11 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
             Point3D     max_bound    = unstructured_interpolator_->getMaxBound();
             SpatialGrid spatial_grid = buildSpatialGrid(coordinates, min_bound, max_bound);
 
+            // Store spatial grid parameters for GPU queries
+            spatial_grid_origin_     = spatial_grid.origin;
+            spatial_grid_cell_size_  = spatial_grid.cell_size;
+            spatial_grid_dimensions_ = spatial_grid.dimensions;
+
             // Allocate GPU memory for spatial grid
             gpu_cell_offsets_ = std::make_unique<cuda::GpuMemory<uint32_t>>();
             gpu_cell_points_  = std::make_unique<cuda::GpuMemory<uint32_t>>();
@@ -643,7 +754,7 @@ bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Failed to upload data to GPU: " << e.what() << std::endl;
+        LogError("GPU data upload", e.what());
         return false;
     }
 #else
@@ -752,7 +863,7 @@ void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, Kerne
         impl_->GetOptimalKernelConfig(query_count, config);
     } else {
         // Default configuration
-        const int BLOCK_SIZE = 512;
+        const int BLOCK_SIZE = CUDA_DEFAULT_BLOCK_SIZE;
         int       num_blocks = (query_count + BLOCK_SIZE - 1) / BLOCK_SIZE;
         config.block_x       = BLOCK_SIZE;
         config.block_y       = 1;
