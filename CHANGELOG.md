@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Factory pattern implementation for format selection
   - No impact on existing interpolation performance or memory usage
 
+- **Out-of-Domain Benchmark Suite**: Added comprehensive performance benchmarks for interpolation queries outside the data domain
+  - New benchmark executables for multiple data scales: 10×10×10, 20×20×20, 30×30×30, and 50×50×50 grids
+  - Query points generated outside the bounding box to test extrapolation performance
+  - Consistent naming convention matching existing in-domain benchmarks
+  - Performance metrics include CPU/GPU timing, speedup ratios, and throughput measurements
+
 ### Changed
 - **Documentation**: Comprehensive updates to API reference and user guides
   - Added `ExportFormat` enum documentation
@@ -33,11 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Notes about VTK file compatibility with Paraview visualization
 
 ### Technical Details
-- **New Files**: `include/point3d_interp/exporter.h`, `src/exporter.cpp`, `tests/test_exporter.cpp`
-- **Modified Files**: `include/point3d_interp/api.h`, `src/api.cpp`, `CMakeLists.txt`, `tests/CMakeLists.txt`, `docs/API_Reference.md`
+- **New Files**: `include/point3d_interp/exporter.h`, `src/exporter.cpp`, `tests/test_exporter.cpp`, `tests/benchmark_out_of_domain_10x10x10.cpp`, `tests/benchmark_out_of_domain_20x20x20.cpp`, `tests/benchmark_out_of_domain_30x30x30.cpp`, `tests/benchmark_out_of_domain_50x50x50.cpp`
+- **Modified Files**: `include/point3d_interp/api.h`, `src/api.cpp`, `tests/benchmark_base.h`, `CMakeLists.txt`, `tests/CMakeLists.txt`, `docs/API_Reference.md`
 - **Export Format**: VTK legacy unstructured grid format ensuring maximum compatibility
 - **Data Completeness**: Exports all magnetic field components, derivatives, and validity information
 - **Error Handling**: Robust error checking with appropriate error codes for export failures
+- **Benchmark Implementation**: Extended `BenchmarkBase` class with virtual `GenerateQueryPoints` method for custom query generation
 
 ### Verified
 - ✅ Code compiles successfully on all platforms
@@ -46,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✅ File content validation ensures proper VTK format compliance
 - ✅ API backward compatibility preserved
 - ✅ Documentation updated with export feature details
+- ✅ New out-of-domain benchmarks build and run successfully
+- ✅ Benchmark performance metrics correctly measure extrapolation scenarios
 
 ## [2025-11-15] - Compilation Error Fixes and Namespace Resolution
 

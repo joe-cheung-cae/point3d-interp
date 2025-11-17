@@ -220,3 +220,39 @@ set_target_properties(benchmark_memory PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+add_executable(benchmark_out_of_domain_10x10x10 benchmark_out_of_domain_10x10x10.cpp)
+target_link_libraries(benchmark_out_of_domain_10x10x10 PRIVATE point3d_interp)
+set_target_properties(benchmark_out_of_domain_10x10x10 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_out_of_domain_10x10x10 COMMAND benchmark_out_of_domain_10x10x10)
+
+add_executable(benchmark_out_of_domain_20x20x20 benchmark_out_of_domain_20x20x20.cpp)
+target_link_libraries(benchmark_out_of_domain_20x20x20 PRIVATE point3d_interp)
+set_target_properties(benchmark_out_of_domain_20x20x20 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_out_of_domain_20x20x20 COMMAND benchmark_out_of_domain_20x20x20)
+
+add_executable(benchmark_out_of_domain_30x30x30 benchmark_out_of_domain_30x30x30.cpp)
+target_link_libraries(benchmark_out_of_domain_30x30x30 PRIVATE point3d_interp)
+set_target_properties(benchmark_out_of_domain_30x30x30 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_out_of_domain_30x30x30 COMMAND benchmark_out_of_domain_30x30x30)
+
+add_executable(benchmark_out_of_domain_50x50x50 benchmark_out_of_domain_50x50x50.cpp)
+target_link_libraries(benchmark_out_of_domain_50x50x50 PRIVATE point3d_interp)
+set_target_properties(benchmark_out_of_domain_50x50x50 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_out_of_domain_50x50x50 COMMAND benchmark_out_of_domain_50x50x50)

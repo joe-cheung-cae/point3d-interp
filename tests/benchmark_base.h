@@ -84,14 +84,35 @@ class BenchmarkBase {
      */
     virtual std::array<size_t, 3> GetDataDimensions() const = 0;
 
+    std::mt19937 rng_;
+
+    /**
+     * @brief Generate query points for benchmarking
+     * @param count Number of points to generate
+     * @param grid_params Grid parameters defining the domain
+     * @return Vector of query points
+     */
+    virtual std::vector<Point3D> GenerateQueryPoints(size_t count, const GridParams& grid_params) {
+        std::vector<Point3D> points;
+        points.reserve(count);
+
+        std::uniform_real_distribution<float> dist_x(grid_params.min_bound.x, grid_params.max_bound.x);
+        std::uniform_real_distribution<float> dist_y(grid_params.min_bound.y, grid_params.max_bound.y);
+        std::uniform_real_distribution<float> dist_z(grid_params.min_bound.z, grid_params.max_bound.z);
+
+        for (size_t i = 0; i < count; ++i) {
+            points.push_back(Point3D(dist_x(rng_), dist_y(rng_), dist_z(rng_)));
+        }
+
+        return points;
+    }
+
   private:
     struct TestData {
         std::vector<Point3D>           coordinates;
         std::vector<MagneticFieldData> field_data;
         GridParams                     grid_params;
     };
-
-    std::mt19937 rng_;
 
     void ExportBenchmarkResults(const TestData& test_data, const std::vector<Point3D>& query_points,
                                 const std::vector<InterpolationResult>& cpu_results,
@@ -166,21 +187,6 @@ class BenchmarkBase {
         }
 
         return data;
-    }
-
-    std::vector<Point3D> GenerateQueryPoints(size_t count, const GridParams& grid_params) {
-        std::vector<Point3D> points;
-        points.reserve(count);
-
-        std::uniform_real_distribution<float> dist_x(grid_params.min_bound.x, grid_params.max_bound.x);
-        std::uniform_real_distribution<float> dist_y(grid_params.min_bound.y, grid_params.max_bound.y);
-        std::uniform_real_distribution<float> dist_z(grid_params.min_bound.z, grid_params.max_bound.z);
-
-        for (size_t i = 0; i < count; ++i) {
-            points.push_back(Point3D(dist_x(rng_), dist_y(rng_), dist_z(rng_)));
-        }
-
-        return points;
     }
 
     std::pair<double, std::vector<InterpolationResult>> BenchmarkCPU(const TestData&             test_data,
