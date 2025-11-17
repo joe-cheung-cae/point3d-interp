@@ -18,14 +18,15 @@ class ExporterTest : public ::testing::Test {
                       {0.5f, 0.5f, 0.5f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f},
                       {2.0f, 2.0f, 2.0f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f}};
 
-        // Create temporary directory for test files
-        temp_dir = fs::temp_directory_path() / "point3d_interp_test";
+        // Create directory for test files in current directory
+        temp_dir = "test_output";
         fs::create_directories(temp_dir);
+        std::cout << "Test output directory: " << temp_dir << std::endl;
     }
 
     void TearDown() override {
         // Clean up test files
-        fs::remove_all(temp_dir);
+        // fs::remove_all(temp_dir);  // Commented out to keep files for inspection
     }
 
     std::vector<p3d::Point3D>           points;
@@ -42,7 +43,8 @@ TEST_F(ExporterTest, ExportInputPointsVTK) {
 
     // Export input points
     fs::path input_file = temp_dir / "input_points.vtk";
-    err                 = interpolator.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, input_file.string());
+    std::cout << "Exporting input points to: " << input_file << std::endl;
+    err = interpolator.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, input_file.string());
     ASSERT_EQ(err, p3d::ErrorCode::Success);
 
     // Check file exists
@@ -89,6 +91,7 @@ TEST_F(ExporterTest, ExportOutputPointsVTK) {
 
     // Export output points
     fs::path output_file = temp_dir / "output_points.vtk";
+    std::cout << "Exporting output points to: " << output_file << std::endl;
     err = interpolator.ExportOutputPoints(p3d::ExportFormat::ParaviewVTK, query_points, results, output_file.string());
     ASSERT_EQ(err, p3d::ErrorCode::Success);
 
