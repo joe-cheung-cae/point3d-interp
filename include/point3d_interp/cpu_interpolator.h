@@ -17,8 +17,10 @@ class CPUInterpolator {
     /**
      * @brief Constructor
      * @param grid Regular grid object
+     * @param extrapolation_method Extrapolation method for points outside domain
      */
-    explicit CPUInterpolator(const RegularGrid3D& grid);
+    explicit CPUInterpolator(const RegularGrid3D& grid,
+                             ExtrapolationMethod  extrapolation_method = ExtrapolationMethod::None);
 
     ~CPUInterpolator();
 
@@ -47,6 +49,13 @@ class CPUInterpolator {
      * @return Constant reference to grid object
      */
     const RegularGrid3D& getGrid() const { return *grid_ptr_; }
+
+    /**
+     * @brief Extrapolate value for point outside domain
+     * @param query_point Query point coordinates
+     * @return Extrapolated interpolation result
+     */
+    InterpolationResult extrapolate(const Point3D& query_point) const;
 
   private:
     /**
@@ -89,7 +98,8 @@ class CPUInterpolator {
      */
     Real hermiteDerivative(Real f0, Real f1, Real df0, Real df1, Real t) const;
 
-    const RegularGrid3D* grid_ptr_;  // Grid pointer
+    const RegularGrid3D* grid_ptr_;              // Grid pointer
+    ExtrapolationMethod  extrapolation_method_;  // Extrapolation method
 };
 
 }  // namespace p3d

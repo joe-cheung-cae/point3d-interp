@@ -105,7 +105,7 @@ int main() {
     // Call the kernel directly
     p3d::cuda::TricubicHermiteInterpolationKernel<<<dim3(config.grid_x, config.grid_y, config.grid_z),
                                                     dim3(config.block_x, config.block_y, config.block_z)>>>(
-        d_query_points, d_field_data, params, d_results, num_queries);
+        d_query_points, d_field_data, params, d_results, num_queries, 0);  // 0 = ExtrapolationMethod::None
 
     // Check for kernel launch errors
     cuda_err = cudaGetLastError();

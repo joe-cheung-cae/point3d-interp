@@ -176,7 +176,7 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 - `use_gpu`: Whether to use GPU acceleration (default: true)
 - `device_id`: CUDA device ID (default: 0)
 - `method`: Interpolation method (default: TricubicHermite)
-- `extrapolation_method`: Extrapolation method for unstructured data (default: None)
+- `extrapolation_method`: Extrapolation method (default: None)
 
 #### Methods
 

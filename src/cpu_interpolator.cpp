@@ -4,11 +4,13 @@
 
 namespace p3d {
 
-CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid) : grid_ptr_(&grid) {}
+CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid, ExtrapolationMethod extrapolation_method)
+    : grid_ptr_(&grid), extrapolation_method_(extrapolation_method) {}
 
 CPUInterpolator::~CPUInterpolator() = default;
 
-CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept : grid_ptr_(other.grid_ptr_) {}
+CPUInterpolator::CPUInterpolator(CPUInterpolator&& other) noexcept
+    : grid_ptr_(other.grid_ptr_), extrapolation_method_(other.extrapolation_method_) {}
 
 CPUInterpolator& CPUInterpolator::operator=(CPUInterpolator&& other) noexcept {
     // const reference cannot be reassigned, nothing to do here
@@ -35,8 +37,12 @@ InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
 
     // Check if point is within grid bounds
     if (!params.is_point_inside(query_point)) {
-        result.valid = false;
-        return result;
+        if (extrapolation_method_ != ExtrapolationMethod::None) {
+            return extrapolate(query_point);
+        } else {
+            result.valid = false;
+            return result;
+        }
     }
 
     // Convert to grid coordinates
@@ -71,6 +77,63 @@ InterpolationResult CPUInterpolator::query(const Point3D& query_point) const {
     // Perform tricubic Hermite interpolation
     result.data  = tricubicHermiteInterpolate(vertex_data, tx, ty, tz);
     result.valid = true;
+
+    return result;
+}
+
+InterpolationResult CPUInterpolator::extrapolate(const Point3D& query_point) const {
+    InterpolationResult result;
+    result.valid = false;
+
+    const auto& params = (*grid_ptr_).getParams();
+
+    if (extrapolation_method_ == ExtrapolationMethod::NearestNeighbor) {
+        // Clamp to nearest boundary point
+        Point3D boundary_point = {std::max(params.min_bound.x, std::min(params.max_bound.x, query_point.x)),
+                                  std::max(params.min_bound.y, std::min(params.max_bound.y, query_point.y)),
+                                  std::max(params.min_bound.z, std::min(params.max_bound.z, query_point.z))};
+
+        // Interpolate at boundary point
+        result = query(boundary_point);
+    } else if (extrapolation_method_ == ExtrapolationMethod::LinearExtrapolation) {
+        // Clamp to nearest boundary point
+        Point3D boundary_point = {std::max(params.min_bound.x, std::min(params.max_bound.x, query_point.x)),
+                                  std::max(params.min_bound.y, std::min(params.max_bound.y, query_point.y)),
+                                  std::max(params.min_bound.z, std::min(params.max_bound.z, query_point.z))};
+
+        // Interpolate at boundary point
+        InterpolationResult boundary_result = query(boundary_point);
+        if (!boundary_result.valid) {
+            return result;  // Should not happen
+        }
+
+        // For linear extrapolation, we need the gradient at the boundary
+        // Approximate using finite differences or use the interpolated derivatives
+        // For simplicity, use the interpolated field derivatives as gradient
+
+        Point3D delta = query_point - boundary_point;
+
+        // Extrapolate: value = boundary_value + gradient · delta
+        result.data.Bx = boundary_result.data.Bx + boundary_result.data.dBx_dx * delta.x +
+                         boundary_result.data.dBx_dy * delta.y + boundary_result.data.dBx_dz * delta.z;
+        result.data.By = boundary_result.data.By + boundary_result.data.dBy_dx * delta.x +
+                         boundary_result.data.dBy_dy * delta.y + boundary_result.data.dBy_dz * delta.z;
+        result.data.Bz = boundary_result.data.Bz + boundary_result.data.dBz_dx * delta.x +
+                         boundary_result.data.dBz_dy * delta.y + boundary_result.data.dBz_dz * delta.z;
+
+        // Derivatives remain the same as boundary (constant extrapolation)
+        result.data.dBx_dx = boundary_result.data.dBx_dx;
+        result.data.dBx_dy = boundary_result.data.dBx_dy;
+        result.data.dBx_dz = boundary_result.data.dBx_dz;
+        result.data.dBy_dx = boundary_result.data.dBy_dx;
+        result.data.dBy_dy = boundary_result.data.dBy_dy;
+        result.data.dBy_dz = boundary_result.data.dBy_dz;
+        result.data.dBz_dx = boundary_result.data.dBz_dx;
+        result.data.dBz_dy = boundary_result.data.dBz_dy;
+        result.data.dBz_dz = boundary_result.data.dBz_dz;
+
+        result.valid = true;
+    }
 
     return result;
 }

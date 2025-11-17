@@ -163,7 +163,8 @@ class MagneticFieldInterpolator::Impl {
 
                 // Launch kernel with specified stream
                 cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, 0, (cudaStream_t)stream>>>(
-                    d_query_points, gpu_grid_field_data_->getDevicePtr(), grid_params, d_results, count);
+                    d_query_points, gpu_grid_field_data_->getDevicePtr(), grid_params, d_results, count,
+                    static_cast<int>(extrapolation_method_));
 
                 // Check for kernel launch errors
                 cudaError_t cuda_err = cudaGetLastError();
@@ -441,7 +442,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
 
         try {
             grid_             = std::make_unique<RegularGrid3D>(coordinates, field_values);
-            cpu_interpolator_ = std::make_unique<CPUInterpolator>(*grid_);
+            cpu_interpolator_ = std::make_unique<CPUInterpolator>(*grid_, extrapolation_method_);
             data_type_        = DataStructureType::RegularGrid;
 
             // Upload data to GPU
@@ -675,7 +676,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
             cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
                 gpu_query_points_->getDevicePtr(), gpu_grid_field_data_->getDevicePtr(), grid_->getParams(),
-                gpu_results_->getDevicePtr(), count);
+                gpu_results_->getDevicePtr(), count, static_cast<int>(extrapolation_method_));
 
             // Check CUDA errors
             cudaError_t cuda_err = cudaGetLastError();

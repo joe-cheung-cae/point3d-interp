@@ -142,7 +142,8 @@ class BenchmarkBase {
 
         // Export CPU results
         if (!cpu_results.empty()) {
-            MagneticFieldInterpolator temp_interp(false);
+            MagneticFieldInterpolator temp_interp(false, 0, InterpolationMethod::TricubicHermite,
+                                                  ExtrapolationMethod::LinearExtrapolation);
             temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                        test_data.coordinates.size());
             std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
@@ -153,7 +154,8 @@ class BenchmarkBase {
 
         // Export GPU results
         if (!gpu_results.empty()) {
-            MagneticFieldInterpolator temp_interp(true);
+            MagneticFieldInterpolator temp_interp(true, 0, InterpolationMethod::TricubicHermite,
+                                                  ExtrapolationMethod::LinearExtrapolation);
             temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                        test_data.coordinates.size());
             std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
@@ -200,7 +202,9 @@ class BenchmarkBase {
 
     std::pair<double, std::vector<InterpolationResult>> BenchmarkCPU(const TestData&             test_data,
                                                                      const std::vector<Point3D>& query_points) {
-        MagneticFieldInterpolator interp(false);  // CPU mode
+        MagneticFieldInterpolator interp(
+            false, 0, InterpolationMethod::TricubicHermite,
+            ExtrapolationMethod::LinearExtrapolation);  // CPU mode with linear extrapolation
 
         // Load data
         ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
@@ -233,7 +237,9 @@ class BenchmarkBase {
 
     std::pair<double, std::vector<InterpolationResult>> BenchmarkGPU(const TestData&             test_data,
                                                                      const std::vector<Point3D>& query_points) {
-        MagneticFieldInterpolator interp(true);  // GPU mode
+        MagneticFieldInterpolator interp(
+            true, 0, InterpolationMethod::TricubicHermite,
+            ExtrapolationMethod::LinearExtrapolation);  // GPU mode with linear extrapolation
 
         // Load data
         ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),

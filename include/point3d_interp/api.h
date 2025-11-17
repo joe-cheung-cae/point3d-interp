@@ -25,7 +25,7 @@ namespace cuda {
 __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ query_points,
                                                    const MagneticFieldData* __restrict__ grid_data,
                                                    GridParams grid_params, InterpolationResult* __restrict__ results,
-                                                   size_t     count);
+                                                   size_t count, int extrapolation_method);
 
 __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, const Point3D* __restrict__ data_points,
                                      const MagneticFieldData* __restrict__ field_data, const size_t data_count,
@@ -63,7 +63,7 @@ class MagneticFieldInterpolator {
      * @param use_gpu Whether to use GPU acceleration (default true)
      * @param device_id GPU device ID (default 0)
      * @param method Interpolation method (default TricubicHermite)
-     * @param extrapolation_method Extrapolation method for unstructured data (default None)
+     * @param extrapolation_method Extrapolation method (default None)
      */
     explicit MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
                                        InterpolationMethod method               = InterpolationMethod::TricubicHermite,

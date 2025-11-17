@@ -786,7 +786,8 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
 __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ query_points,
                                                    const MagneticFieldData* __restrict__ grid_data,
                                                    const GridParams grid_params,
-                                                   InterpolationResult* __restrict__ results, const size_t count) {
+                                                   InterpolationResult* __restrict__ results, const size_t count,
+                                                   const int extrapolation_method) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid >= count) {
@@ -822,6 +823,63 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
                                (query_point.z >= origin.z && query_point.z <= origin.z + (nz - 1) * spacing.z);
 
     if (!inside_bounds) {
+        if (extrapolation_method != 0) {  // 0 = None
+            // Clamp to boundary
+            Point3D boundary_point = {max(grid_params.min_bound.x, min(grid_params.max_bound.x, query_point.x)),
+                                      max(grid_params.min_bound.y, min(grid_params.max_bound.y, query_point.y)),
+                                      max(grid_params.min_bound.z, min(grid_params.max_bound.z, query_point.z))};
+
+            // Interpolate at boundary point (recursive call would be inefficient, so inline the logic)
+            // For simplicity, implement nearest neighbor by clamping and interpolating
+            // For linear extrapolation, would need to compute gradient, but that's complex in GPU
+            // For now, implement nearest neighbor
+
+            // Convert boundary point to grid coordinates
+            Real grid_x_b = (boundary_point.x - grid_params.origin.x) / grid_params.spacing.x;
+            Real grid_y_b = (boundary_point.y - grid_params.origin.y) / grid_params.spacing.y;
+            Real grid_z_b = (boundary_point.z - grid_params.origin.z) / grid_params.spacing.z;
+
+            int i0_b = __float2int_rd(grid_x_b);
+            int j0_b = __float2int_rd(grid_y_b);
+            int k0_b = __float2int_rd(grid_z_b);
+
+            bool valid_cell_b = (i0_b >= 0) && (i0_b < static_cast<int>(grid_params.dimensions[0]) - 1) &&
+                                (j0_b >= 0) && (j0_b < static_cast<int>(grid_params.dimensions[1]) - 1) &&
+                                (k0_b >= 0) && (k0_b < static_cast<int>(grid_params.dimensions[2]) - 1);
+
+            if (valid_cell_b) {
+                // Interpolate at boundary
+                Real tx_b = grid_x_b - __int2float_rn(i0_b);
+                Real ty_b = grid_y_b - __int2float_rn(j0_b);
+                Real tz_b = grid_z_b - __int2float_rn(k0_b);
+
+                uint32_t base_idx_b = i0_b + j0_b * grid_params.dimensions[0] +
+                                      k0_b * grid_params.dimensions[0] * grid_params.dimensions[1];
+                uint32_t idx_100_b = base_idx_b + 1;
+                uint32_t idx_010_b = base_idx_b + grid_params.dimensions[0];
+                uint32_t idx_110_b = base_idx_b + grid_params.dimensions[0] + 1;
+                uint32_t idx_001_b = base_idx_b + grid_params.dimensions[0] * grid_params.dimensions[1];
+                uint32_t idx_101_b = base_idx_b + grid_params.dimensions[0] * grid_params.dimensions[1] + 1;
+                uint32_t idx_011_b =
+                    base_idx_b + grid_params.dimensions[0] * grid_params.dimensions[1] + grid_params.dimensions[0];
+                uint32_t idx_111_b =
+                    base_idx_b + grid_params.dimensions[0] * grid_params.dimensions[1] + grid_params.dimensions[0] + 1;
+
+                // Load vertex data
+                MagneticFieldData vertex_data_b[8];
+                vertex_data_b[0] = grid_data[base_idx_b];
+                vertex_data_b[1] = grid_data[idx_100_b];
+                vertex_data_b[2] = grid_data[idx_010_b];
+                vertex_data_b[3] = grid_data[idx_110_b];
+                vertex_data_b[4] = grid_data[idx_001_b];
+                vertex_data_b[5] = grid_data[idx_101_b];
+                vertex_data_b[6] = grid_data[idx_011_b];
+                vertex_data_b[7] = grid_data[idx_111_b];
+
+                result.data  = TricubicHermiteInterpolate(vertex_data_b, tx_b, ty_b, tz_b, grid_params);
+                result.valid = true;
+            }
+        }
         results[tid] = result;
         return;
     }
