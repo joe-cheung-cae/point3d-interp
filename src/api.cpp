@@ -243,9 +243,10 @@ class MagneticFieldInterpolator::Impl {
     std::unique_ptr<cuda::GpuMemory<uint32_t>> gpu_cell_points_;
     SpatialGrid                                spatial_grid_;  // Host copy for parameters
 
-    // Shared GPU memory for queries and results
+    // Shared GPU memory for queries and results (pre-allocated for performance)
     std::unique_ptr<cuda::GpuMemory<Point3D>>             gpu_query_points_;
     std::unique_ptr<cuda::GpuMemory<InterpolationResult>> gpu_results_;
+    size_t                                                gpu_memory_capacity_;  // Track allocated capacity
 #endif
 
     // Default parameters
@@ -328,7 +329,12 @@ MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, Interpolation
       extrapolation_method_(extrapolation_method),
       spatial_grid_origin_(0, 0, 0),
       spatial_grid_cell_size_(1, 1, 1),
-      spatial_grid_dimensions_{0, 0, 0} {
+      spatial_grid_dimensions_{0, 0, 0}
+#ifdef __CUDACC__
+      ,
+      gpu_memory_capacity_(0)
+#endif
+{
 #ifdef __CUDACC__
     if (use_gpu_) {
         gpu_initialized_ = InitializeGPU(device_id);
@@ -352,7 +358,12 @@ MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
       extrapolation_method_(other.extrapolation_method_),
       spatial_grid_origin_(other.spatial_grid_origin_),
       spatial_grid_cell_size_(other.spatial_grid_cell_size_),
-      spatial_grid_dimensions_(other.spatial_grid_dimensions_) {
+      spatial_grid_dimensions_(other.spatial_grid_dimensions_)
+#ifdef __CUDACC__
+      ,
+      gpu_memory_capacity_(other.gpu_memory_capacity_)
+#endif
+{
 #ifdef __CUDACC__
     gpu_grid_points_             = std::move(other.gpu_grid_points_);
     gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -381,6 +392,9 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
         spatial_grid_origin_       = other.spatial_grid_origin_;
         spatial_grid_cell_size_    = other.spatial_grid_cell_size_;
         spatial_grid_dimensions_   = other.spatial_grid_dimensions_;
+#ifdef __CUDACC__
+        gpu_memory_capacity_ = other.gpu_memory_capacity_;
+#endif
 #ifdef __CUDACC__
         gpu_grid_points_             = std::move(other.gpu_grid_points_);
         gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
@@ -506,17 +520,27 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             gpu_cell_offsets_ && gpu_cell_points_) {
             // GPU implementation for unstructured data with spatial grid
             try {
-                // Ensure GPU memory is sufficient
-                if (!gpu_query_points_ || gpu_query_points_->getCount() < count) {
-                    gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
-                    if (!gpu_query_points_->allocate(count)) {
-                        return ErrorCode::CudaError;
-                    }
+                // Ensure GPU memory is sufficient with capacity tracking and growth strategy
+                size_t required_capacity = std::max(count, gpu_memory_capacity_);
+                if (gpu_memory_capacity_ == 0) {
+                    // Initial allocation - allocate with some headroom for future growth
+                    required_capacity = std::max(count, static_cast<size_t>(1024));
+                } else if (count > gpu_memory_capacity_) {
+                    // Grow capacity using exponential growth strategy
+                    required_capacity = std::max(count, gpu_memory_capacity_ * 2);
                 }
 
-                if (!gpu_results_ || gpu_results_->getCount() < count) {
+                if (!gpu_query_points_ || gpu_query_points_->getCount() < required_capacity) {
+                    gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
+                    if (!gpu_query_points_->allocate(required_capacity)) {
+                        return ErrorCode::CudaError;
+                    }
+                    gpu_memory_capacity_ = required_capacity;
+                }
+
+                if (!gpu_results_ || gpu_results_->getCount() < required_capacity) {
                     gpu_results_ = std::make_unique<cuda::GpuMemory<InterpolationResult>>();
-                    if (!gpu_results_->allocate(count)) {
+                    if (!gpu_results_->allocate(required_capacity)) {
                         return ErrorCode::CudaError;
                     }
                 }
@@ -567,17 +591,27 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         } else if (use_gpu_ && gpu_initialized_ && gpu_unstructured_points_ && gpu_unstructured_field_data_) {
             // Fallback to brute force GPU implementation
             try {
-                // Ensure GPU memory is sufficient
-                if (!gpu_query_points_ || gpu_query_points_->getCount() < count) {
-                    gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
-                    if (!gpu_query_points_->allocate(count)) {
-                        return ErrorCode::CudaError;
-                    }
+                // Ensure GPU memory is sufficient with capacity tracking and growth strategy
+                size_t required_capacity = std::max(count, gpu_memory_capacity_);
+                if (gpu_memory_capacity_ == 0) {
+                    // Initial allocation - allocate with some headroom for future growth
+                    required_capacity = std::max(count, static_cast<size_t>(1024));
+                } else if (count > gpu_memory_capacity_) {
+                    // Grow capacity using exponential growth strategy
+                    required_capacity = std::max(count, gpu_memory_capacity_ * 2);
                 }
 
-                if (!gpu_results_ || gpu_results_->getCount() < count) {
+                if (!gpu_query_points_ || gpu_query_points_->getCount() < required_capacity) {
+                    gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
+                    if (!gpu_query_points_->allocate(required_capacity)) {
+                        return ErrorCode::CudaError;
+                    }
+                    gpu_memory_capacity_ = required_capacity;
+                }
+
+                if (!gpu_results_ || gpu_results_->getCount() < required_capacity) {
                     gpu_results_ = std::make_unique<cuda::GpuMemory<InterpolationResult>>();
-                    if (!gpu_results_->allocate(count)) {
+                    if (!gpu_results_->allocate(required_capacity)) {
                         return ErrorCode::CudaError;
                     }
                 }
@@ -637,17 +671,27 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
     if (use_gpu_ && gpu_initialized_ && data_type_ == DataStructureType::RegularGrid) {
         // GPU implementation
         try {
-            // Ensure GPU memory is sufficient
-            if (!gpu_query_points_ || gpu_query_points_->getCount() < count) {
-                gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
-                if (!gpu_query_points_->allocate(count)) {
-                    return ErrorCode::CudaError;
-                }
+            // Ensure GPU memory is sufficient with capacity tracking and growth strategy
+            size_t required_capacity = std::max(count, gpu_memory_capacity_);
+            if (gpu_memory_capacity_ == 0) {
+                // Initial allocation - allocate with some headroom for future growth
+                required_capacity = std::max(count, static_cast<size_t>(1024));
+            } else if (count > gpu_memory_capacity_) {
+                // Grow capacity using exponential growth strategy
+                required_capacity = std::max(count, gpu_memory_capacity_ * 2);
             }
 
-            if (!gpu_results_ || gpu_results_->getCount() < count) {
+            if (!gpu_query_points_ || gpu_query_points_->getCount() < required_capacity) {
+                gpu_query_points_ = std::make_unique<cuda::GpuMemory<Point3D>>();
+                if (!gpu_query_points_->allocate(required_capacity)) {
+                    return ErrorCode::CudaError;
+                }
+                gpu_memory_capacity_ = required_capacity;
+            }
+
+            if (!gpu_results_ || gpu_results_->getCount() < required_capacity) {
                 gpu_results_ = std::make_unique<cuda::GpuMemory<InterpolationResult>>();
-                if (!gpu_results_->allocate(count)) {
+                if (!gpu_results_->allocate(required_capacity)) {
                     return ErrorCode::CudaError;
                 }
             }

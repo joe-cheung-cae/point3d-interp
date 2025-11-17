@@ -23,10 +23,23 @@ endif()
 option(USE_DOUBLE_PRECISION "Use double precision" OFF)
 option(BUILD_TESTS "Build tests" ON)
 option(BUILD_EXAMPLES "Build examples" ON)
+option(ENABLE_SIMD "Enable SIMD optimizations" ON)
 
 # Precision settings
 if(USE_DOUBLE_PRECISION)
     add_definitions(-DUSE_DOUBLE_PRECISION)
+endif()
+
+# SIMD optimizations
+if(ENABLE_SIMD)
+    add_definitions(-DENABLE_SIMD)
+    if(MSVC)
+        # MSVC SIMD flags
+        add_compile_options(/arch:AVX2)
+    else()
+        # GCC/Clang SIMD flags
+        add_compile_options(-mavx2 -mfma)
+    endif()
 endif()
 
 # Include directories

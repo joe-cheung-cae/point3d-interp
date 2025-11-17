@@ -98,6 +98,32 @@ class CPUInterpolator {
      */
     Real hermiteDerivative(Real f0, Real f1, Real df0, Real df1, Real t) const;
 
+#ifdef ENABLE_SIMD
+    /**
+     * @brief SIMD-optimized Hermite interpolation (AVX2)
+     * @param f0 Array of 4 values at 0
+     * @param f1 Array of 4 values at 1
+     * @param df0 Array of 4 derivatives at 0
+     * @param df1 Array of 4 derivatives at 1
+     * @param t Array of 4 parameters (0-1)
+     * @param result Output array of 4 interpolated values
+     */
+    void hermiteInterpolateSIMD(const Real f0[4], const Real f1[4], const Real df0[4], const Real df1[4],
+                                const Real t[4], Real result[4]) const;
+
+    /**
+     * @brief SIMD-optimized Hermite derivative (AVX2)
+     * @param f0 Array of 4 values at 0
+     * @param f1 Array of 4 values at 1
+     * @param df0 Array of 4 derivatives at 0
+     * @param df1 Array of 4 derivatives at 1
+     * @param t Array of 4 parameters (0-1)
+     * @param result Output array of 4 derivative values
+     */
+    void hermiteDerivativeSIMD(const Real f0[4], const Real f1[4], const Real df0[4], const Real df1[4],
+                               const Real t[4], Real result[4]) const;
+#endif
+
     const RegularGrid3D* grid_ptr_;              // Grid pointer
     ExtrapolationMethod  extrapolation_method_;  // Extrapolation method
 };

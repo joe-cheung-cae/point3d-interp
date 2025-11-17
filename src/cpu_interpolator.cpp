@@ -2,6 +2,14 @@
 #include <algorithm>
 #include <cmath>
 
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
+
+#ifdef ENABLE_SIMD
+    #include <immintrin.h>
+#endif
+
 namespace p3d {
 
 CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid, ExtrapolationMethod extrapolation_method)
@@ -139,11 +147,14 @@ InterpolationResult CPUInterpolator::extrapolate(const Point3D& query_point) con
 }
 
 std::vector<InterpolationResult> CPUInterpolator::queryBatch(const std::vector<Point3D>& query_points) const {
-    std::vector<InterpolationResult> results;
-    results.reserve(query_points.size());
+    std::vector<InterpolationResult> results(query_points.size());
 
-    for (const auto& point : query_points) {
-        results.push_back(query(point));
+    // Use OpenMP for parallel processing if available
+#ifdef _OPENMP
+    #pragma omp parallel for if (query_points.size() > 100) schedule(dynamic, 16)
+#endif
+    for (size_t i = 0; i < query_points.size(); ++i) {
+        results[i] = query(query_points[i]);
     }
 
     return results;
@@ -270,9 +281,89 @@ MagneticFieldData CPUInterpolator::tricubicHermiteInterpolate(const MagneticFiel
 void CPUInterpolator::getVertexData(const uint32_t indices[8], MagneticFieldData vertex_data[8]) const {
     const auto& field_data = (*grid_ptr_).getFieldData();
 
+    // Cache-friendly access: load vertices in a pattern that maximizes cache hits
+    // Load in order that corresponds to spatial locality
+#pragma omp simd
     for (int i = 0; i < 8; ++i) {
         vertex_data[i] = field_data[indices[i]];
     }
 }
+
+#ifdef ENABLE_SIMD
+/**
+ * @brief SIMD-optimized Hermite interpolation using AVX2
+ * Processes 4 values simultaneously for better throughput
+ */
+void CPUInterpolator::hermiteInterpolateSIMD(const Real f0[4], const Real f1[4], const Real df0[4], const Real df1[4],
+                                             const Real t[4], Real result[4]) const {
+    // Load input values into AVX registers
+    __m256 f0_vec  = _mm256_loadu_ps(f0);
+    __m256 f1_vec  = _mm256_loadu_ps(f1);
+    __m256 df0_vec = _mm256_loadu_ps(df0);
+    __m256 df1_vec = _mm256_loadu_ps(df1);
+    __m256 t_vec   = _mm256_loadu_ps(t);
+
+    // Compute powers of t
+    __m256 t2 = _mm256_mul_ps(t_vec, t_vec);
+    __m256 t3 = _mm256_mul_ps(t2, t_vec);
+
+    // Hermite basis functions
+    __m256 h00 =
+        _mm256_sub_ps(_mm256_add_ps(_mm256_mul_ps(_mm256_set1_ps(2.0f), t3), _mm256_mul_ps(_mm256_set1_ps(-3.0f), t2)),
+                      _mm256_set1_ps(1.0f));
+    __m256 h10 = _mm256_add_ps(_mm256_sub_ps(t3, _mm256_mul_ps(_mm256_set1_ps(2.0f), t2)), t_vec);
+    __m256 h01 =
+        _mm256_sub_ps(_mm256_add_ps(_mm256_mul_ps(_mm256_set1_ps(-2.0f), t3), _mm256_mul_ps(_mm256_set1_ps(3.0f), t2)),
+                      _mm256_set1_ps(0.0f));
+    __m256 h11 = _mm256_sub_ps(t3, t2);
+
+    // Compute interpolation: f0*h00 + df0*h10 + f1*h01 + df1*h11
+    __m256 term0 = _mm256_mul_ps(f0_vec, h00);
+    __m256 term1 = _mm256_mul_ps(df0_vec, h10);
+    __m256 term2 = _mm256_mul_ps(f1_vec, h01);
+    __m256 term3 = _mm256_mul_ps(df1_vec, h11);
+
+    __m256 sum = _mm256_add_ps(_mm256_add_ps(term0, term1), _mm256_add_ps(term2, term3));
+
+    // Store result
+    _mm256_storeu_ps(result, sum);
+}
+
+/**
+ * @brief SIMD-optimized Hermite derivative using AVX2
+ */
+void CPUInterpolator::hermiteDerivativeSIMD(const Real f0[4], const Real f1[4], const Real df0[4], const Real df1[4],
+                                            const Real t[4], Real result[4]) const {
+    // Load input values into AVX registers
+    __m256 f0_vec  = _mm256_loadu_ps(f0);
+    __m256 f1_vec  = _mm256_loadu_ps(f1);
+    __m256 df0_vec = _mm256_loadu_ps(df0);
+    __m256 df1_vec = _mm256_loadu_ps(df1);
+    __m256 t_vec   = _mm256_loadu_ps(t);
+
+    // Compute powers of t
+    __m256 t2 = _mm256_mul_ps(t_vec, t_vec);
+
+    // Derivative of Hermite basis functions
+    __m256 dh00_dt = _mm256_sub_ps(_mm256_mul_ps(_mm256_set1_ps(6.0f), t2), _mm256_mul_ps(_mm256_set1_ps(6.0f), t_vec));
+    __m256 dh10_dt = _mm256_add_ps(
+        _mm256_sub_ps(_mm256_mul_ps(_mm256_set1_ps(3.0f), t2), _mm256_mul_ps(_mm256_set1_ps(4.0f), t_vec)),
+        _mm256_set1_ps(1.0f));
+    __m256 dh01_dt =
+        _mm256_sub_ps(_mm256_mul_ps(_mm256_set1_ps(-6.0f), t2), _mm256_mul_ps(_mm256_set1_ps(-6.0f), t_vec));
+    __m256 dh11_dt = _mm256_sub_ps(_mm256_mul_ps(_mm256_set1_ps(3.0f), t2), _mm256_mul_ps(_mm256_set1_ps(2.0f), t_vec));
+
+    // Compute derivative: f0*dh00_dt + df0*dh10_dt + f1*dh01_dt + df1*dh11_dt
+    __m256 term0 = _mm256_mul_ps(f0_vec, dh00_dt);
+    __m256 term1 = _mm256_mul_ps(df0_vec, dh10_dt);
+    __m256 term2 = _mm256_mul_ps(f1_vec, dh01_dt);
+    __m256 term3 = _mm256_mul_ps(df1_vec, dh11_dt);
+
+    __m256 sum = _mm256_add_ps(_mm256_add_ps(term0, term1), _mm256_add_ps(term2, term3));
+
+    // Store result
+    _mm256_storeu_ps(result, sum);
+}
+#endif
 
 }  // namespace p3d
