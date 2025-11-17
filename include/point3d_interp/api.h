@@ -52,8 +52,8 @@ namespace p3d {
  * This is the main interface class of the library, responsible for data loading, GPU resource management, and
  * interpolation calculations
  *
- * @note Thread Safety: This class is thread-safe. Multiple threads can safely call methods on the same instance
- * concurrently. All operations are serialized using internal mutex synchronization.
+ * @note Thread Safety: This class is not thread-safe. Do not call methods on the same instance concurrently from
+ * multiple threads.
  */
 class MagneticFieldInterpolator {
   public:

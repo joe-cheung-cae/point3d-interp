@@ -22,8 +22,8 @@ This document summarizes the issues identified during the code review of the Poi
 ### 6. Potential Header Pollution (RESOLVED)
 **Resolution**: Removed conditional inclusion of CUDA headers from api.h to prevent namespace pollution. All necessary types are defined in types.h without CUDA dependencies, and CUDA kernels are forward declared without requiring header inclusion.
 
-### 7. Thread Safety Undocumented (RESOLVED)
-**Resolution**: Added thread safety documentation to the MagneticFieldInterpolator class API, stating that it is thread-safe with internal mutex synchronization. Implemented mutex locks in all public methods of the Impl class to serialize operations and ensure thread safety for concurrent access.
+### 7. Thread Safety Undocumented (REVERTED)
+**Resolution**: Attempted to add thread safety with internal mutex synchronization, but it caused deadlocks in ctest. The mutex locks were removed, and the class is now documented as not thread-safe. Multiple threads should not call methods on the same instance concurrently.
 
 ### 8. Compilation Errors Due to Namespace Conflicts (RESOLVED)
 **Resolution**: Moved CUDA header inclusion inside conditional compilation blocks to prevent namespace pollution. Added missing forward declarations for CUDA kernels.
