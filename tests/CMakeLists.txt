@@ -177,14 +177,6 @@ add_test(NAME test_exporter COMMAND test_exporter)
 # Benchmark
 add_test(NAME test_edge_cases COMMAND test_edge_cases)
 
-# Benchmark
-add_executable(performance_benchmark benchmark.cpp)
-target_link_libraries(performance_benchmark PRIVATE point3d_interp)
-set_target_properties(performance_benchmark PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-)
-
 # Split benchmarks
 add_executable(benchmark_10x10x10 benchmark_10x10x10.cpp)
 target_link_libraries(benchmark_10x10x10 PRIVATE point3d_interp)
@@ -193,12 +185,16 @@ set_target_properties(benchmark_10x10x10 PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
+add_test(NAME benchmark_10x10x10 COMMAND benchmark_10x10x10)
+
 add_executable(benchmark_20x20x20 benchmark_20x20x20.cpp)
 target_link_libraries(benchmark_20x20x20 PRIVATE point3d_interp)
 set_target_properties(benchmark_20x20x20 PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+add_test(NAME benchmark_20x20x20 COMMAND benchmark_20x20x20)
 
 add_executable(benchmark_30x30x30 benchmark_30x30x30.cpp)
 target_link_libraries(benchmark_30x30x30 PRIVATE point3d_interp)
@@ -207,12 +203,16 @@ set_target_properties(benchmark_30x30x30 PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
 
+add_test(NAME benchmark_30x30x30 COMMAND benchmark_30x30x30)
+
 add_executable(benchmark_50x50x50 benchmark_50x50x50.cpp)
 target_link_libraries(benchmark_50x50x50 PRIVATE point3d_interp)
 set_target_properties(benchmark_50x50x50 PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
 )
+
+add_test(NAME benchmark_50x50x50 COMMAND benchmark_50x50x50)
 
 add_executable(benchmark_memory benchmark_memory.cpp)
 target_link_libraries(benchmark_memory PRIVATE point3d_interp)

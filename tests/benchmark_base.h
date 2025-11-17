@@ -156,9 +156,10 @@ class BenchmarkBase {
                     data.coordinates.push_back(coord);
 
                     // Generate magnetic field data for each grid point
-                    MagneticFieldData field(coord.x + coord.y + coord.z + 1.0f,  // B = x + y + z + 1
-                                            1.0f, 1.0f, 1.0f                     // Constant gradient
-                    );
+                    MagneticFieldData field(coord.x, coord.y, coord.z,  // Bx = x, By = y, Bz = z
+                                            1.0f, 0.0f, 0.0f,           // dBx_dx=1, dBx_dy=0, dBx_dz=0
+                                            0.0f, 1.0f, 0.0f,           // dBy_dx=0, dBy_dy=1, dBy_dz=0
+                                            0.0f, 0.0f, 1.0f);          // dBz_dx=0, dBz_dy=0, dBz_dz=1
                     data.field_data.push_back(field);
                 }
             }
