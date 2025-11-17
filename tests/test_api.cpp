@@ -82,6 +82,13 @@ TEST_F(APITest, SinglePointQuery) {
     // Check result reasonableness
     EXPECT_GE(result.data.Bx, 0.0f);
     EXPECT_LE(result.data.Bx, 2.0f);
+
+    // Export query point and result for visualization
+    std::vector<Point3D>             query_points = {query_point};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/single_point_query.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test batch query
@@ -112,6 +119,10 @@ TEST_F(APITest, BatchQuery) {
     for (const auto& result : results) {
         EXPECT_TRUE(result.valid);
     }
+
+    // Export batch query points and results for visualization
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/batch_query.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test out of bounds query
@@ -207,6 +218,16 @@ TEST_F(APITest, UnstructuredDataLoading) {
     EXPECT_GE(result.data.Bx, 0.0f);
     EXPECT_GE(result.data.By, 0.0f);
     EXPECT_GE(result.data.Bz, 0.0f);
+
+    // Export input points and query result for visualization
+    err = interp.ExportInputPoints(ExportFormat::ParaviewVTK, "test_output/unstructured_input.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
+
+    std::vector<Point3D>             query_points = {query_point};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/unstructured_query.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test GPU acceleration for unstructured data
@@ -242,6 +263,14 @@ TEST_F(APITest, GPUUnstructuredData) {
         EXPECT_GE(result.data.By, 0.0f);
         EXPECT_GE(result.data.Bz, 0.0f);
     }
+
+    // Export input points and GPU query results for visualization
+    err = interp.ExportInputPoints(ExportFormat::ParaviewVTK, "test_output/gpu_unstructured_input.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
+
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/gpu_unstructured_query.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test move semantics

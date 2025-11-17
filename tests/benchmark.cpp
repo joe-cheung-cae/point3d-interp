@@ -4,6 +4,7 @@
 #include <chrono>
 #include <vector>
 #include <random>
+#include <filesystem>
 
 using namespace p3d;
 
@@ -43,11 +44,13 @@ class Benchmark {
                 auto query_points = GenerateQueryPoints(query_size, test_data.grid_params);
 
                 // CPU benchmark
-                double cpu_time = BenchmarkCPU(test_data, query_points);
+                auto   cpu_results = BenchmarkCPU(test_data, query_points);
+                double cpu_time    = cpu_results.first;
                 std::cout << "  CPU time: " << std::fixed << std::setprecision(3) << cpu_time << " ms";
 
                 // GPU benchmark
-                double gpu_time = BenchmarkGPU(test_data, query_points);
+                auto   gpu_results = BenchmarkGPU(test_data, query_points);
+                double gpu_time    = gpu_results.first;
                 if (gpu_time > 0) {
                     double speedup = cpu_time / gpu_time;
                     std::cout << "  GPU time: " << std::fixed << std::setprecision(3) << gpu_time << " ms";
@@ -60,6 +63,10 @@ class Benchmark {
                 double throughput = query_size / (cpu_time / 1000.0);
                 std::cout << "  Throughput: " << std::fixed << std::setprecision(0) << throughput
                           << " queries/second\n";
+
+                // Export VTK files for visualization
+                ExportBenchmarkResults(test_data, query_points, cpu_results.second, gpu_results.second, data_size,
+                                       query_size);
 
                 std::cout << "\n";
             }
@@ -78,6 +85,46 @@ class Benchmark {
     };
 
     std::mt19937 rng_;
+
+    void ExportBenchmarkResults(const TestData& test_data, const std::vector<Point3D>& query_points,
+                                const std::vector<InterpolationResult>& cpu_results,
+                                const std::vector<InterpolationResult>& gpu_results,
+                                const std::array<size_t, 3>& data_size, size_t query_size) {
+        // Create output directory
+        std::filesystem::create_directories("benchmark_output");
+
+        // Export input data points
+        {
+            MagneticFieldInterpolator temp_interp(false);
+            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                       test_data.coordinates.size());
+            std::string filename = "benchmark_output/input_" + std::to_string(data_size[0]) + "x" +
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + ".vtk";
+            temp_interp.ExportInputPoints(ExportFormat::ParaviewVTK, filename);
+        }
+
+        // Export CPU results
+        if (!cpu_results.empty()) {
+            MagneticFieldInterpolator temp_interp(false);
+            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                       test_data.coordinates.size());
+            std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + "_q" +
+                                   std::to_string(query_size) + ".vtk";
+            temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
+        }
+
+        // Export GPU results
+        if (!gpu_results.empty()) {
+            MagneticFieldInterpolator temp_interp(true);
+            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                       test_data.coordinates.size());
+            std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
+                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + "_q" +
+                                   std::to_string(query_size) + ".vtk";
+            temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
+        }
+    }
 
     TestData GenerateTestData(const std::array<size_t, 3>& dimensions) {
         TestData data;
@@ -128,7 +175,8 @@ class Benchmark {
         return points;
     }
 
-    double BenchmarkCPU(const TestData& test_data, const std::vector<Point3D>& query_points) {
+    std::pair<double, std::vector<InterpolationResult>> BenchmarkCPU(const TestData&             test_data,
+                                                                     const std::vector<Point3D>& query_points) {
         MagneticFieldInterpolator interp(false);  // CPU mode
 
         // Load data
@@ -136,7 +184,7 @@ class Benchmark {
                                               test_data.coordinates.size());
         if (err != ErrorCode::Success) {
             std::cerr << "CPU data loading failed: " << static_cast<int>(err) << std::endl;
-            return -1.0;
+            return {-1.0, {}};
         }
 
         // Warm up
@@ -153,21 +201,22 @@ class Benchmark {
 
         if (err != ErrorCode::Success) {
             std::cerr << "CPU query failed: " << static_cast<int>(err) << std::endl;
-            return -1.0;
+            return {-1.0, {}};
         }
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        return duration.count() / 1000.0;  // Convert to milliseconds
+        return {duration.count() / 1000.0, results};  // Convert to milliseconds
     }
 
-    double BenchmarkGPU(const TestData& test_data, const std::vector<Point3D>& query_points) {
+    std::pair<double, std::vector<InterpolationResult>> BenchmarkGPU(const TestData&             test_data,
+                                                                     const std::vector<Point3D>& query_points) {
         MagneticFieldInterpolator interp(true);  // GPU mode
 
         // Load data
         ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
                                               test_data.coordinates.size());
         if (err != ErrorCode::Success) {
-            return -1.0;  // GPU unavailable or initialization failed
+            return {-1.0, {}};  // GPU unavailable or initialization failed
         }
 
         // Warm up
@@ -183,11 +232,11 @@ class Benchmark {
         auto end = std::chrono::high_resolution_clock::now();
 
         if (err != ErrorCode::Success) {
-            return -1.0;
+            return {-1.0, {}};
         }
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        return duration.count() / 1000.0;  // Convert to milliseconds
+        return {duration.count() / 1000.0, results};  // Convert to milliseconds
     }
 
     void RunMemoryBenchmark() {

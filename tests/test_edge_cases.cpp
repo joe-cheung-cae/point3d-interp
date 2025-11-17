@@ -124,6 +124,15 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
     EXPECT_FALSE(result.valid);
 
     std::cout << "Outside point (1.0,1.0,1.0): valid=" << result.valid << std::endl << std::endl;
+
+    // Export boundary condition test results for visualization
+    std::vector<Point3D>             query_points = {boundary_point, outside_point};
+    std::vector<InterpolationResult> results      = {InterpolationResult(), result};  // First result is overwritten
+    err                                           = interp.Query(boundary_point, results[0]);
+    EXPECT_EQ(err, ErrorCode::Success);
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/boundary_conditions.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test high precision data handling
@@ -146,6 +155,13 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
     // Results should be reasonable (interpolation of high precision data)
     EXPECT_GE(result.data.Bx, 0.08f);
     EXPECT_LE(result.data.Bx, 0.17f);
+
+    // Export high precision data test results for visualization
+    std::vector<Point3D>             query_points = {query_point};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/high_precision_data.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test extreme values
@@ -176,6 +192,13 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     std::cout << "Very large values query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
               << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
               << std::endl;
+
+    // Export very large values test results for visualization
+    std::vector<Point3D>             query_points = {query};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/very_large_values.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test very small values
@@ -205,6 +228,13 @@ TEST(ExtremeValueTest, VerySmallValues) {
     std::cout << "Very small values query (0.5,0.5,0.5): valid=" << result.valid << ", Bx=" << result.data.Bx
               << ", By=" << result.data.By << ", Bz=" << result.data.Bz << std::endl
               << std::endl;
+
+    // Export very small values test results for visualization
+    std::vector<Point3D>             query_points = {query};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/very_small_values.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test NaN and Inf values
@@ -243,6 +273,12 @@ TEST(ExtremeValueTest, NaNInfValues) {
               << ", By=" << result.data.By << ", Bz=" << result.data.Bz;
     if (std::isnan(result.data.Bx)) std::cout << " (Bx is NaN)";
     std::cout << std::endl << std::endl;
+
+    // Export NaN/Inf values test results for visualization
+    std::vector<Point3D>             query_points = {query};
+    std::vector<InterpolationResult> results      = {result};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/nan_inf_values.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test empty data arrays
@@ -304,6 +340,13 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     std::cout << "Concurrency query2 (0.3,0.7,0.5): valid=" << result2.valid << ", Bx=" << result2.data.Bx
               << ", By=" << result2.data.By << ", Bz=" << result2.data.Bz << std::endl
               << std::endl;
+
+    // Export concurrency test results for visualization
+    std::vector<Point3D>             query_points = {query1, query2};
+    std::vector<InterpolationResult> results      = {result1, result2};
+    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                    "test_output/basic_concurrency.vtk");
+    EXPECT_EQ(err, ErrorCode::Success);
 }
 
 // Test grid parameter validation
