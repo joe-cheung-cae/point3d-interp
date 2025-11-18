@@ -231,6 +231,16 @@ class MagneticFieldInterpolator {
     ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
                                  const std::vector<InterpolationResult>& results, const std::string& filename);
 
+    /**
+     * @brief Get the last kernel execution time (GPU only)
+     * @param kernel_time_ms Output kernel execution time in milliseconds
+     * @return Error code
+     *
+     * @note Only valid after a GPU QueryBatch call. Returns the time spent in GPU kernel execution only,
+     *       excluding memory transfers.
+     */
+    ErrorCode GetLastKernelTime(float& kernel_time_ms) const;
+
   private:
     /**
      * @brief Initialize GPU resources

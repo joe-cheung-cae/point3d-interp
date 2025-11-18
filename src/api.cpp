@@ -104,6 +104,19 @@ class MagneticFieldInterpolator::Impl {
     ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
                                  const std::vector<InterpolationResult>& results, const std::string& filename);
 
+    ErrorCode GetLastKernelTime(float& kernel_time_ms) const {
+#ifdef __CUDACC__
+        if (use_gpu_ && gpu_initialized_) {
+            kernel_time_ms = last_kernel_time_ms_;
+            return ErrorCode::Success;
+        } else {
+            return ErrorCode::CudaNotAvailable;
+        }
+#else
+        return ErrorCode::CudaNotAvailable;
+#endif
+    }
+
     const GridParams& GetGridParams() const {
         return (data_type_ == DataStructureType::RegularGrid && grid_) ? grid_->getParams() : default_params_;
     }
@@ -247,6 +260,9 @@ class MagneticFieldInterpolator::Impl {
     std::unique_ptr<cuda::GpuMemory<Point3D>>             gpu_query_points_;
     std::unique_ptr<cuda::GpuMemory<InterpolationResult>> gpu_results_;
     size_t                                                gpu_memory_capacity_;  // Track allocated capacity
+
+    // Kernel timing
+    float last_kernel_time_ms_;
 #endif
 
     // Default parameters
@@ -332,7 +348,8 @@ MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, Interpolation
       spatial_grid_dimensions_{0, 0, 0}
 #ifdef __CUDACC__
       ,
-      gpu_memory_capacity_(0)
+      gpu_memory_capacity_(0),
+      last_kernel_time_ms_(0.0f)
 #endif
 {
 #ifdef __CUDACC__
@@ -718,9 +735,28 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             dim3 block_dim(BLOCK_SIZE);
             dim3 grid_dim(num_blocks);
 
+            // Create CUDA events for kernel timing
+            cudaEvent_t start_event, stop_event;
+            cudaEventCreate(&start_event);
+            cudaEventCreate(&stop_event);
+
+            // Record start event
+            cudaEventRecord(start_event);
+
             cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
                 gpu_query_points_->getDevicePtr(), gpu_grid_field_data_->getDevicePtr(), grid_->getParams(),
                 gpu_results_->getDevicePtr(), count, static_cast<int>(extrapolation_method_));
+
+            // Record stop event
+            cudaEventRecord(stop_event);
+            cudaEventSynchronize(stop_event);
+
+            // Calculate kernel execution time
+            cudaEventElapsedTime(&last_kernel_time_ms_, start_event, stop_event);
+
+            // Cleanup events
+            cudaEventDestroy(start_event);
+            cudaEventDestroy(stop_event);
 
             // Check CUDA errors
             cudaError_t cuda_err = cudaGetLastError();
@@ -1000,6 +1036,13 @@ ErrorCode MagneticFieldInterpolator::ExportOutputPoints(ExportFormat format, con
         return ErrorCode::DataNotLoaded;
     }
     return impl_->ExportOutputPoints(format, query_points, results, filename);
+}
+
+ErrorCode MagneticFieldInterpolator::GetLastKernelTime(float& kernel_time_ms) const {
+    if (!impl_) {
+        return ErrorCode::DataNotLoaded;
+    }
+    return impl_->GetLastKernelTime(kernel_time_ms);
 }
 
 }  // namespace p3d

@@ -5,6 +5,9 @@
 #include <vector>
 #include <random>
 #include <numeric>
+#ifdef __CUDACC__
+    #include <cuda_runtime.h>
+#endif
 
 int main() {
     using namespace p3d;
@@ -76,8 +79,24 @@ int main() {
                 return -1.0;
             }
 
-            auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            times.push_back(duration.count() / 1000.0);  // Convert to milliseconds
+            // For GPU, get kernel-only time if available
+            double measured_time;
+            if (use_gpu) {
+                float kernel_time_ms;
+                if (interp.GetLastKernelTime(kernel_time_ms) == ErrorCode::Success) {
+                    measured_time = kernel_time_ms;
+                } else {
+                    // Fallback to total time if kernel timing not available
+                    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                    measured_time = duration.count() / 1000.0;
+                }
+            } else {
+                // CPU timing
+                auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+                measured_time = duration.count() / 1000.0;
+            }
+
+            times.push_back(measured_time);
         }
 
         // Calculate average time
