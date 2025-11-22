@@ -11,11 +11,8 @@
 #include <algorithm>
 #include <string>
 #include <cmath>
-
-#ifdef __CUDACC__
-    #include <cuda_runtime.h>
-    #include "point3d_interp/memory_manager.h"
-#endif
+#include <cuda_runtime.h>
+#include "point3d_interp/memory_manager.h"
 
 namespace p3d {
 
@@ -29,7 +26,6 @@ enum class DataStructureType { RegularGrid, Unstructured };
  */
 class MagneticFieldInterpolator::Impl {
   private:
-#ifdef __CUDACC__
     /**
      * @brief Log CUDA error with consistent formatting
      * @param operation Description of the operation that failed
@@ -38,7 +34,6 @@ class MagneticFieldInterpolator::Impl {
     static void LogCudaError(const std::string& operation, cudaError_t cuda_err) {
         std::cerr << "CUDA " << operation << " error: " << cudaGetErrorString(cuda_err) << std::endl;
     }
-#endif
 
     /**
      * @brief Log general error with consistent formatting
@@ -105,16 +100,12 @@ class MagneticFieldInterpolator::Impl {
                                         const std::vector<InterpolationResult>& results, const std::string& filename);
 
     ErrorCode GetLastKernelTime(float& kernel_time_ms) const {
-#ifdef __CUDACC__
         if (use_gpu_ && gpu_initialized_) {
             kernel_time_ms = last_kernel_time_ms_;
             return ErrorCode::Success;
         } else {
             return ErrorCode::CudaNotAvailable;
         }
-#else
-        return ErrorCode::CudaNotAvailable;
-#endif
     }
 
     const GridParams& GetGridParams() const {
@@ -149,19 +140,11 @@ class MagneticFieldInterpolator::Impl {
     }
 
     const Point3D* GetDeviceGridPoints() const {
-#ifdef __CUDACC__
         return gpu_grid_points_ ? gpu_grid_points_->getDevicePtr() : nullptr;
-#else
-        return nullptr;
-#endif
     }
 
     const MagneticFieldData* GetDeviceFieldData() const {
-#ifdef __CUDACC__
         return gpu_grid_field_data_ ? gpu_grid_field_data_->getDevicePtr() : nullptr;
-#else
-        return nullptr;
-#endif
     }
 
     const GridParams* GetDeviceGridParams() const {
@@ -180,7 +163,6 @@ class MagneticFieldInterpolator::Impl {
             return ErrorCode::InvalidParameter;
         }
 
-#ifdef __CUDACC__
         if (use_gpu_ && gpu_initialized_) {
             try {
                 // Get optimal kernel configuration
@@ -215,9 +197,6 @@ class MagneticFieldInterpolator::Impl {
         } else {
             return ErrorCode::CudaNotAvailable;
         }
-#else
-        return ErrorCode::CudaNotAvailable;
-#endif
     }
 
     void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
@@ -263,7 +242,6 @@ class MagneticFieldInterpolator::Impl {
     Point3D                 spatial_grid_cell_size_;
     std::array<uint32_t, 3> spatial_grid_dimensions_;
 
-#ifdef __CUDACC__
     // GPU memory manager for regular grids
     std::unique_ptr<cuda::GpuMemory<Point3D>>           gpu_grid_points_;
     std::unique_ptr<cuda::GpuMemory<MagneticFieldData>> gpu_grid_field_data_;
@@ -284,7 +262,6 @@ class MagneticFieldInterpolator::Impl {
 
     // Kernel timing
     float last_kernel_time_ms_;
-#endif
 
     // Default parameters
     GridParams default_params_;
@@ -349,96 +326,82 @@ ErrorCode MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat forma
 // Implementation
 
 MagneticFieldInterpolator::Impl::Impl(bool use_gpu, int device_id, InterpolationMethod method,
-                                      ExtrapolationMethod extrapolation_method)
-    : data_type_(DataStructureType::RegularGrid),
-      use_gpu_(use_gpu),
-      device_id_(device_id),
-      gpu_initialized_(false),
-      method_(method),
-      extrapolation_method_(extrapolation_method),
-      spatial_grid_origin_(0, 0, 0),
-      spatial_grid_cell_size_(1, 1, 1),
-      spatial_grid_dimensions_{0, 0, 0}
-#ifdef __CUDACC__
-      ,
-      gpu_memory_capacity_(0),
-      last_kernel_time_ms_(0.0f)
-#endif
+                                       ExtrapolationMethod extrapolation_method)
+     : data_type_(DataStructureType::RegularGrid),
+       use_gpu_(use_gpu),
+       device_id_(device_id),
+       gpu_initialized_(false),
+       method_(method),
+       extrapolation_method_(extrapolation_method),
+       spatial_grid_origin_(0, 0, 0),
+       spatial_grid_cell_size_(1, 1, 1),
+       spatial_grid_dimensions_{0, 0, 0},
+       gpu_memory_capacity_(0),
+       last_kernel_time_ms_(0.0f)
 {
-#ifdef __CUDACC__
-    if (use_gpu_) {
-        gpu_initialized_ = InitializeGPU(device_id);
-        if (!gpu_initialized_) {
-            LogError("GPU initialization", "falling back to CPU");
-            use_gpu_ = false;
-        }
-    }
-#endif
+     if (use_gpu_) {
+         gpu_initialized_ = InitializeGPU(device_id);
+         if (!gpu_initialized_) {
+             LogError("GPU initialization", "falling back to CPU");
+             use_gpu_ = false;
+         }
+     }
 }
 
 MagneticFieldInterpolator::Impl::Impl(Impl&& other) noexcept
-    : data_type_(other.data_type_),
-      grid_(std::move(other.grid_)),
-      cpu_interpolator_(std::move(other.cpu_interpolator_)),
-      unstructured_interpolator_(std::move(other.unstructured_interpolator_)),
-      use_gpu_(other.use_gpu_),
-      device_id_(other.device_id_),
-      gpu_initialized_(other.gpu_initialized_),
-      method_(other.method_),
-      extrapolation_method_(other.extrapolation_method_),
-      spatial_grid_origin_(other.spatial_grid_origin_),
-      spatial_grid_cell_size_(other.spatial_grid_cell_size_),
-      spatial_grid_dimensions_(other.spatial_grid_dimensions_)
-#ifdef __CUDACC__
-      ,
-      gpu_memory_capacity_(other.gpu_memory_capacity_)
-#endif
+     : data_type_(other.data_type_),
+       grid_(std::move(other.grid_)),
+       cpu_interpolator_(std::move(other.cpu_interpolator_)),
+       unstructured_interpolator_(std::move(other.unstructured_interpolator_)),
+       use_gpu_(other.use_gpu_),
+       device_id_(other.device_id_),
+       gpu_initialized_(other.gpu_initialized_),
+       method_(other.method_),
+       extrapolation_method_(other.extrapolation_method_),
+       spatial_grid_origin_(other.spatial_grid_origin_),
+       spatial_grid_cell_size_(other.spatial_grid_cell_size_),
+       spatial_grid_dimensions_(other.spatial_grid_dimensions_),
+       gpu_memory_capacity_(other.gpu_memory_capacity_)
 {
-#ifdef __CUDACC__
-    gpu_grid_points_             = std::move(other.gpu_grid_points_);
-    gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
-    gpu_unstructured_points_     = std::move(other.gpu_unstructured_points_);
-    gpu_unstructured_field_data_ = std::move(other.gpu_unstructured_field_data_);
-    gpu_cell_offsets_            = std::move(other.gpu_cell_offsets_);
-    gpu_cell_points_             = std::move(other.gpu_cell_points_);
-    gpu_query_points_            = std::move(other.gpu_query_points_);
-    gpu_results_                 = std::move(other.gpu_results_);
-#endif
-    // Reset moved-from state
-    other.gpu_initialized_ = false;
+     gpu_grid_points_             = std::move(other.gpu_grid_points_);
+     gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
+     gpu_unstructured_points_     = std::move(other.gpu_unstructured_points_);
+     gpu_unstructured_field_data_ = std::move(other.gpu_unstructured_field_data_);
+     gpu_cell_offsets_            = std::move(other.gpu_cell_offsets_);
+     gpu_cell_points_             = std::move(other.gpu_cell_points_);
+     gpu_query_points_            = std::move(other.gpu_query_points_);
+     gpu_results_                 = std::move(other.gpu_results_);
+     // Reset moved-from state
+     other.gpu_initialized_ = false;
 }
 
 MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl&& other) noexcept {
-    if (this != &other) {
-        data_type_                 = other.data_type_;
-        grid_                      = std::move(other.grid_);
-        cpu_interpolator_          = std::move(other.cpu_interpolator_);
-        unstructured_interpolator_ = std::move(other.unstructured_interpolator_);
-        use_gpu_                   = other.use_gpu_;
-        device_id_                 = other.device_id_;
-        gpu_initialized_           = other.gpu_initialized_;
-        method_                    = other.method_;
-        extrapolation_method_      = other.extrapolation_method_;
-        spatial_grid_origin_       = other.spatial_grid_origin_;
-        spatial_grid_cell_size_    = other.spatial_grid_cell_size_;
-        spatial_grid_dimensions_   = other.spatial_grid_dimensions_;
-#ifdef __CUDACC__
-        gpu_memory_capacity_ = other.gpu_memory_capacity_;
-#endif
-#ifdef __CUDACC__
-        gpu_grid_points_             = std::move(other.gpu_grid_points_);
-        gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
-        gpu_unstructured_points_     = std::move(other.gpu_unstructured_points_);
-        gpu_unstructured_field_data_ = std::move(other.gpu_unstructured_field_data_);
-        gpu_cell_offsets_            = std::move(other.gpu_cell_offsets_);
-        gpu_cell_points_             = std::move(other.gpu_cell_points_);
-        gpu_query_points_            = std::move(other.gpu_query_points_);
-        gpu_results_                 = std::move(other.gpu_results_);
-#endif
-        // Reset moved-from state
-        other.gpu_initialized_ = false;
-    }
-    return *this;
+     if (this != &other) {
+         data_type_                 = other.data_type_;
+         grid_                      = std::move(other.grid_);
+         cpu_interpolator_          = std::move(other.cpu_interpolator_);
+         unstructured_interpolator_ = std::move(other.unstructured_interpolator_);
+         use_gpu_                   = other.use_gpu_;
+         device_id_                 = other.device_id_;
+         gpu_initialized_           = other.gpu_initialized_;
+         method_                    = other.method_;
+         extrapolation_method_      = other.extrapolation_method_;
+         spatial_grid_origin_       = other.spatial_grid_origin_;
+         spatial_grid_cell_size_    = other.spatial_grid_cell_size_;
+         spatial_grid_dimensions_   = other.spatial_grid_dimensions_;
+         gpu_memory_capacity_ = other.gpu_memory_capacity_;
+         gpu_grid_points_             = std::move(other.gpu_grid_points_);
+         gpu_grid_field_data_         = std::move(other.gpu_grid_field_data_);
+         gpu_unstructured_points_     = std::move(other.gpu_unstructured_points_);
+         gpu_unstructured_field_data_ = std::move(other.gpu_unstructured_field_data_);
+         gpu_cell_offsets_            = std::move(other.gpu_cell_offsets_);
+         gpu_cell_points_             = std::move(other.gpu_cell_points_);
+         gpu_query_points_            = std::move(other.gpu_query_points_);
+         gpu_results_                 = std::move(other.gpu_results_);
+         // Reset moved-from state
+         other.gpu_initialized_ = false;
+     }
+     return *this;
 }
 
 MagneticFieldInterpolator::Impl::~Impl() { ReleaseGPU(); }
@@ -815,126 +778,116 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 }
 
 bool MagneticFieldInterpolator::Impl::InitializeGPU(int device_id) {
-#ifdef __CUDACC__
-    cudaError_t err = cudaSetDevice(device_id);
-    if (err != cudaSuccess) {
-        LogCudaError("set device " + std::to_string(device_id), err);
-        return false;
-    }
+     cudaError_t err = cudaSetDevice(device_id);
+     if (err != cudaSuccess) {
+         LogCudaError("set device " + std::to_string(device_id), err);
+         return false;
+     }
 
-    // Check device properties
-    cudaDeviceProp prop;
-    err = cudaGetDeviceProperties(&prop, device_id);
-    if (err != cudaSuccess) {
-        LogCudaError("get device properties", err);
-        return false;
-    }
+     // Check device properties
+     cudaDeviceProp prop;
+     err = cudaGetDeviceProperties(&prop, device_id);
+     if (err != cudaSuccess) {
+         LogCudaError("get device properties", err);
+         return false;
+     }
 
-    std::cout << "Using GPU: " << prop.name << std::endl;
-    return true;
-#else
-    return false;
-#endif
+     std::cout << "Using GPU: " << prop.name << std::endl;
+     return true;
 }
 
 void MagneticFieldInterpolator::Impl::ReleaseGPU() {
-#ifdef __CUDACC__
-    gpu_grid_points_.reset();
-    gpu_grid_field_data_.reset();
-    gpu_unstructured_points_.reset();
-    gpu_unstructured_field_data_.reset();
-    gpu_cell_offsets_.reset();
-    gpu_cell_points_.reset();
-    gpu_query_points_.reset();
-    gpu_results_.reset();
+     gpu_grid_points_.reset();
+     gpu_grid_field_data_.reset();
+     gpu_unstructured_points_.reset();
+     gpu_unstructured_field_data_.reset();
+     gpu_cell_offsets_.reset();
+     gpu_cell_points_.reset();
+     gpu_query_points_.reset();
+     gpu_results_.reset();
 
-    gpu_initialized_ = false;
-#endif
+     gpu_initialized_ = false;
 }
 
 bool MagneticFieldInterpolator::Impl::UploadDataToGPU() {
-#ifdef __CUDACC__
-    if (!gpu_initialized_) {
-        return false;
-    }
+     if (!gpu_initialized_) {
+         return false;
+     }
 
-    try {
-        if (data_type_ == DataStructureType::RegularGrid && grid_) {
-            size_t data_count = grid_->getDataCount();
+     try {
+         if (data_type_ == DataStructureType::RegularGrid && grid_) {
+             size_t data_count = grid_->getDataCount();
 
-            // Allocate GPU memory for regular grid
-            gpu_grid_points_     = std::make_unique<cuda::GpuMemory<Point3D>>();
-            gpu_grid_field_data_ = std::make_unique<cuda::GpuMemory<MagneticFieldData>>();
+             // Allocate GPU memory for regular grid
+             gpu_grid_points_     = std::make_unique<cuda::GpuMemory<Point3D>>();
+             gpu_grid_field_data_ = std::make_unique<cuda::GpuMemory<MagneticFieldData>>();
 
-            if (!gpu_grid_points_->allocate(data_count) || !gpu_grid_field_data_->allocate(data_count)) {
-                return false;
-            }
+             if (!gpu_grid_points_->allocate(data_count) || !gpu_grid_field_data_->allocate(data_count)) {
+                 return false;
+             }
 
-            // Upload data
-            const auto& coordinates = grid_->getCoordinates();
-            const auto& field_data  = grid_->getFieldData();
+             // Upload data
+             const auto& coordinates = grid_->getCoordinates();
+             const auto& field_data  = grid_->getFieldData();
 
-            if (!gpu_grid_points_->copyToDevice(coordinates.data(), data_count) ||
-                !gpu_grid_field_data_->copyToDevice(field_data.data(), data_count)) {
-                return false;
-            }
-        } else if (data_type_ == DataStructureType::Unstructured && unstructured_interpolator_) {
-            size_t data_count = unstructured_interpolator_->getDataCount();
+             if (!gpu_grid_points_->copyToDevice(coordinates.data(), data_count) ||
+                 !gpu_grid_field_data_->copyToDevice(field_data.data(), data_count)) {
+                 return false;
+             }
+         } else if (data_type_ == DataStructureType::Unstructured && unstructured_interpolator_) {
+             size_t data_count = unstructured_interpolator_->getDataCount();
 
-            // Allocate GPU memory for unstructured data
-            gpu_unstructured_points_     = std::make_unique<cuda::GpuMemory<Point3D>>();
-            gpu_unstructured_field_data_ = std::make_unique<cuda::GpuMemory<MagneticFieldData>>();
+             // Allocate GPU memory for unstructured data
+             gpu_unstructured_points_     = std::make_unique<cuda::GpuMemory<Point3D>>();
+             gpu_unstructured_field_data_ = std::make_unique<cuda::GpuMemory<MagneticFieldData>>();
 
-            if (!gpu_unstructured_points_->allocate(data_count) ||
-                !gpu_unstructured_field_data_->allocate(data_count)) {
-                return false;
-            }
+             if (!gpu_unstructured_points_->allocate(data_count) ||
+                 !gpu_unstructured_field_data_->allocate(data_count)) {
+                 return false;
+             }
 
-            // Upload data
-            const auto& coordinates = unstructured_interpolator_->getCoordinates();
-            const auto& field_data  = unstructured_interpolator_->getFieldData();
+             // Upload data
+             const auto& coordinates = unstructured_interpolator_->getCoordinates();
+             const auto& field_data  = unstructured_interpolator_->getFieldData();
 
-            if (!gpu_unstructured_points_->copyToDevice(coordinates.data(), data_count) ||
-                !gpu_unstructured_field_data_->copyToDevice(field_data.data(), data_count)) {
-                return false;
-            }
+             if (!gpu_unstructured_points_->copyToDevice(coordinates.data(), data_count) ||
+                 !gpu_unstructured_field_data_->copyToDevice(field_data.data(), data_count)) {
+                 return false;
+             }
 
-            // Build and upload spatial grid for efficient neighbor finding
-            Point3D     min_bound    = unstructured_interpolator_->getMinBound();
-            Point3D     max_bound    = unstructured_interpolator_->getMaxBound();
-            SpatialGrid spatial_grid = buildSpatialGrid(coordinates, min_bound, max_bound);
+             // Build and upload spatial grid for efficient neighbor finding
+             Point3D     min_bound    = unstructured_interpolator_->getMinBound();
+             Point3D     max_bound    = unstructured_interpolator_->getMaxBound();
+             SpatialGrid spatial_grid = buildSpatialGrid(coordinates, min_bound, max_bound);
 
-            // Store spatial grid parameters for GPU queries
-            spatial_grid_origin_     = spatial_grid.origin;
-            spatial_grid_cell_size_  = spatial_grid.cell_size;
-            spatial_grid_dimensions_ = spatial_grid.dimensions;
+             // Store spatial grid parameters for GPU queries
+             spatial_grid_origin_     = spatial_grid.origin;
+             spatial_grid_cell_size_  = spatial_grid.cell_size;
+             spatial_grid_dimensions_ = spatial_grid.dimensions;
 
-            // Allocate GPU memory for spatial grid
-            gpu_cell_offsets_ = std::make_unique<cuda::GpuMemory<uint32_t>>();
-            gpu_cell_points_  = std::make_unique<cuda::GpuMemory<uint32_t>>();
+             // Allocate GPU memory for spatial grid
+             gpu_cell_offsets_ = std::make_unique<cuda::GpuMemory<uint32_t>>();
+             gpu_cell_points_  = std::make_unique<cuda::GpuMemory<uint32_t>>();
 
-            size_t num_cells_plus_one = spatial_grid.cell_offsets.size();
-            size_t num_cell_points    = spatial_grid.cell_points.size();
+             size_t num_cells_plus_one = spatial_grid.cell_offsets.size();
+             size_t num_cell_points    = spatial_grid.cell_points.size();
 
-            if (!gpu_cell_offsets_->allocate(num_cells_plus_one) || !gpu_cell_points_->allocate(num_cell_points)) {
-                return false;
-            }
+             if (!gpu_cell_offsets_->allocate(num_cells_plus_one) || !gpu_cell_points_->allocate(num_cell_points)) {
+                 return false;
+             }
 
-            // Upload spatial grid data
-            if (!gpu_cell_offsets_->copyToDevice(spatial_grid.cell_offsets.data(), num_cells_plus_one) ||
-                !gpu_cell_points_->copyToDevice(spatial_grid.cell_points.data(), num_cell_points)) {
-                return false;
-            }
-        }
+             // Upload spatial grid data
+             if (!gpu_cell_offsets_->copyToDevice(spatial_grid.cell_offsets.data(), num_cells_plus_one) ||
+                 !gpu_cell_points_->copyToDevice(spatial_grid.cell_points.data(), num_cell_points)) {
+                 return false;
+             }
+         }
 
-        return true;
-    } catch (const std::exception& e) {
-        LogError("GPU data upload", e.what());
-        return false;
-    }
-#else
-    return false;
-#endif
+         return true;
+     } catch (const std::exception& e) {
+         LogError("GPU data upload", e.what());
+         return false;
+     }
 }
 
 // MagneticFieldInterpolator implementation
