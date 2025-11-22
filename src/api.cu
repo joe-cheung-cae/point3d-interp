@@ -192,8 +192,11 @@ class MagneticFieldInterpolator::Impl {
                 // Get grid parameters (host copy)
                 GridParams grid_params = grid_->getParams();
 
+                // Calculate shared memory size for kernel
+                const size_t shared_mem_size = sizeof(GridParams) + 8 * sizeof(MagneticFieldData);
+
                 // Launch kernel with specified stream
-                cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, 0, (cudaStream_t)stream>>>(
+                cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, shared_mem_size, (cudaStream_t)stream>>>(
                     d_query_points, gpu_grid_field_data_->getDevicePtr(), grid_params, d_results, count,
                     static_cast<int>(extrapolation_method_));
 
@@ -542,11 +545,13 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
     }
 
     if (data_type_ == DataStructureType::Unstructured) {
-#ifdef __CUDACC__
         if (use_gpu_ && gpu_initialized_ && gpu_unstructured_points_ && gpu_unstructured_field_data_ &&
             gpu_cell_offsets_ && gpu_cell_points_) {
             // GPU implementation for unstructured data with spatial grid
             try {
+                // Print information
+                std::cout << "Using GPU implementation for unstructured data with spatial grid" << std::endl;
+
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
                 if (gpu_memory_capacity_ == 0) {
@@ -618,6 +623,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         } else if (use_gpu_ && gpu_initialized_ && gpu_unstructured_points_ && gpu_unstructured_field_data_) {
             // Fallback to brute force GPU implementation
             try {
+                // Print information
+                std::cout << "Using GPU implementation for unstructured data" << std::endl;
+
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
                 if (gpu_memory_capacity_ == 0) {
@@ -685,7 +693,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 use_gpu_ = false;
             }
         }
-#endif
+
+        // Print information
+        std::cout << "Using CPU implementation for unstructured data" << std::endl;
 
         // CPU fallback for unstructured data
         std::vector<Point3D> query_vec(query_points, query_points + count);
@@ -694,10 +704,12 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         return ErrorCode::Success;
     }
 
-#ifdef __CUDACC__
     if (use_gpu_ && gpu_initialized_ && data_type_ == DataStructureType::RegularGrid) {
         // GPU implementation
         try {
+            // Print information
+            std::cout << "Using GPU implementation for regular grid data" << std::endl;
+          
             // Ensure GPU memory is sufficient with capacity tracking and growth strategy
             size_t required_capacity = std::max(count, gpu_memory_capacity_);
             if (gpu_memory_capacity_ == 0) {
@@ -745,6 +757,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             dim3 block_dim(BLOCK_SIZE);
             dim3 grid_dim(num_blocks);
 
+            // Calculate shared memory size for kernel
+            const size_t shared_mem_size = sizeof(GridParams) + 8 * sizeof(MagneticFieldData);
+
             // Create CUDA events for kernel timing
             cudaEvent_t start_event, stop_event;
             cudaEventCreate(&start_event);
@@ -753,7 +768,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             // Record start event
             cudaEventRecord(start_event);
 
-            cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
+            cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, shared_mem_size>>>(
                 gpu_query_points_->getDevicePtr(), gpu_grid_field_data_->getDevicePtr(), grid_->getParams(),
                 gpu_results_->getDevicePtr(), count, static_cast<int>(extrapolation_method_));
 
@@ -786,7 +801,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             use_gpu_ = false;
         }
     }
-#endif
+
+    // Print information
+    std::cout << "Using CPU implementation for regular grid data(Fallback method)" << std::endl;
 
     // CPU implementation (fallback for regular grid)
     std::vector<Point3D> query_vec(query_points, query_points + count);

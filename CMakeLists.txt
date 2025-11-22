@@ -33,6 +33,7 @@ endif()
 # SIMD optimizations
 if(ENABLE_SIMD)
     add_definitions(-DENABLE_SIMD)
+
     if(MSVC)
         # MSVC SIMD flags
         add_compile_options(/arch:AVX2)
@@ -51,13 +52,14 @@ set(SOURCES
     src/data_loader.cpp
     src/grid_structure.cpp
     src/cpu_interpolator.cpp
+    src/spatial_grid.cpp
     src/unstructured_interpolator.cpp
     src/kd_tree.cpp
-    src/api.cpp
     src/exporter.cpp
 )
 
 set(CUDA_SOURCES
+    src/api.cu
     src/cuda_interpolator.cu
     src/memory_manager.cu
 )
