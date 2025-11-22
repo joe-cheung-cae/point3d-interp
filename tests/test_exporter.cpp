@@ -44,7 +44,9 @@ TEST_F(ExporterTest, ExportInputPointsVTK) {
     // Export input points
     fs::path input_file = temp_dir / "input_points.vtk";
     std::cout << "Exporting input points to: " << input_file << std::endl;
-    err = interpolator.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, input_file.string());
+    auto export_coordinates = interpolator.GetCoordinates();
+    auto export_field_data = interpolator.GetFieldData();
+    err = p3d::MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, p3d::ExportFormat::ParaviewVTK, input_file.string());
     ASSERT_EQ(err, p3d::ErrorCode::Success);
 
     // Check file exists
@@ -122,27 +124,15 @@ TEST_F(ExporterTest, ExportOutputPointsVTK) {
 }
 
 TEST_F(ExporterTest, ExportWithoutDataLoaded) {
-    p3d::MagneticFieldInterpolator interpolator;
-
-    // Try to export without loading data
-    fs::path input_file = temp_dir / "no_data.vtk";
-    auto     err        = interpolator.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, input_file.string());
-    EXPECT_EQ(err, p3d::ErrorCode::DataNotLoaded);
-
-    // File should not exist
-    EXPECT_FALSE(fs::exists(input_file));
+    // Since ExportInputPoints is now static and doesn't check for loaded data,
+    // this test is no longer applicable. The static method just takes the data directly.
+    SUCCEED();  // Skip this test
 }
 
 TEST_F(ExporterTest, ExportWithInvalidFormat) {
-    p3d::MagneticFieldInterpolator interpolator;
-
-    // Load test data
-    auto err = interpolator.LoadFromMemory(points.data(), field_data.data(), points.size());
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
-
     // Try to export with invalid format (this will use Tecplot which is not implemented)
     // Note: Since Tecplot is not implemented, it should return InvalidParameter
     fs::path input_file = temp_dir / "invalid_format.vtk";
-    err                 = interpolator.ExportInputPoints(static_cast<p3d::ExportFormat>(999), input_file.string());
+    auto err = p3d::MagneticFieldInterpolator::ExportInputPoints(points, field_data, static_cast<p3d::ExportFormat>(999), input_file.string());
     EXPECT_EQ(err, p3d::ErrorCode::InvalidParameter);
 }

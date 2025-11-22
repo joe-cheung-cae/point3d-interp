@@ -131,37 +131,27 @@ class BenchmarkBase {
 
         // Export input data points
         {
-            MagneticFieldInterpolator temp_interp(false);
-            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
-                                       test_data.coordinates.size());
             std::string filename = "benchmark_output/input_" + std::to_string(data_size[0]) + "x" +
                                    std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
                                    ".vtk";
-            temp_interp.ExportInputPoints(ExportFormat::ParaviewVTK, filename);
+            MagneticFieldInterpolator::ExportInputPoints(test_data.coordinates, test_data.field_data,
+                                                         ExportFormat::ParaviewVTK, filename);
         }
 
         // Export CPU results
         if (!cpu_results.empty()) {
-            MagneticFieldInterpolator temp_interp(false, 0, InterpolationMethod::TricubicHermite,
-                                                  ExtrapolationMethod::LinearExtrapolation);
-            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
-                                       test_data.coordinates.size());
             std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
                                    std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
                                    "_q" + std::to_string(query_size) + ".vtk";
-            temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
+            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
         }
 
         // Export GPU results
         if (!gpu_results.empty()) {
-            MagneticFieldInterpolator temp_interp(true, 0, InterpolationMethod::TricubicHermite,
-                                                  ExtrapolationMethod::LinearExtrapolation);
-            temp_interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
-                                       test_data.coordinates.size());
             std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
                                    std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
                                    "_q" + std::to_string(query_size) + ".vtk";
-            temp_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
+            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
         }
     }
 

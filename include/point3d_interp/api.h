@@ -169,6 +169,18 @@ class MagneticFieldInterpolator {
     size_t GetDataPointCount() const;
 
     /**
+     * @brief Get coordinates of loaded data points
+     * @return Vector of coordinates
+     */
+    std::vector<Point3D> GetCoordinates() const;
+
+    /**
+     * @brief Get field data of loaded data points
+     * @return Vector of field data
+     */
+    std::vector<MagneticFieldData> GetFieldData() const;
+
+    /**
      * @brief Get GPU device pointer to grid coordinates (for direct CUDA kernel access)
      * @return Device pointer to grid points, nullptr if not available
      */
@@ -212,13 +224,15 @@ class MagneticFieldInterpolator {
 
     /**
      * @brief Export input sampling points to visualization format
+     * @param coordinates Input coordinates
+     * @param field_data Magnetic field data
      * @param format Export format
      * @param filename Output filename
      * @return Error code
-     *
-     * @note Data must be loaded first (call LoadFromCSV or LoadFromMemory)
      */
-    ErrorCode ExportInputPoints(ExportFormat format, const std::string& filename);
+    static ErrorCode ExportInputPoints(const std::vector<Point3D>& coordinates,
+                                       const std::vector<MagneticFieldData>& field_data,
+                                       ExportFormat format, const std::string& filename);
 
     /**
      * @brief Export output interpolation points to visualization format
@@ -228,8 +242,8 @@ class MagneticFieldInterpolator {
      * @param filename Output filename
      * @return Error code
      */
-    ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                                 const std::vector<InterpolationResult>& results, const std::string& filename);
+    static ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                        const std::vector<InterpolationResult>& results, const std::string& filename);
 
     /**
      * @brief Get the last kernel execution time (GPU only)
