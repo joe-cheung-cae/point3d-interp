@@ -19,7 +19,7 @@ int main() {
     // Configuration
     const std::vector<size_t> query_sizes    = {100, 1000, 10000};
     const int                 num_iterations = 5;
-    const std::string         data_file      = "./sample_magnetic_field.csv";
+    const std::string         data_file      = "../sample_magnetic_field.csv";
 
     // Load data
     std::cout << "Loading magnetic field data from: " << data_file << std::endl;

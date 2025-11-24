@@ -1,15 +1,15 @@
 #include "benchmark_base.h"
 
 /**
- * @brief Performance benchmark for interpolation points outside the domain (50x50x50 data)
+ * @brief Performance benchmark for structured data with 1,000 points (outside domain)
  */
-class BenchmarkOutOfDomain50x50x50 : public p3d::BenchmarkBase {
+class BenchmarkStructuredOutsideDomain1000 : public p3d::BenchmarkBase {
   protected:
     std::array<size_t, 3> GetDataDimensions() const override {
-        return {50, 50, 50};  // 125,000 points
+        return {10, 10, 10};  // 1,000 points
     }
 
-    std::string GetBenchmarkType() const override { return "_out_of_domain"; }
+    std::string GetBenchmarkType() const override { return "_structured_out_of_domain"; }
 
     std::vector<p3d::Point3D> GenerateQueryPoints(size_t count, const p3d::GridParams& grid_params) override {
         std::vector<p3d::Point3D> points;
@@ -45,7 +45,7 @@ class BenchmarkOutOfDomain50x50x50 : public p3d::BenchmarkBase {
 };
 
 int main() {
-    BenchmarkOutOfDomain50x50x50 benchmark;
+    BenchmarkStructuredOutsideDomain1000 benchmark;
     benchmark.RunAllBenchmarks();
     return 0;
 }

@@ -1,18 +1,17 @@
-#include "benchmark_base.h"
+#ifndef POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H
+#define POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H
+
+#include "benchmark_unstructured_base.h"
+
+namespace p3d {
 
 /**
- * @brief Performance benchmark for interpolation points outside the domain (30x30x30 data)
+ * @brief Base class for unstructured data performance benchmarks with queries outside the domain
  */
-class BenchmarkOutOfDomain30x30x30 : public p3d::BenchmarkBase {
+class UnstructuredBenchmarkOutsideDomainBase : public UnstructuredBenchmarkBase {
   protected:
-    std::array<size_t, 3> GetDataDimensions() const override {
-        return {30, 30, 30};  // 27,000 points
-    }
-
-    std::string GetBenchmarkType() const override { return "_out_of_domain"; }
-
-    std::vector<p3d::Point3D> GenerateQueryPoints(size_t count, const p3d::GridParams& grid_params) override {
-        std::vector<p3d::Point3D> points;
+    std::vector<Point3D> GenerateQueryPoints(size_t count, const GridParams& grid_params) override {
+        std::vector<Point3D> points;
         points.reserve(count);
 
         // Generate points outside the domain bounds
@@ -37,15 +36,15 @@ class BenchmarkOutOfDomain30x30x30 : public p3d::BenchmarkBase {
             float x = side_dist(rng_) ? dist_x_high(rng_) : dist_x_low(rng_);
             float y = side_dist(rng_) ? dist_y_high(rng_) : dist_y_low(rng_);
             float z = side_dist(rng_) ? dist_z_high(rng_) : dist_z_low(rng_);
-            points.push_back(p3d::Point3D(x, y, z));
+            points.push_back(Point3D(x, y, z));
         }
 
         return points;
     }
+
+    std::string GetBenchmarkType() const override { return "_unstructured_out_of_domain"; }
 };
 
-int main() {
-    BenchmarkOutOfDomain30x30x30 benchmark;
-    benchmark.RunAllBenchmarks();
-    return 0;
-}
+}  // namespace p3d
+
+#endif  // POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H

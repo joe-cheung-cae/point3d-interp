@@ -1,7 +1,7 @@
-#ifndef POINT3D_INTERP_BENCHMARK_BASE_H
-#define POINT3D_INTERP_BENCHMARK_BASE_H
+#ifndef POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
+#define POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
 
-#include "point3d_interp/api.h"
+#include "benchmark_base.h"
 #include <iostream>
 #include <iomanip>
 #include <chrono>
@@ -13,35 +13,34 @@
 namespace p3d {
 
 /**
- * @brief Base class for performance benchmarks
+ * @brief Base class for unstructured data performance benchmarks
  *
  * Provides common functionality for benchmarking different data scales
- * and query sizes. Eliminates code duplication across benchmark files.
+ * and query sizes for unstructured (scattered) point cloud data using IDW interpolation.
  */
-class BenchmarkBase {
+class UnstructuredBenchmarkBase : public BenchmarkBase {
   public:
-    BenchmarkBase() : rng_(std::random_device{}()) {}
+    UnstructuredBenchmarkBase() = default;
 
-    virtual ~BenchmarkBase() = default;
+    virtual ~UnstructuredBenchmarkBase() = default;
 
     /**
      * @brief Run all benchmarks for this data scale
      */
     void RunAllBenchmarks() {
-        std::cout << "=== 3D Magnetic Field Data Interpolation Library Performance Benchmarks ===\n\n";
+        std::cout << "=== 3D Magnetic Field Data Interpolation Library Unstructured Data Performance Benchmarks ===\n\n";
 
-        // Get data dimensions from derived class
-        auto data_size = GetDataDimensions();
+        // Get data point count from derived class
+        size_t data_count = GetDataPointCount();
 
         // Test different numbers of query points
         std::vector<size_t> query_sizes = {100, 1000, 10000};
 
-        std::cout << "Test data scale: " << data_size[0] << "x" << data_size[1] << "x" << data_size[2] << " ("
-                  << (data_size[0] * data_size[1] * data_size[2]) << " points)\n";
+        std::cout << "Test data scale: " << data_count << " scattered points\n";
         std::cout << std::string(60, '-') << "\n";
 
         // Create test data
-        auto test_data = GenerateTestData(data_size);
+        auto test_data = GenerateTestData(data_count);
 
         for (size_t query_size : query_sizes) {
             std::cout << "=== Testing with " << query_size << " query points ===" << std::endl;
@@ -58,18 +57,17 @@ class BenchmarkBase {
             double gpu_time    = gpu_results.first;
 
             // Print CPU results
-            std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
+            std::cout << "[CPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
 
             if (gpu_time > 0) {
                 double speedup = cpu_time / gpu_time;
-                std::cout << "[GPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0)) << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
+                std::cout << "[GPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0)) << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
             } else {
-                std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)" << std::endl;
+                std::cout << "[CPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)" << std::endl;
             }
 
             // Export VTK files for visualization
-            ExportBenchmarkResults(test_data, query_points, cpu_results.second, gpu_results.second, data_size,
-                                   query_size);
+            ExportBenchmarkResults(test_data, query_points, cpu_results.second, gpu_results.second, {0, 0, 0}, query_size);
 
             std::cout << std::endl;
         }
@@ -77,26 +75,26 @@ class BenchmarkBase {
 
   protected:
     /**
-     * @brief Get the data dimensions for this benchmark
-     * @return Array of {width, height, depth}
+     * @brief Get the data dimensions for this benchmark (not used for unstructured)
+     * @return Array of {width, height, depth} - returns {point_count, 1, 1}
      */
-    virtual std::array<size_t, 3> GetDataDimensions() const = 0;
+    std::array<size_t, 3> GetDataDimensions() const override {
+        return {GetDataPointCount(), 1, 1};
+    }
 
     /**
-     * @brief Get the benchmark type suffix for file naming
-     * @return String suffix to append to filenames (e.g., "_out_of_domain")
+     * @brief Get the number of data points for this benchmark
+     * @return Number of scattered data points
      */
-    virtual std::string GetBenchmarkType() const { return ""; }
-
-    std::mt19937 rng_;
+    virtual size_t GetDataPointCount() const = 0;
 
     /**
      * @brief Generate query points for benchmarking
      * @param count Number of points to generate
-     * @param grid_params Grid parameters defining the domain
+     * @param grid_params Grid parameters defining the domain (min/max bounds)
      * @return Vector of query points
      */
-    virtual std::vector<Point3D> GenerateQueryPoints(size_t count, const GridParams& grid_params) {
+    virtual std::vector<Point3D> GenerateQueryPoints(size_t count, const GridParams& grid_params) override {
         std::vector<Point3D> points;
         points.reserve(count);
 
@@ -121,78 +119,87 @@ class BenchmarkBase {
     void ExportBenchmarkResults(const TestData& test_data, const std::vector<Point3D>& query_points,
                                 const std::vector<InterpolationResult>& cpu_results,
                                 const std::vector<InterpolationResult>& gpu_results,
-                                const std::array<size_t, 3>& data_size, size_t query_size) {
+                                const std::array<size_t, 3>& /*data_size*/, size_t query_size) {
         // Create output directory
         std::filesystem::create_directories("benchmark_output");
 
         std::string type_suffix = GetBenchmarkType();
+        std::string count_str = std::to_string(GetDataPointCount());
 
         // Export input data points
         {
-            std::string filename = "benchmark_output/input_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
-                                   ".vtk";
+            std::string filename = "benchmark_output/input_unstructured_" + count_str + type_suffix + ".vtk";
             MagneticFieldInterpolator::ExportInputPoints(test_data.coordinates, test_data.field_data,
                                                          ExportFormat::ParaviewVTK, filename);
         }
 
         // Export CPU results
         if (!cpu_results.empty()) {
-            std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
-                                   "_q" + std::to_string(query_size) + ".vtk";
+            std::string filename = "benchmark_output/cpu_unstructured_" + count_str + type_suffix + "_q" +
+                                   std::to_string(query_size) + ".vtk";
             MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
         }
 
         // Export GPU results
         if (!gpu_results.empty()) {
-            std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
-                                   std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
-                                   "_q" + std::to_string(query_size) + ".vtk";
+            std::string filename = "benchmark_output/gpu_unstructured_" + count_str + type_suffix + "_q" +
+                                   std::to_string(query_size) + ".vtk";
             MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
         }
     }
 
-    TestData GenerateTestData(const std::array<size_t, 3>& dimensions) {
+    TestData GenerateTestData(size_t point_count) {
         TestData data;
 
+        data.coordinates.reserve(point_count);
+        data.field_data.reserve(point_count);
+
+        // Set up domain bounds (similar to structured benchmarks)
         data.grid_params.origin     = Point3D(0.0f, 0.0f, 0.0f);
         data.grid_params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
-        data.grid_params.dimensions = {static_cast<uint32_t>(dimensions[0]), static_cast<uint32_t>(dimensions[1]),
-                                       static_cast<uint32_t>(dimensions[2])};
+        data.grid_params.dimensions = {static_cast<uint32_t>(point_count), 1, 1};  // Not used for unstructured
         data.grid_params.update_bounds();
 
-        size_t total_points = dimensions[0] * dimensions[1] * dimensions[2];
-        data.coordinates.reserve(total_points);
-        data.field_data.reserve(total_points);
+        // Generate random points within a reasonable domain
+        std::uniform_real_distribution<float> pos_dist(-10.0f, 10.0f);
+        std::uniform_real_distribution<float> field_dist(-1.0f, 1.0f);
 
-        // Generate magnetic field data for each grid point
-        for (size_t k = 0; k < dimensions[2]; ++k) {
-            for (size_t j = 0; j < dimensions[1]; ++j) {
-                for (size_t i = 0; i < dimensions[0]; ++i) {
-                    Point3D coord(data.grid_params.origin.x + i * data.grid_params.spacing.x,
-                                  data.grid_params.origin.y + j * data.grid_params.spacing.y,
-                                  data.grid_params.origin.z + k * data.grid_params.spacing.z);
-                    data.coordinates.push_back(coord);
+        for (size_t i = 0; i < point_count; ++i) {
+            Point3D coord(pos_dist(rng_), pos_dist(rng_), pos_dist(rng_));
+            data.coordinates.push_back(coord);
 
-                    // Generate magnetic field data for each grid point
-                    MagneticFieldData field(coord.x, coord.y, coord.z,  // Bx = x, By = y, Bz = z
-                                            1.0f, 0.0f, 0.0f,           // dBx_dx=1, dBx_dy=0, dBx_dz=0
-                                            0.0f, 1.0f, 0.0f,           // dBy_dx=0, dBy_dy=1, dBy_dz=0
-                                            0.0f, 0.0f, 1.0f);          // dBz_dx=0, dBz_dy=0, dBz_dz=1
-                    data.field_data.push_back(field);
-                }
+            // Generate magnetic field data (similar pattern to structured)
+            MagneticFieldData field(coord.x, coord.y, coord.z,  // Bx = x, By = y, Bz = z
+                                   1.0f, 0.0f, 0.0f,           // dBx_dx=1, dBx_dy=0, dBx_dz=0
+                                   0.0f, 1.0f, 0.0f,           // dBy_dx=0, dBy_dy=1, dBy_dz=0
+                                   0.0f, 0.0f, 1.0f);          // dBz_dx=0, dBz_dy=0, dBz_dz=1
+            data.field_data.push_back(field);
+        }
+
+        // Update bounds based on actual data
+        if (!data.coordinates.empty()) {
+            Point3D min_bound = data.coordinates[0];
+            Point3D max_bound = data.coordinates[0];
+            for (const auto& p : data.coordinates) {
+                min_bound.x = std::min(min_bound.x, p.x);
+                min_bound.y = std::min(min_bound.y, p.y);
+                min_bound.z = std::min(min_bound.z, p.z);
+                max_bound.x = std::max(max_bound.x, p.x);
+                max_bound.y = std::max(max_bound.y, p.y);
+                max_bound.z = std::max(max_bound.z, p.z);
             }
+            data.grid_params.min_bound = min_bound;
+            data.grid_params.max_bound = max_bound;
         }
 
         return data;
     }
 
     std::pair<double, std::vector<InterpolationResult>> BenchmarkCPU(const TestData&             test_data,
-                                                                     const std::vector<Point3D>& query_points) {
+                                                                      const std::vector<Point3D>& query_points) {
         MagneticFieldInterpolator interp(
-            false, 0, InterpolationMethod::TricubicHermite,
-            ExtrapolationMethod::LinearExtrapolation);  // CPU mode with linear extrapolation
+            false, 0, InterpolationMethod::IDW,
+            ExtrapolationMethod::LinearExtrapolation);  // CPU mode with IDW interpolation
 
         // Load data
         ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
@@ -224,10 +231,10 @@ class BenchmarkBase {
     }
 
     std::pair<double, std::vector<InterpolationResult>> BenchmarkGPU(const TestData&             test_data,
-                                                                     const std::vector<Point3D>& query_points) {
+                                                                      const std::vector<Point3D>& query_points) {
         MagneticFieldInterpolator interp(
-            true, 0, InterpolationMethod::TricubicHermite,
-            ExtrapolationMethod::LinearExtrapolation);  // GPU mode with linear extrapolation
+            true, 0, InterpolationMethod::IDW,
+            ExtrapolationMethod::LinearExtrapolation);  // GPU mode with IDW interpolation
 
         // Load data
         ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
@@ -259,4 +266,4 @@ class BenchmarkBase {
 
 }  // namespace p3d
 
-#endif  // POINT3D_INTERP_BENCHMARK_BASE_H
+#endif  // POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
