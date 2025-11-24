@@ -513,7 +513,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             // GPU implementation for unstructured data with spatial grid
             try {
                 // Print information
-                std::cout << "Using GPU implementation for unstructured data with spatial grid" << std::endl;
+                std::cout << "Using GPU implementation for unstructured data(Spatial Grid)" << std::endl;
 
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
@@ -587,7 +587,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             // Fallback to brute force GPU implementation
             try {
                 // Print information
-                std::cout << "Using GPU implementation for unstructured data" << std::endl;
+                std::cout << "Using GPU implementation for unstructured data(Brute Force)" << std::endl;
 
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
@@ -658,7 +658,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         }
 
         // Print information
-        std::cout << "Using CPU implementation for unstructured data" << std::endl;
+        std::cout << "Using CPU implementation for unstructured data(Fallback Method)" << std::endl;
 
         // CPU fallback for unstructured data
         std::vector<Point3D> query_vec(query_points, query_points + count);
@@ -671,7 +671,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         // GPU implementation
         try {
             // Print information
-            std::cout << "Using GPU implementation for regular grid data" << std::endl;
+            std::cout << "Using GPU implementation for structured grid data" << std::endl;
           
             // Ensure GPU memory is sufficient with capacity tracking and growth strategy
             size_t required_capacity = std::max(count, gpu_memory_capacity_);
