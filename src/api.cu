@@ -512,9 +512,6 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             gpu_cell_offsets_ && gpu_cell_points_) {
             // GPU implementation for unstructured data with spatial grid
             try {
-                // Print information
-                std::cout << "Using GPU implementation for unstructured data(Spatial Grid)" << std::endl;
-
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
                 if (gpu_memory_capacity_ == 0) {
@@ -559,17 +556,45 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 uint32_t grid_dimensions[3] = {spatial_grid_dimensions_[0], spatial_grid_dimensions_[1],
                                                spatial_grid_dimensions_[2]};
 
-                cuda::IDWSpatialGridKernel<<<num_blocks, BLOCK_SIZE>>>(
+                // No shared memory used for cell offsets
+                const size_t shared_mem_size = 0;
+
+                // Create CUDA events for kernel timing
+                cudaEvent_t start_event, stop_event;
+                cudaEventCreate(&start_event);
+                cudaEventCreate(&stop_event);
+
+                // Record start event
+                cudaEventRecord(start_event);
+
+                cuda::IDWSpatialGridKernel<<<num_blocks, BLOCK_SIZE, shared_mem_size>>>(
                     gpu_query_points_->getDevicePtr(), gpu_unstructured_points_->getDevicePtr(),
                     gpu_unstructured_field_data_->getDevicePtr(), unstructured_interpolator_->getDataCount(),
                     gpu_cell_offsets_->getDevicePtr(), gpu_cell_points_->getDevicePtr(), grid_origin, grid_cell_size,
-                    grid_dimensions, unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_),
+                    grid_dimensions[0], grid_dimensions[1], grid_dimensions[2], unstructured_interpolator_->getPower(), static_cast<int>(extrapolation_method_),
                     min_bound, max_bound, gpu_results_->getDevicePtr(), count);
+
+                // Record stop event
+                cudaEventRecord(stop_event);
+                cudaEventSynchronize(stop_event);
+
+                // Calculate kernel execution time
+                cudaEventElapsedTime(&last_kernel_time_ms_, start_event, stop_event);
+
+                // Cleanup events
+                cudaEventDestroy(start_event);
+                cudaEventDestroy(stop_event);
 
                 // Check CUDA errors
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
                     LogCudaError("IDW spatial grid kernel", cuda_err);
+                    return ErrorCode::CudaError;
+                }
+
+                // Synchronize and check for runtime errors
+                cuda_err = cudaDeviceSynchronize();
+                if (cuda_err != cudaSuccess) {
                     return ErrorCode::CudaError;
                 }
 
@@ -586,9 +611,6 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
         } else if (use_gpu_ && gpu_initialized_ && gpu_unstructured_points_ && gpu_unstructured_field_data_) {
             // Fallback to brute force GPU implementation
             try {
-                // Print information
-                std::cout << "Using GPU implementation for unstructured data(Brute Force)" << std::endl;
-
                 // Ensure GPU memory is sufficient with capacity tracking and growth strategy
                 size_t required_capacity = std::max(count, gpu_memory_capacity_);
                 if (gpu_memory_capacity_ == 0) {
@@ -629,8 +651,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
                 // Calculate shared memory size for optimization
                 const size_t data_count = unstructured_interpolator_->getDataCount();
-                const size_t shared_data_count =
-                    std::min(data_count, static_cast<size_t>(BLOCK_SIZE * SHARED_MEMORY_LIMIT_FACTOR));
+                // Reduce shared memory usage to avoid invalid argument error
+                const size_t max_shared_points = 256;  // Limit to 256 points in shared memory
+                const size_t shared_data_count = std::min(data_count, max_shared_points);
                 const size_t shared_mem_size = shared_data_count * (sizeof(Point3D) + sizeof(MagneticFieldData));
 
                 cuda::IDWInterpolationKernel<<<num_blocks, BLOCK_SIZE, shared_mem_size>>>(
@@ -642,6 +665,12 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
                     LogCudaError("IDW kernel", cuda_err);
+                    return ErrorCode::CudaError;
+                }
+
+                // Synchronize and check for runtime errors
+                cuda_err = cudaDeviceSynchronize();
+                if (cuda_err != cudaSuccess) {
                     return ErrorCode::CudaError;
                 }
 
@@ -657,9 +686,6 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             }
         }
 
-        // Print information
-        std::cout << "Using CPU implementation for unstructured data(Fallback Method)" << std::endl;
-
         // CPU fallback for unstructured data
         std::vector<Point3D> query_vec(query_points, query_points + count);
         auto                 cpu_results = unstructured_interpolator_->queryBatch(query_vec);
@@ -670,8 +696,6 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
     if (use_gpu_ && gpu_initialized_ && data_type_ == DataStructureType::RegularGrid) {
         // GPU implementation
         try {
-            // Print information
-            std::cout << "Using GPU implementation for structured grid data" << std::endl;
           
             // Ensure GPU memory is sufficient with capacity tracking and growth strategy
             size_t required_capacity = std::max(count, gpu_memory_capacity_);
@@ -764,9 +788,6 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             use_gpu_ = false;
         }
     }
-
-    // Print information
-    std::cout << "Using CPU implementation for regular grid data(Fallback method)" << std::endl;
 
     // CPU implementation (fallback for regular grid)
     std::vector<Point3D> query_vec(query_points, query_points + count);

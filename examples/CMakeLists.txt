@@ -4,7 +4,7 @@
 add_executable(basic_usage basic_usage.cpp)
 
 # Time Profile Example
-add_executable(time_profile time_profile.cpp)
+add_executable(time_profile time_profile.cu)
 
 # Direct CUDA Kernel Example
 add_executable(cuda_kernel_direct cuda_kernel_direct.cu)

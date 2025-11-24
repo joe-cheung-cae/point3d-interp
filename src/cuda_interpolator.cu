@@ -472,23 +472,23 @@ __device__ MagneticFieldData LinearExtrapolate(const Point3D& query_point, const
 /**
  * @brief Get cell index from 3D coordinates (device function)
  */
-__device__ size_t GetCellIndex(int ix, int iy, int iz, const uint32_t dimensions[3]) {
-    return ix + iy * dimensions[0] + iz * dimensions[0] * dimensions[1];
+__device__ size_t GetCellIndex(int ix, int iy, int iz, uint32_t dim_x, uint32_t dim_y, uint32_t dim_z) {
+    return ix + iy * dim_x + iz * dim_x * dim_y;
 }
 
 /**
  * @brief Get cell coordinates from world point (device function)
  */
 __device__ void GetCellCoords(const Point3D& point, const Point3D& origin, const Point3D& cell_size,
-                              const uint32_t dimensions[3], int& ix, int& iy, int& iz) {
+                              uint32_t dim_x, uint32_t dim_y, uint32_t dim_z, int& ix, int& iy, int& iz) {
     ix = static_cast<int>((point.x - origin.x) / cell_size.x);
     iy = static_cast<int>((point.y - origin.y) / cell_size.y);
     iz = static_cast<int>((point.z - origin.z) / cell_size.z);
 
     // Clamp to bounds
-    ix = max(0, min(ix, static_cast<int>(dimensions[0]) - 1));
-    iy = max(0, min(iy, static_cast<int>(dimensions[1]) - 1));
-    iz = max(0, min(iz, static_cast<int>(dimensions[2]) - 1));
+    ix = max(0, min(ix, static_cast<int>(dim_x) - 1));
+    iy = max(0, min(iy, static_cast<int>(dim_y) - 1));
+    iz = max(0, min(iz, static_cast<int>(dim_z) - 1));
 }
 
 /**
@@ -516,7 +516,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                                      const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
-                                     const Point3D grid_cell_size, const uint32_t grid_dimensions[3], const Real power,
+                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z, const Real power,
                                      const int extrapolation_method, const Point3D min_bound, const Point3D max_bound,
                                      InterpolationResult* __restrict__ results, const size_t query_count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -557,21 +557,10 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
 
     // Find the cell containing the query point
     int query_ix, query_iy, query_iz;
-    GetCellCoords(query_point, grid_origin, grid_cell_size, grid_dimensions, query_ix, query_iy, query_iz);
+    GetCellCoords(query_point, grid_origin, grid_cell_size, grid_dim_x, grid_dim_y, grid_dim_z, query_ix, query_iy, query_iz);
 
     Real              weight_sum   = 0.0f;
     MagneticFieldData weighted_sum = {};
-
-    // Use shared memory for cell offsets to reduce global memory accesses
-    extern __shared__ char shared_mem[];
-    uint32_t*              shared_cell_offsets = reinterpret_cast<uint32_t*>(shared_mem);
-
-    // Load cell offsets into shared memory cooperatively
-    const size_t total_cells = grid_dimensions[0] * grid_dimensions[1] * grid_dimensions[2] + 1;
-    for (size_t i = threadIdx.x; i < min(total_cells, static_cast<size_t>(blockDim.x) * 4); i += blockDim.x) {
-        shared_cell_offsets[i] = cell_offsets[i];
-    }
-    __syncthreads();
 
     // Search 3x3x3 neighborhood of cells (27 cells total) with improved memory access
     for (int dz = -1; dz <= 1; ++dz) {
@@ -583,17 +572,16 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                 int cell_iz = query_iz + dz;
 
                 // Check bounds
-                if (cell_ix < 0 || cell_ix >= static_cast<int>(grid_dimensions[0]) || cell_iy < 0 ||
-                    cell_iy >= static_cast<int>(grid_dimensions[1]) || cell_iz < 0 ||
-                    cell_iz >= static_cast<int>(grid_dimensions[2])) {
+                if (cell_ix < 0 || cell_ix >= static_cast<int>(grid_dim_x) || cell_iy < 0 ||
+                    cell_iy >= static_cast<int>(grid_dim_y) || cell_iz < 0 ||
+                    cell_iz >= static_cast<int>(grid_dim_z)) {
                     continue;
                 }
 
                 // Get cell index and point range
-                size_t cell_idx  = GetCellIndex(cell_ix, cell_iy, cell_iz, grid_dimensions);
-                size_t start_idx = (cell_idx < blockDim.x * 4) ? shared_cell_offsets[cell_idx] : cell_offsets[cell_idx];
-                size_t end_idx =
-                    (cell_idx + 1 < blockDim.x * 4) ? shared_cell_offsets[cell_idx + 1] : cell_offsets[cell_idx + 1];
+                size_t cell_idx  = GetCellIndex(cell_ix, cell_iy, cell_iz, grid_dim_x, grid_dim_y, grid_dim_z);
+                size_t start_idx = cell_offsets[cell_idx];
+                size_t end_idx   = cell_offsets[cell_idx + 1];
 
                 // Process points in this cell with improved memory coalescing
 #pragma unroll 4
@@ -699,14 +687,14 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
     MagneticFieldData weighted_sum = {};
 
     // Use shared memory optimization for small datasets
-    extern __shared__ char shared_mem[];
-    Point3D*               shared_points = reinterpret_cast<Point3D*>(shared_mem);
-    MagneticFieldData*     shared_field_data =
-        reinterpret_cast<MagneticFieldData*>(shared_mem + blockDim.x * 4 * sizeof(Point3D));
-
     const size_t block_size = blockDim.x;
     const size_t shared_data_count =
         min(data_count, block_size * SHARED_MEMORY_LIMIT_FACTOR);  // Limit shared memory usage
+
+    extern __shared__ char shared_mem[];
+    Point3D*               shared_points = reinterpret_cast<Point3D*>(shared_mem);
+    MagneticFieldData*     shared_field_data =
+        reinterpret_cast<MagneticFieldData*>(shared_mem + shared_data_count * sizeof(Point3D));
 
     // Load data into shared memory cooperatively
     for (size_t i = threadIdx.x; i < shared_data_count; i += block_size) {

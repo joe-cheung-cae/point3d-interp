@@ -31,7 +31,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                                      const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
-                                     const Point3D grid_cell_size, const uint32_t grid_dimensions[3], const Real power,
+                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z, const Real power,
                                      const int extrapolation_method, const Point3D min_bound, const Point3D max_bound,
                                      InterpolationResult* __restrict__ results, const size_t query_count);
 

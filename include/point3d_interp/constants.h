@@ -79,7 +79,7 @@ constexpr size_t MAX_EXTRAPOLATION_NEIGHBORS = 5;
  * @brief Shared memory limit factor for IDW kernel optimization
  * Limits shared memory usage to prevent kernel launch failures
  */
-constexpr size_t SHARED_MEMORY_LIMIT_FACTOR = 4;
+constexpr size_t SHARED_MEMORY_LIMIT_FACTOR = 1;
 
 }  // namespace p3d
 

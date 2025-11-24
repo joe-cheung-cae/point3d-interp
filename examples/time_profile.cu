@@ -12,12 +12,14 @@
 int main() {
     using namespace p3d;
 
-    std::cout << "=== Benchmarking Structured Interpolation ===\n" << std::endl;
+    std::cout << "=============================================\n";
+    std::cout << "=== Benchmarking Structured Interpolation ===\n";
+    std::cout << "=============================================\n" << std::endl;
 
     // Configuration
-    const std::vector<size_t> query_sizes    = {100, 1000, 10000, 1000000};
+    const std::vector<size_t> query_sizes    = {100, 1000, 10000};
     const int                 num_iterations = 5;
-    const std::string         data_file      = "../data/sample_magnetic_field.csv";
+    const std::string         data_file      = "./sample_magnetic_field.csv";
 
     // Load data
     std::cout << "Loading magnetic field data from: " << data_file << std::endl;
@@ -129,10 +131,7 @@ int main() {
         std::cout << "Benchmarking GPU interpolation..." << std::endl;
         double gpu_time = benchmark_interpolator_structured(true, "GPU", query_points);
         if (gpu_time < 0) {
-            std::cout << "GPU benchmark failed (GPU may not be available)." << std::endl;
-            std::cout << "CPU time: " << std::fixed << std::setprecision(3) << cpu_time << " ms" << std::endl;
-            std::cout << "Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0))
-                      << " queries/second" << std::endl;
+            std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)" << std::endl;
             std::cout << std::endl;
             continue;
         }
@@ -142,20 +141,15 @@ int main() {
         double speedup = cpu_time / gpu_time;
 
         // Print results
-        std::cout << "Results for " << query_size << " query points:" << std::endl;
-        std::cout << "  CPU time: " << std::fixed << std::setprecision(3) << cpu_time << " ms" << std::endl;
-        std::cout << "  GPU time: " << std::fixed << std::setprecision(3) << gpu_time << " ms" << std::endl;
-        std::cout << "  Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
-        std::cout << "  Throughput:" << std::endl;
-        std::cout << "    CPU: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0))
-                  << " queries/second" << std::endl;
-        std::cout << "    GPU: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0))
-                  << " queries/second" << std::endl;
+        std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
+        std::cout << "[GPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0)) << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
         std::cout << std::endl;
     }
 
     // === Benchmarking Unstructured Interpolation ===
-    std::cout << std::endl << "=== Benchmarking Unstructured Interpolation ===" << std::endl;
+    std::cout << "===============================================\n";
+    std::cout << "=== Benchmarking Unstructured Interpolation ===\n";
+    std::cout << "===============================================\n" << std::endl;
 
     // Generate synthetic unstructured data
     const size_t num_data_points = 1000;
@@ -198,6 +192,7 @@ int main() {
     // Function to benchmark unstructured interpolator
     auto benchmark_interpolator_unstructured = [&](bool use_gpu, const std::string& name,
                                                    const std::vector<Point3D>& query_points) -> double {
+        std::cout << "Creating " << name << " interpolator (use_gpu=" << use_gpu << ")" << std::endl;
         MagneticFieldInterpolator interp(use_gpu, 0, InterpolationMethod::IDW);
 
         ErrorCode err = interp.LoadFromMemory(data_points.data(), data_field.data(), num_data_points);
@@ -205,6 +200,7 @@ int main() {
             std::cerr << name << " interpolator initialization failed: " << ErrorCodeToString(err) << std::endl;
             return -1.0;
         }
+        std::cout << "Data loaded successfully. Data points: " << interp.GetDataPointCount() << std::endl;
 
         // Warm up
         InterpolationResult dummy;
@@ -224,6 +220,10 @@ int main() {
             if (err != ErrorCode::Success) {
                 std::cerr << name << " query failed at iteration " << iter << ": " << ErrorCodeToString(err)
                           << std::endl;
+                cudaError_t cuda_err = cudaGetLastError();
+                if (cuda_err != cudaSuccess) {
+                    std::cerr << "CUDA error: " << cudaGetErrorString(cuda_err) << std::endl;
+                }
                 return -1.0;
             }
 
@@ -252,8 +252,9 @@ int main() {
         return avg_time;
     };
 
-    // Test different query sizes for unstructured
-    for (size_t query_size : query_sizes) {
+    // Test different query sizes for unstructured (limited to avoid GPU memory issues)
+    const std::vector<size_t> unstructured_query_sizes = {100, 1000, 10000};
+    for (size_t query_size : unstructured_query_sizes) {
         std::cout << "=== Testing unstructured with " << query_size << " query points ===" << std::endl;
 
         // Generate query points for this size
@@ -268,37 +269,27 @@ int main() {
         std::cout << "Benchmarking CPU unstructured interpolation..." << std::endl;
         double cpu_time = benchmark_interpolator_unstructured(false, "CPU Unstructured", query_points);
         if (cpu_time < 0) {
-            std::cerr << "CPU unstructured benchmark failed." << std::endl;
+            std::cerr << "CPU unstructured benchmark failed.\n\n";
             continue;
         }
-        std::cout << "CPU unstructured benchmark completed." << std::endl;
+        std::cout << "CPU unstructured benchmark completed.\n\n";
 
         // Benchmark GPU
-        std::cout << "Benchmarking GPU unstructured interpolation..." << std::endl;
+        std::cout << "\nBenchmarking GPU unstructured interpolation..." << std::endl;
         double gpu_time = benchmark_interpolator_unstructured(true, "GPU Unstructured", query_points);
         if (gpu_time < 0) {
-            std::cout << "GPU unstructured benchmark failed (GPU may not be available)." << std::endl;
-            std::cout << "CPU time: " << std::fixed << std::setprecision(3) << cpu_time << " ms" << std::endl;
-            std::cout << "Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0))
-                      << " queries/second" << std::endl;
+            std::cout << "[CPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)" << std::endl;
             std::cout << std::endl;
             continue;
         }
-        std::cout << "GPU unstructured benchmark completed." << std::endl;
+        std::cout << "GPU unstructured benchmark completed.\n\n";
 
         // Calculate speedup
         double speedup = cpu_time / gpu_time;
 
         // Print results
-        std::cout << "Unstructured results for " << query_size << " query points:" << std::endl;
-        std::cout << "  CPU time: " << std::fixed << std::setprecision(3) << cpu_time << " ms" << std::endl;
-        std::cout << "  GPU time: " << std::fixed << std::setprecision(3) << gpu_time << " ms" << std::endl;
-        std::cout << "  Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
-        std::cout << "  Throughput:" << std::endl;
-        std::cout << "    CPU: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0))
-                  << " queries/second" << std::endl;
-        std::cout << "    GPU: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0))
-                  << " queries/second" << std::endl;
+        std::cout << "[CPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
+        std::cout << "[GPU, Unstructured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0)) << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
         std::cout << std::endl;
     }
 
