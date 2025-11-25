@@ -1,7 +1,7 @@
 #ifndef POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
 #define POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
 
-#include "benchmark_base.h"
+#include "benchmark_structured_base.h"
 #include <iostream>
 #include <iomanip>
 #include <chrono>

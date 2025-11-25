@@ -1,4 +1,4 @@
-#include "benchmark_base.h"
+#include "benchmark_structured_base.h"
 
 /**
  * @brief Performance benchmark program for structured data with 1,000 points (inside domain)
