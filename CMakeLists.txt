@@ -62,14 +62,14 @@ set(SOURCES
     src/unstructured_interpolator.cpp
     src/kd_tree.cpp
     src/exporter.cpp
-    src/interpolator_adapters.cpp
-    src/interpolator_factory.cpp
 )
 
 set(CUDA_SOURCES
     src/api.cu
     src/cuda_interpolator.cu
     src/memory_manager.cu
+    src/interpolator_adapters.cu
+    src/interpolator_factory.cu
 )
 
 # Static library

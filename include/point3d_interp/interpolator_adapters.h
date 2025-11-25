@@ -5,7 +5,10 @@
 #include "cpu_interpolator.h"
 #include "unstructured_interpolator.h"
 #include "grid_structure.h"
+#include "spatial_grid.h"
 #include <memory>
+#include "memory_manager.h"
+
 
 namespace p3d {
 
@@ -90,7 +93,9 @@ private:
     std::unique_ptr<CPUInterpolator> cpu_interpolator_;  // Fallback for single queries
     InterpolationMethod method_;
     ExtrapolationMethod extrapolation_;
-    // GPU resources would be added here
+
+    // GPU resources
+    cuda::GpuMemory<MagneticFieldData> d_grid_data_;  // Device memory for grid data
 };
 
 /**
@@ -117,8 +122,14 @@ public:
 private:
     std::unique_ptr<UnstructuredInterpolator> unstructured_interpolator_;
     InterpolationMethod method_;
-    ExtrapolationMethod extrapolation_;
-    // GPU resources would be added here
+    ExtrapolationMethod                       extrapolation_;
+    
+    // GPU resources
+    cuda::GpuMemory<Point3D> d_points_;              // Device memory for data points
+    cuda::GpuMemory<MagneticFieldData> d_field_data_; // Device memory for field data
+    cuda::GpuMemory<uint32_t> d_cell_offsets_;       // Device memory for spatial grid cell offsets
+    cuda::GpuMemory<uint32_t> d_cell_points_;        // Device memory for spatial grid cell points
+    SpatialGrid spatial_grid_;                            // Spatial grid for efficient neighbor finding
 };
 
 }  // namespace p3d

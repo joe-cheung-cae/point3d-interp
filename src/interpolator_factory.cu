@@ -1,6 +1,7 @@
 #include "point3d_interp/interpolator_factory.h"
 #include <stdexcept>
 #include <algorithm>
+#include "point3d_interp/interpolator_adapters.h"
 
 namespace p3d {
 

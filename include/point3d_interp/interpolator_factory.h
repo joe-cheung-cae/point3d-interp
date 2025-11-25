@@ -2,7 +2,6 @@
 #define POINTER3D_INTERP_INTERPOLATOR_FACTORY_H
 
 #include "interpolator_interface.h"
-#include "interpolator_adapters.h"
 #include "grid_structure.h"
 #include <memory>
 #include <vector>
