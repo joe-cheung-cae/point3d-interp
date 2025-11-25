@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.25.0 FATAL_ERROR)
+
+# Set the CUDA architectures
+set(CMAKE_CUDA_ARCHITECTURES native CACHE STRING "Choose the CUDA architectures")
+set_property(CACHE CMAKE_CUDA_ARCHITECTURES PROPERTY STRINGS native all all-major)
+
 project(point3d_interp LANGUAGES CXX CUDA)
 
 # Set CMAKE build type
@@ -8,9 +13,6 @@ set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release Debug)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Set CUDA architectures
-set(CMAKE_CUDA_ARCHITECTURES 60 70 75 80 86)
 
 # Export compile command
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
