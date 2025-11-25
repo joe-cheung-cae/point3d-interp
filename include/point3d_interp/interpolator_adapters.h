@@ -32,6 +32,7 @@ public:
     GridParams getGridParams() const override;
     std::vector<Point3D> getCoordinates() const override;
     std::vector<MagneticFieldData> getFieldData() const override;
+    bool getLastKernelTime(float& kernel_time_ms) const override;
 
 private:
     std::unique_ptr<RegularGrid3D> grid_;
@@ -60,6 +61,7 @@ public:
     GridParams getGridParams() const override;
     std::vector<Point3D> getCoordinates() const override;
     std::vector<MagneticFieldData> getFieldData() const override;
+    bool getLastKernelTime(float& kernel_time_ms) const override;
 
 private:
     std::unique_ptr<UnstructuredInterpolator> unstructured_interpolator_;
@@ -87,6 +89,7 @@ public:
     GridParams getGridParams() const override;
     std::vector<Point3D> getCoordinates() const override;
     std::vector<MagneticFieldData> getFieldData() const override;
+    bool getLastKernelTime(float& kernel_time_ms) const override;
 
 private:
     std::unique_ptr<RegularGrid3D> grid_;
@@ -96,6 +99,9 @@ private:
 
     // GPU resources
     cuda::GpuMemory<MagneticFieldData> d_grid_data_;  // Device memory for grid data
+
+    // Kernel timing
+    mutable float last_kernel_time_ms_;
 };
 
 /**
@@ -118,6 +124,7 @@ public:
     GridParams getGridParams() const override;
     std::vector<Point3D> getCoordinates() const override;
     std::vector<MagneticFieldData> getFieldData() const override;
+    bool getLastKernelTime(float& kernel_time_ms) const override;
 
 private:
     std::unique_ptr<UnstructuredInterpolator> unstructured_interpolator_;
@@ -130,6 +137,9 @@ private:
     cuda::GpuMemory<uint32_t> d_cell_offsets_;       // Device memory for spatial grid cell offsets
     cuda::GpuMemory<uint32_t> d_cell_points_;        // Device memory for spatial grid cell points
     SpatialGrid spatial_grid_;                            // Spatial grid for efficient neighbor finding
+
+    // Kernel timing
+    mutable float last_kernel_time_ms_;
 };
 
 }  // namespace p3d

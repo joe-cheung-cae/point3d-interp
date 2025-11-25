@@ -52,6 +52,9 @@ endif()
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
+# Copy data files to build directory for examples
+file(COPY ${PROJECT_SOURCE_DIR}/data DESTINATION ${CMAKE_BINARY_DIR})
+
 # Source files (only include existing files)
 set(SOURCES
     src/error_codes.cpp

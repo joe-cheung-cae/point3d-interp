@@ -72,6 +72,10 @@ std::vector<MagneticFieldData> CPUStructuredInterpolatorAdapter::getFieldData() 
     return grid_->getFieldData();
 }
 
+bool CPUStructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
+    return false;  // CPU doesn't have kernel timing
+}
+
 // CPUUnstructuredInterpolatorAdapter implementation
 
 CPUUnstructuredInterpolatorAdapter::CPUUnstructuredInterpolatorAdapter(
@@ -114,16 +118,21 @@ std::vector<MagneticFieldData> CPUUnstructuredInterpolatorAdapter::getFieldData(
     return unstructured_interpolator_->getFieldData();
 }
 
+bool CPUUnstructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
+    return false;  // CPU doesn't have kernel timing
+}
+
 // GPUStructuredInterpolatorAdapter implementation
 
 GPUStructuredInterpolatorAdapter::GPUStructuredInterpolatorAdapter(
-    std::unique_ptr<RegularGrid3D> grid,
-    InterpolationMethod method,
-    ExtrapolationMethod extrapolation)
-    : grid_(std::move(grid))
-    , cpu_interpolator_(std::make_unique<CPUInterpolator>(*grid_, extrapolation))
-    , method_(method)
-    , extrapolation_(extrapolation) {
+     std::unique_ptr<RegularGrid3D> grid,
+     InterpolationMethod method,
+     ExtrapolationMethod extrapolation)
+     : grid_(std::move(grid))
+     , cpu_interpolator_(std::make_unique<CPUInterpolator>(*grid_, extrapolation))
+     , method_(method)
+     , extrapolation_(extrapolation)
+     , last_kernel_time_ms_(0.0f) {
     // Initialize GPU memory for grid data
     const auto& field_data = grid_->getFieldData();
     if (!field_data.empty()) {
@@ -161,6 +170,14 @@ std::vector<InterpolationResult> GPUStructuredInterpolatorAdapter::queryBatch(
     const size_t num_threads = 256;
     const size_t num_blocks = (points.size() + num_threads - 1) / num_threads;
 
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Record start event
+    cudaEventRecord(start, 0);
+
     p3d::cuda::TricubicHermiteInterpolationKernel<<<num_blocks, num_threads>>>(
         d_query_points.getDevicePtr(),
         d_grid_data_.getDevicePtr(),
@@ -170,15 +187,30 @@ std::vector<InterpolationResult> GPUStructuredInterpolatorAdapter::queryBatch(
         extrapolation_method
     );
 
+    // Record stop event
+    cudaEventRecord(stop, 0);
+
     // Check for kernel launch errors
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
+        // Clean up events
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         // Fallback to CPU on error
         return cpu_interpolator_->queryBatch(points);
     }
 
     // Wait for kernel completion
-    cudaDeviceSynchronize();
+    cudaEventSynchronize(stop);
+
+    // Calculate elapsed time
+    float elapsed_time_ms;
+    cudaEventElapsedTime(&elapsed_time_ms, start, stop);
+    last_kernel_time_ms_ = elapsed_time_ms;
+
+    // Clean up events
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     // Copy results back to host
     std::vector<InterpolationResult> results(points.size());
@@ -209,15 +241,21 @@ std::vector<MagneticFieldData> GPUStructuredInterpolatorAdapter::getFieldData() 
     return grid_->getFieldData();
 }
 
+bool GPUStructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
+    kernel_time_ms = last_kernel_time_ms_;
+    return true;
+}
+
 // GPUUnstructuredInterpolatorAdapter implementation
 
 GPUUnstructuredInterpolatorAdapter::GPUUnstructuredInterpolatorAdapter(
-    std::unique_ptr<UnstructuredInterpolator> interpolator,
-    InterpolationMethod method,
-    ExtrapolationMethod extrapolation)
-    : unstructured_interpolator_(std::move(interpolator))
-    , method_(method)
-    , extrapolation_(extrapolation) {
+     std::unique_ptr<UnstructuredInterpolator> interpolator,
+     InterpolationMethod method,
+     ExtrapolationMethod extrapolation)
+     : unstructured_interpolator_(std::move(interpolator))
+     , method_(method)
+     , extrapolation_(extrapolation)
+     , last_kernel_time_ms_(0.0f) {
     // Initialize GPU memory for points and field data
     const auto& coordinates = unstructured_interpolator_->getCoordinates();
     const auto& field_data = unstructured_interpolator_->getFieldData();
@@ -281,6 +319,14 @@ std::vector<InterpolationResult> GPUUnstructuredInterpolatorAdapter::queryBatch(
     const size_t num_threads = 256;
     const size_t num_blocks = (points.size() + num_threads - 1) / num_threads;
 
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Record start event
+    cudaEventRecord(start, 0);
+
     if (!spatial_grid_.cell_offsets.empty() && !spatial_grid_.cell_points.empty()) {
         // Use spatial grid kernel for better performance
         p3d::cuda::IDWSpatialGridKernel<<<num_blocks, num_threads>>>(
@@ -318,15 +364,30 @@ std::vector<InterpolationResult> GPUUnstructuredInterpolatorAdapter::queryBatch(
         );
     }
 
+    // Record stop event
+    cudaEventRecord(stop, 0);
+
     // Check for kernel launch errors
     cudaError_t error = cudaGetLastError();
     if (error != cudaSuccess) {
+        // Clean up events
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         // Fallback to CPU on error
         return unstructured_interpolator_->queryBatch(points);
     }
 
     // Wait for kernel completion
-    cudaDeviceSynchronize();
+    cudaEventSynchronize(stop);
+
+    // Calculate elapsed time
+    float elapsed_time_ms;
+    cudaEventElapsedTime(&elapsed_time_ms, start, stop);
+    last_kernel_time_ms_ = elapsed_time_ms;
+
+    // Clean up events
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     // Copy results back to host
     std::vector<InterpolationResult> results(points.size());
@@ -355,6 +416,11 @@ std::vector<Point3D> GPUUnstructuredInterpolatorAdapter::getCoordinates() const 
 
 std::vector<MagneticFieldData> GPUUnstructuredInterpolatorAdapter::getFieldData() const {
     return unstructured_interpolator_->getFieldData();
+}
+
+bool GPUUnstructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
+    kernel_time_ms = last_kernel_time_ms_;
+    return true;
 }
 
 }  // namespace p3d

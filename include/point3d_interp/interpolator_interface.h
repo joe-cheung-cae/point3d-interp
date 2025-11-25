@@ -90,6 +90,13 @@ public:
      * @return Vector of magnetic field data
      */
     virtual std::vector<MagneticFieldData> getFieldData() const = 0;
+
+    /**
+     * @brief Get the last kernel execution time (GPU only)
+     * @param kernel_time_ms Output kernel execution time in milliseconds
+     * @return true if timing is available, false otherwise
+     */
+    virtual bool getLastKernelTime(float& kernel_time_ms) const = 0;
 };
 
 /**

@@ -96,12 +96,12 @@ class MagneticFieldInterpolator::Impl {
                                         const std::vector<InterpolationResult>& results, const std::string& filename);
 
     ErrorCode GetLastKernelTime(float& kernel_time_ms) const {
-        if (use_gpu_ && gpu_initialized_) {
-            kernel_time_ms = last_kernel_time_ms_;
-            return ErrorCode::Success;
-        } else {
-            return ErrorCode::CudaNotAvailable;
+        if (use_gpu_ && gpu_initialized_ && interpolator_) {
+            if (interpolator_->getLastKernelTime(kernel_time_ms)) {
+                return ErrorCode::Success;
+            }
         }
+        return ErrorCode::CudaNotAvailable;
     }
 
     const GridParams& GetGridParams() const {
