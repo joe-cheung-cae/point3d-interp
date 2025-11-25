@@ -175,7 +175,7 @@ class MagneticFieldInterpolator::Impl {
                 GridParams grid_params = grid_->getParams();
 
                 // Calculate shared memory size for kernel
-                const size_t shared_mem_size = sizeof(GridParams) + 8 * sizeof(MagneticFieldData);
+                const size_t shared_mem_size = sizeof(GridParams);
 
                 // Launch kernel with specified stream
                 cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, shared_mem_size, (cudaStream_t)stream>>>(
@@ -745,7 +745,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
             dim3 grid_dim(num_blocks);
 
             // Calculate shared memory size for kernel
-            const size_t shared_mem_size = sizeof(GridParams) + 8 * sizeof(MagneticFieldData);
+            const size_t shared_mem_size = sizeof(GridParams);
 
             // Create CUDA events for kernel timing
             cudaEvent_t start_event, stop_event;

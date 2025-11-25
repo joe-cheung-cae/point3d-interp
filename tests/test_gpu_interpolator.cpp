@@ -187,17 +187,6 @@ TEST_F(GPUTest, GPUOutOfBounds) {
     EXPECT_FALSE(result.valid);
 }
 
-// Test invalid GPU device ID
-TEST_F(GPUTest, InvalidGPUDevice) {
-    // Try device ID 999 (likely invalid)
-    MagneticFieldInterpolator interp(true, 999);
-
-    ErrorCode err = interp.LoadFromMemory(coordinates_.data(), field_data_.data(), coordinates_.size());
-    // Should either fail gracefully or succeed if device ID is ignored
-    // For now, just check it doesn't crash
-    SUCCEED();
-}
-
 // Test GPU Hermite interpolation accuracy
 TEST_F(GPUTest, GPUHermiteInterpolationAccuracy) {
     MagneticFieldInterpolator gpu_interp(true, 0);

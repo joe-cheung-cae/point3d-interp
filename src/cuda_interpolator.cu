@@ -878,18 +878,17 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
     const Real grid_z = (query_point.z - origin.z) / spacing.z;
 
     // Fast floor and bounds checking
-    const int i0 = __float2int_rd(grid_x);
-    const int j0 = __float2int_rd(grid_y);
-    const int k0 = __float2int_rd(grid_z);
+    int i0 = __float2int_rd(grid_x);
+    int j0 = __float2int_rd(grid_y);
+    int k0 = __float2int_rd(grid_z);
 
-    // Combine bounds checking to reduce branching
-    const bool valid_cell = (i0 >= 0) && (i0 < static_cast<int>(nx) - 1) && (j0 >= 0) &&
-                            (j0 < static_cast<int>(ny) - 1) && (k0 >= 0) && (k0 < static_cast<int>(nz) - 1);
-
-    if (!valid_cell) {
-        results[tid] = result;
-        return;
-    }
+    // Clamp to valid cell range (match CPU implementation)
+    int max_i = static_cast<int>(nx) - 1;
+    int max_j = static_cast<int>(ny) - 1;
+    int max_k = static_cast<int>(nz) - 1;
+    i0 = min(i0, max_i - 1);
+    j0 = min(j0, max_j - 1);
+    k0 = min(k0, max_k - 1);
 
     // Calculate local coordinates (using fast math)
     const Real tx = grid_x - __int2float_rn(i0);
@@ -906,18 +905,16 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
     const uint32_t idx_011  = base_idx + nx * ny + nx;      // (i0, j1, k1)
     const uint32_t idx_111  = base_idx + nx * ny + nx + 1;  // (i1, j1, k1)
 
-    // Use shared memory for vertex data to improve memory access patterns
-    MagneticFieldData* shared_vertex_data = reinterpret_cast<MagneticFieldData*>(shared_mem + sizeof(GridParams));
-
-    // Load vertex data into shared memory cooperatively
-    if (threadIdx.x < 8) {
-        const uint32_t indices[8]       = {base_idx, idx_100, idx_010, idx_110, idx_001, idx_101, idx_011, idx_111};
-        shared_vertex_data[threadIdx.x] = grid_data[indices[threadIdx.x]];
-    }
-    __syncthreads();
-
-    // Access vertex data from shared memory
-    const MagneticFieldData* vertex_data = shared_vertex_data;
+    // Load vertex data directly (fix shared memory bug)
+    MagneticFieldData vertex_data[8];
+    vertex_data[0] = grid_data[base_idx];
+    vertex_data[1] = grid_data[idx_100];
+    vertex_data[2] = grid_data[idx_010];
+    vertex_data[3] = grid_data[idx_110];
+    vertex_data[4] = grid_data[idx_001];
+    vertex_data[5] = grid_data[idx_101];
+    vertex_data[6] = grid_data[idx_011];
+    vertex_data[7] = grid_data[idx_111];
 
     // Perform tricubic Hermite interpolation
     result.data  = TricubicHermiteInterpolate(vertex_data, tx, ty, tz, grid_params);
