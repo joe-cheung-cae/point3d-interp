@@ -8,6 +8,8 @@ The Point3D Interpolation Library provides a high-performance C++ API for 3D mag
 
 ### MagneticFieldInterpolator
 
+The main interface class for magnetic field interpolation. Uses a modular architecture with abstract interfaces and factory patterns for extensibility.
+
 The main interface class for magnetic field interpolation.
 
 #### Constructor
@@ -312,6 +314,126 @@ enum class ExportFormat {
 };
 ```
 
+## Extensibility Interfaces
+
+The library provides abstract interfaces for extending interpolation capabilities.
+
+### IInterpolator
+
+Abstract base class defining the interface for all interpolator implementations.
+
+```cpp
+class IInterpolator {
+public:
+    virtual ~IInterpolator() = default;
+
+    virtual InterpolationResult query(const Point3D& point) const = 0;
+    virtual std::vector<InterpolationResult> queryBatch(const std::vector<Point3D>& points) const = 0;
+    virtual bool supportsGPU() const = 0;
+    virtual DataStructureType getDataType() const = 0;
+    virtual InterpolationMethod getMethod() const = 0;
+    virtual ExtrapolationMethod getExtrapolationMethod() const = 0;
+    virtual size_t getDataCount() const = 0;
+    virtual void getBounds(Point3D& min_bound, Point3D& max_bound) const = 0;
+    virtual GridParams getGridParams() const = 0;
+    virtual std::vector<Point3D> getCoordinates() const = 0;
+    virtual std::vector<MagneticFieldData> getFieldData() const = 0;
+};
+```
+
+### IInterpolatorFactory
+
+Abstract factory interface for creating interpolator instances.
+
+```cpp
+class IInterpolatorFactory {
+public:
+    virtual ~IInterpolatorFactory() = default;
+
+    virtual std::unique_ptr<IInterpolator> createInterpolator(
+        DataStructureType dataType,
+        InterpolationMethod method,
+        const std::vector<Point3D>& coordinates,
+        const std::vector<MagneticFieldData>& fieldData,
+        ExtrapolationMethod extrapolation,
+        bool useGPU) = 0;
+
+    virtual bool supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const = 0;
+};
+```
+
+### InterpolatorFactory
+
+Concrete factory implementation providing the standard interpolation algorithms.
+
+```cpp
+class InterpolatorFactory : public IInterpolatorFactory {
+public:
+    std::unique_ptr<IInterpolator> createInterpolator(
+        DataStructureType dataType,
+        InterpolationMethod method,
+        const std::vector<Point3D>& coordinates,
+        const std::vector<MagneticFieldData>& fieldData,
+        ExtrapolationMethod extrapolation,
+        bool useGPU) override;
+
+    bool supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const override;
+};
+```
+
+### PluginInterpolatorFactory
+
+Factory supporting dynamic loading of interpolation algorithms via plugins.
+
+```cpp
+class PluginInterpolatorFactory : public IInterpolatorFactory {
+public:
+    void registerPlugin(std::unique_ptr<IInterpolatorFactory> plugin);
+
+    std::unique_ptr<IInterpolator> createInterpolator(
+        DataStructureType dataType,
+        InterpolationMethod method,
+        const std::vector<Point3D>& coordinates,
+        const std::vector<MagneticFieldData>& fieldData,
+        ExtrapolationMethod extrapolation,
+        bool useGPU) override;
+
+    bool supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const override;
+};
+```
+
+### GlobalInterpolatorFactory
+
+Global factory registry for managing interpolator factories.
+
+```cpp
+class GlobalInterpolatorFactory {
+public:
+    static GlobalInterpolatorFactory& instance();
+
+    void registerFactory(std::unique_ptr<IInterpolatorFactory> factory);
+
+    std::unique_ptr<IInterpolator> createInterpolator(
+        DataStructureType dataType,
+        InterpolationMethod method,
+        const std::vector<Point3D>& coordinates,
+        const std::vector<MagneticFieldData>& fieldData,
+        ExtrapolationMethod extrapolation = ExtrapolationMethod::None,
+        bool useGPU = false);
+};
+```
+
+### DataStructureType
+
+Enum specifying the type of data structure being interpolated.
+
+```cpp
+enum class DataStructureType {
+    RegularGrid,    // Structured grid data (supports tricubic Hermite)
+    Unstructured    // Unstructured point cloud data (supports IDW)
+};
+```
+
 ## Error Codes
 
 The library uses error codes instead of exceptions for error handling.
@@ -532,3 +654,132 @@ The `MagneticFieldInterpolator` class is not thread-safe. Create separate instan
 - Avoid frequent CPU-GPU data transfers
 - For large unstructured datasets (>1000 points), KD-tree spatial indexing is automatically used for optimal query performance
 - Batch processing with coalesced memory access maximizes GPU utilization
+
+## Extending the Library
+
+The library's modular architecture allows for easy extension with custom interpolation algorithms.
+
+### Adding a Custom Interpolation Algorithm
+
+```cpp
+#include "point3d_interp/interpolator_interface.h"
+
+class MyCustomInterpolator : public p3d::IInterpolator {
+public:
+    MyCustomInterpolator(const std::vector<p3d::Point3D>& coords,
+                        const std::vector<p3d::MagneticFieldData>& data)
+        : coordinates_(coords), field_data_(data) {}
+
+    p3d::InterpolationResult query(const p3d::Point3D& point) const override {
+        // Implement your custom interpolation algorithm
+        p3d::InterpolationResult result;
+        // ... your algorithm here ...
+        return result;
+    }
+
+    std::vector<p3d::InterpolationResult> queryBatch(
+        const std::vector<p3d::Point3D>& points) const override {
+        std::vector<p3d::InterpolationResult> results;
+        for (const auto& point : points) {
+            results.push_back(query(point));
+        }
+        return results;
+    }
+
+    // Implement other required interface methods
+    bool supportsGPU() const override { return false; }
+    p3d::DataStructureType getDataType() const override { return p3d::DataStructureType::Unstructured; }
+    p3d::InterpolationMethod getMethod() const override { return p3d::InterpolationMethod::IDW; } // Or custom enum value
+    p3d::ExtrapolationMethod getExtrapolationMethod() const override { return p3d::ExtrapolationMethod::None; }
+    size_t getDataCount() const override { return coordinates_.size(); }
+    void getBounds(p3d::Point3D& min_bound, p3d::Point3D& max_bound) const override {
+        // Calculate bounds
+    }
+    p3d::GridParams getGridParams() const override { return p3d::GridParams(); }
+    std::vector<p3d::Point3D> getCoordinates() const override { return coordinates_; }
+    std::vector<p3d::MagneticFieldData> getFieldData() const override { return field_data_; }
+
+private:
+    std::vector<p3d::Point3D> coordinates_;
+    std::vector<p3d::MagneticFieldData> field_data_;
+};
+```
+
+### Creating a Custom Factory
+
+```cpp
+#include "point3d_interp/interpolator_factory.h"
+
+class MyCustomFactory : public p3d::IInterpolatorFactory {
+public:
+    std::unique_ptr<p3d::IInterpolator> createInterpolator(
+        p3d::DataStructureType dataType,
+        p3d::InterpolationMethod method,
+        const std::vector<p3d::Point3D>& coordinates,
+        const std::vector<p3d::MagneticFieldData>& fieldData,
+        p3d::ExtrapolationMethod extrapolation,
+        bool useGPU) override {
+
+        if (method == p3d::InterpolationMethod::IDW && !useGPU) { // Your custom condition
+            return std::make_unique<MyCustomInterpolator>(coordinates, fieldData);
+        }
+        return nullptr;
+    }
+
+    bool supports(p3d::DataStructureType dataType, p3d::InterpolationMethod method, bool useGPU) const override {
+        return method == p3d::InterpolationMethod::IDW && !useGPU;
+    }
+};
+```
+
+### Registering Custom Algorithms
+
+```cpp
+#include "point3d_interp/interpolator_factory.h"
+
+int main() {
+    // Register your custom factory globally
+    p3d::GlobalInterpolatorFactory::instance().registerFactory(
+        std::make_unique<MyCustomFactory>());
+
+    // Now the library will automatically use your custom interpolator
+    // when appropriate conditions are met
+    p3d::MagneticFieldInterpolator interp;
+    interp.LoadFromCSV("data.csv");
+
+    // Your custom algorithm will be used automatically
+    p3d::InterpolationResult result;
+    interp.Query(p3d::Point3D(1.0, 1.0, 1.0), result);
+
+    return 0;
+}
+```
+
+### Plugin System
+
+For more advanced extensibility, use the plugin system:
+
+```cpp
+#include "point3d_interp/interpolator_factory.h"
+
+int main() {
+    // Create a plugin factory
+    p3d::PluginInterpolatorFactory pluginFactory;
+
+    // Register multiple algorithms
+    pluginFactory.registerPlugin(std::make_unique<MyCustomFactory>());
+    pluginFactory.registerPlugin(std::make_unique<AnotherCustomFactory>());
+
+    // Use the plugin factory
+    auto interpolator = pluginFactory.createInterpolator(
+        p3d::DataStructureType::Unstructured,
+        p3d::InterpolationMethod::IDW,
+        coordinates, fieldData,
+        p3d::ExtrapolationMethod::None,
+        false);
+
+    return 0;
+}
+```
+
+This architecture ensures the library remains maintainable, testable, and easily extensible while preserving full backward compatibility.

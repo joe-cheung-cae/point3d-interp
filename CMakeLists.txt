@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.18)
 project(point3d_interp LANGUAGES CXX CUDA)
 
+# Set CMAKE build type
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the build type")
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release Debug)
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,6 +60,8 @@ set(SOURCES
     src/unstructured_interpolator.cpp
     src/kd_tree.cpp
     src/exporter.cpp
+    src/interpolator_adapters.cpp
+    src/interpolator_factory.cpp
 )
 
 set(CUDA_SOURCES

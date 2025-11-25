@@ -11,6 +11,7 @@ A high-performance 3D magnetic field data interpolation library with GPU-acceler
 - 💪 **Reliable**: Comprehensive error handling, boundary checking, and extrapolation strategies for out-of-bounds queries
 - 🔄 **Compatible**: Automatic CPU/GPU switching with spatial indexing and performance optimizations
 - 📊 **Visualization Ready**: Built-in Paraview VTK export for data visualization and analysis
+- 🧩 **Extensible Architecture**: Modular design with abstract interfaces, factory patterns, and plugin support for easy algorithm extension
 - ✅ **Production Ready**: All tests pass (25/25, 100% success rate), fully documented, and ready for production use
 
 ## Quick Start
@@ -269,11 +270,15 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 
 ## Architecture Design
 
+The library uses a modular, extensible architecture based on abstract interfaces and factory patterns:
+
+### Core Components
+
 ```
 point3d_interp/
 ├── include/          # Public headers
 │   └── point3d_interp/
-│       ├── api.h                    # Main API
+│       ├── api.h                    # Main API (Pimpl pattern)
 │       ├── types.h                  # Data type definitions
 │       ├── error_codes.h            # Error codes
 │       ├── data_loader.h            # Data loader
@@ -282,9 +287,12 @@ point3d_interp/
 │       ├── unstructured_interpolator.h # Unstructured data interpolator
 │       ├── kd_tree.h                # KD-tree spatial indexing
 │       ├── spatial_grid.h           # GPU spatial grid
-│       └── memory_manager.h         # GPU memory management
+│       ├── memory_manager.h         # GPU memory management
+│       ├── interpolator_interface.h # Abstract interpolator interface
+│       ├── interpolator_adapters.h  # Adapter classes for existing interpolators
+│       └── interpolator_factory.h   # Factory classes for interpolator creation
 ├── src/              # Implementation files
-│   ├── api.cpp                      # API implementation
+│   ├── api.cu                       # API implementation (CUDA)
 │   ├── data_loader.cpp              # CSV parsing
 │   ├── grid_structure.cpp           # Grid management
 │   ├── cpu_interpolator.cpp         # CPU interpolation
@@ -292,12 +300,66 @@ point3d_interp/
 │   ├── kd_tree.cpp                  # KD-tree implementation
 │   ├── spatial_grid.cpp             # GPU spatial grid
 │   ├── cuda_interpolator.cu         # CUDA kernels
-│   └── memory_manager.cu            # GPU memory management
+│   ├── memory_manager.cu            # GPU memory management
+│   ├── interpolator_adapters.cpp    # Adapter implementations
+│   └── interpolator_factory.cpp     # Factory implementations
 ├── examples/         # Example programs
 ├── tests/            # Unit tests
 ├── data/             # Sample data
 └── docs/             # Documentation
 ```
+
+### Design Patterns
+
+#### Abstract Interface Pattern
+- `IInterpolator`: Defines the contract for all interpolator implementations
+- Enables polymorphic usage and decouples algorithm implementations from the API layer
+- Supports both structured and unstructured data types
+
+#### Adapter Pattern
+- `CPUStructuredInterpolatorAdapter`: Adapts existing CPU structured grid interpolator
+- `CPUUnstructuredInterpolatorAdapter`: Adapts existing CPU unstructured data interpolator
+- `GPUStructuredInterpolatorAdapter`: Adapts GPU structured grid interpolator
+- `GPUUnstructuredInterpolatorAdapter`: Adapts GPU unstructured data interpolator
+
+#### Factory Pattern
+- `InterpolatorFactory`: Creates appropriate interpolator based on data type and requirements
+- `PluginInterpolatorFactory`: Supports dynamic loading of interpolation algorithms
+- `GlobalInterpolatorFactory`: Manages factory instances globally
+
+#### Strategy Pattern
+- Automatic data type detection (regular grid vs unstructured)
+- Dynamic algorithm selection based on data characteristics
+- Configurable extrapolation strategies for out-of-bounds queries
+
+### Extension Points
+
+#### Adding New Interpolation Algorithms
+```cpp
+class MyCustomInterpolator : public IInterpolator {
+public:
+    InterpolationResult query(const Point3D& point) const override {
+        // Implement your algorithm
+    }
+    // ... other interface methods
+};
+```
+
+#### Registering Custom Factories
+```cpp
+class MyCustomFactory : public IInterpolatorFactory {
+public:
+    std::unique_ptr<IInterpolator> createInterpolator(...) override {
+        // Return your custom interpolator
+    }
+};
+
+// Register globally
+GlobalInterpolatorFactory::instance().registerFactory(
+    std::make_unique<MyCustomFactory>());
+```
+
+This architecture ensures the library remains maintainable, testable, and extensible while preserving backward compatibility.
 
 ## Build Options
 
