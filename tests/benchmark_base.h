@@ -58,13 +58,21 @@ class BenchmarkBase {
             double gpu_time    = gpu_results.first;
 
             // Print CPU results
-            std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
+            std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed
+                      << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0)
+                      << (query_size / (cpu_time / 1000.0)) << " q/s" << std::endl;
 
             if (gpu_time > 0) {
                 double speedup = cpu_time / gpu_time;
-                std::cout << "[GPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (gpu_time / 1000.0)) << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
+                std::cout << "[GPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed
+                          << std::setprecision(3) << gpu_time << " ms, Throughput: " << std::fixed
+                          << std::setprecision(0) << (query_size / (gpu_time / 1000.0))
+                          << " q/s, Speedup: " << std::fixed << std::setprecision(2) << speedup << "x" << std::endl;
             } else {
-                std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)" << std::endl;
+                std::cout << "[CPU, Structured, QuerySize=" << query_size << "] Time: " << std::fixed
+                          << std::setprecision(3) << cpu_time << " ms, Throughput: " << std::fixed
+                          << std::setprecision(0) << (query_size / (cpu_time / 1000.0)) << " q/s (GPU not available)"
+                          << std::endl;
             }
 
             // Export VTK files for visualization
@@ -141,7 +149,8 @@ class BenchmarkBase {
             std::string filename = "benchmark_output/cpu_" + std::to_string(data_size[0]) + "x" +
                                    std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
                                    "_q" + std::to_string(query_size) + ".vtk";
-            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results, filename);
+            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results,
+                                                          filename);
         }
 
         // Export GPU results
@@ -149,7 +158,8 @@ class BenchmarkBase {
             std::string filename = "benchmark_output/gpu_" + std::to_string(data_size[0]) + "x" +
                                    std::to_string(data_size[1]) + "x" + std::to_string(data_size[2]) + type_suffix +
                                    "_q" + std::to_string(query_size) + ".vtk";
-            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results, filename);
+            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results,
+                                                          filename);
         }
     }
 

@@ -479,8 +479,8 @@ __device__ size_t GetCellIndex(int ix, int iy, int iz, uint32_t dim_x, uint32_t 
 /**
  * @brief Get cell coordinates from world point (device function)
  */
-__device__ void GetCellCoords(const Point3D& point, const Point3D& origin, const Point3D& cell_size,
-                              uint32_t dim_x, uint32_t dim_y, uint32_t dim_z, int& ix, int& iy, int& iz) {
+__device__ void GetCellCoords(const Point3D& point, const Point3D& origin, const Point3D& cell_size, uint32_t dim_x,
+                              uint32_t dim_y, uint32_t dim_z, int& ix, int& iy, int& iz) {
     ix = static_cast<int>((point.x - origin.x) / cell_size.x);
     iy = static_cast<int>((point.y - origin.y) / cell_size.y);
     iz = static_cast<int>((point.z - origin.z) / cell_size.z);
@@ -516,8 +516,9 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                                      const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
-                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z, const Real power,
-                                     const int extrapolation_method, const Point3D min_bound, const Point3D max_bound,
+                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y,
+                                     uint32_t grid_dim_z, const Real power, const int extrapolation_method,
+                                     const Point3D min_bound, const Point3D                  max_bound,
                                      InterpolationResult* __restrict__ results, const size_t query_count) {
     const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -557,7 +558,8 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
 
     // Find the cell containing the query point
     int query_ix, query_iy, query_iz;
-    GetCellCoords(query_point, grid_origin, grid_cell_size, grid_dim_x, grid_dim_y, grid_dim_z, query_ix, query_iy, query_iz);
+    GetCellCoords(query_point, grid_origin, grid_cell_size, grid_dim_x, grid_dim_y, grid_dim_z, query_ix, query_iy,
+                  query_iz);
 
     Real              weight_sum   = 0.0f;
     MagneticFieldData weighted_sum = {};
@@ -573,8 +575,7 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
 
                 // Check bounds
                 if (cell_ix < 0 || cell_ix >= static_cast<int>(grid_dim_x) || cell_iy < 0 ||
-                    cell_iy >= static_cast<int>(grid_dim_y) || cell_iz < 0 ||
-                    cell_iz >= static_cast<int>(grid_dim_z)) {
+                    cell_iy >= static_cast<int>(grid_dim_y) || cell_iz < 0 || cell_iz >= static_cast<int>(grid_dim_z)) {
                     continue;
                 }
 
@@ -886,9 +887,9 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
     int max_i = static_cast<int>(nx) - 1;
     int max_j = static_cast<int>(ny) - 1;
     int max_k = static_cast<int>(nz) - 1;
-    i0 = min(i0, max_i - 1);
-    j0 = min(j0, max_j - 1);
-    k0 = min(k0, max_k - 1);
+    i0        = min(i0, max_i - 1);
+    j0        = min(j0, max_j - 1);
+    k0        = min(k0, max_k - 1);
 
     // Calculate local coordinates (using fast math)
     const Real tx = grid_x - __int2float_rn(i0);

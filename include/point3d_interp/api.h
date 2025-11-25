@@ -31,8 +31,9 @@ __global__ void IDWSpatialGridKernel(const Point3D* __restrict__ query_points, c
                                      const MagneticFieldData* __restrict__ field_data, const size_t data_count,
                                      const uint32_t* __restrict__ cell_offsets,
                                      const uint32_t* __restrict__ cell_points, const Point3D grid_origin,
-                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y, uint32_t grid_dim_z, const Real power,
-                                     const int extrapolation_method, const Point3D min_bound, const Point3D max_bound,
+                                     const Point3D grid_cell_size, uint32_t grid_dim_x, uint32_t grid_dim_y,
+                                     uint32_t grid_dim_z, const Real power, const int extrapolation_method,
+                                     const Point3D min_bound, const Point3D                  max_bound,
                                      InterpolationResult* __restrict__ results, const size_t query_count);
 
 __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
@@ -230,9 +231,9 @@ class MagneticFieldInterpolator {
      * @param filename Output filename
      * @return Error code
      */
-    static ErrorCode ExportInputPoints(const std::vector<Point3D>& coordinates,
-                                       const std::vector<MagneticFieldData>& field_data,
-                                       ExportFormat format, const std::string& filename);
+    static ErrorCode ExportInputPoints(const std::vector<Point3D>&           coordinates,
+                                       const std::vector<MagneticFieldData>& field_data, ExportFormat format,
+                                       const std::string& filename);
 
     /**
      * @brief Export output interpolation points to visualization format

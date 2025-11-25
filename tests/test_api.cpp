@@ -4,6 +4,9 @@
 #include <string>
 #include <iostream>
 #include <iomanip>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace p3d {
 namespace test {
@@ -11,6 +14,11 @@ namespace test {
 class APITest : public ::testing::Test {
   protected:
     void SetUp() override {
+        // Create directory for test files in current directory
+        std::string temp_dir = "test_output";
+        fs::create_directories(temp_dir);
+        std::cout << "Test output directory: " << temp_dir << std::endl;
+
         // Create temporary test file
         CreateTestCSVFile();
     }
@@ -221,8 +229,9 @@ TEST_F(APITest, UnstructuredDataLoading) {
 
     // Export input points and query result for visualization
     auto export_coordinates = interp.GetCoordinates();
-    auto export_field_data = interp.GetFieldData();
-    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK, "test_output/unstructured_input.vtk");
+    auto export_field_data  = interp.GetFieldData();
+    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
+                                                       "test_output/unstructured_input.vtk");
     EXPECT_EQ(err, ErrorCode::Success);
 
     std::vector<Point3D>             query_points = {query_point};
@@ -268,8 +277,9 @@ TEST_F(APITest, GPUUnstructuredData) {
 
     // Export input points and GPU query results for visualization
     auto export_coordinates = interp.GetCoordinates();
-    auto export_field_data = interp.GetFieldData();
-    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK, "test_output/gpu_unstructured_input.vtk");
+    auto export_field_data  = interp.GetFieldData();
+    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
+                                                       "test_output/gpu_unstructured_input.vtk");
     EXPECT_EQ(err, ErrorCode::Success);
 
     err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,

@@ -45,8 +45,9 @@ TEST_F(ExporterTest, ExportInputPointsVTK) {
     fs::path input_file = temp_dir / "input_points.vtk";
     std::cout << "Exporting input points to: " << input_file << std::endl;
     auto export_coordinates = interpolator.GetCoordinates();
-    auto export_field_data = interpolator.GetFieldData();
-    err = p3d::MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, p3d::ExportFormat::ParaviewVTK, input_file.string());
+    auto export_field_data  = interpolator.GetFieldData();
+    err                     = p3d::MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data,
+                                                                                p3d::ExportFormat::ParaviewVTK, input_file.string());
     ASSERT_EQ(err, p3d::ErrorCode::Success);
 
     // Check file exists
@@ -133,6 +134,7 @@ TEST_F(ExporterTest, ExportWithInvalidFormat) {
     // Try to export with invalid format (this will use Tecplot which is not implemented)
     // Note: Since Tecplot is not implemented, it should return InvalidParameter
     fs::path input_file = temp_dir / "invalid_format.vtk";
-    auto err = p3d::MagneticFieldInterpolator::ExportInputPoints(points, field_data, static_cast<p3d::ExportFormat>(999), input_file.string());
+    auto     err        = p3d::MagneticFieldInterpolator::ExportInputPoints(
+                   points, field_data, static_cast<p3d::ExportFormat>(999), input_file.string());
     EXPECT_EQ(err, p3d::ErrorCode::InvalidParameter);
 }
