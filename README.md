@@ -5,12 +5,13 @@ A high-performance 3D magnetic field data interpolation library with GPU-acceler
 ## Features
 
 - 🚀 **High Performance**: CUDA-based GPU acceleration with optimized kernels, supports millions of interpolation queries per second
-- 📊 **Accurate**: Implements tricubic Hermite interpolation algorithm with complete gradient computation for regular grids, IDW interpolation for unstructured data
+- 📊 **Accurate**: Implements tricubic Hermite interpolation algorithm with complete gradient computation for regular grids, IDW interpolation for unstructured data with KD-tree spatial indexing
 - 🔧 **Easy to Use**: Clean C++ API interface, supports single-point and batch queries with automatic data type detection
-- 🏗️ **Flexible**: Supports regular grid (tricubic Hermite) and unstructured point cloud data (IDW with KD-tree optimization)
-- 💪 **Reliable**: Comprehensive error handling, boundary checking, and extrapolation strategies
+- 🏗️ **Flexible**: Supports regular grid (tricubic Hermite) and unstructured point cloud data (IDW with configurable extrapolation strategies)
+- 💪 **Reliable**: Comprehensive error handling, boundary checking, and extrapolation strategies for out-of-bounds queries
 - 🔄 **Compatible**: Automatic CPU/GPU switching with spatial indexing and performance optimizations
-- ✅ **Production Ready**: All tests pass (100% success rate), fully documented, and ready for production use
+- 📊 **Visualization Ready**: Built-in Paraview VTK export for data visualization and analysis
+- ✅ **Production Ready**: All tests pass (25/25, 100% success rate), fully documented, and ready for production use
 
 ## Quick Start
 
@@ -83,6 +84,43 @@ int main() {
 }
 ```
 
+### Data Export for Visualization
+
+Export interpolation data to Paraview VTK format for advanced visualization and analysis:
+
+```cpp
+#include "point3d_interp/api.h"
+#include <vector>
+
+int main() {
+    using namespace p3d;
+
+    MagneticFieldInterpolator interp;
+    interp.LoadFromCSV("magnetic_field_data.csv");
+
+    // Export input sampling points with field data
+    ErrorCode err = MagneticFieldInterpolator::ExportInputPoints(
+        ExportFormat::ParaviewVTK, "input_points.vtk");
+    if (err != ErrorCode::Success) {
+        std::cerr << "Export failed: " << ErrorCodeToString(err) << std::endl;
+        return 1;
+    }
+
+    // Perform interpolation queries
+    std::vector<Point3D> query_points = {
+        {1.0, 1.0, 1.0}, {2.0, 2.0, 2.0}, {3.0, 3.0, 3.0}
+    };
+    std::vector<InterpolationResult> results;
+    interp.QueryBatch(query_points, results);
+
+    // Export interpolated results
+    err = MagneticFieldInterpolator::ExportOutputPoints(
+        ExportFormat::ParaviewVTK, query_points, results, "output_points.vtk");
+
+    return 0;
+}
+```
+
 ### Direct CUDA Kernel Access (Advanced)
 
 For maximum performance and integration with existing CUDA applications, you can access the interpolation kernel directly:
@@ -111,11 +149,11 @@ int main() {
     cudaMemcpy(d_query_points, host_queries, num_queries * sizeof(Point3D), cudaMemcpyHostToDevice);
 
     // Get optimal kernel configuration
-    dim3 block_dim, grid_dim;
-    interp.GetOptimalKernelConfig(num_queries, block_dim, grid_dim);
+    KernelConfig config;
+    interp.GetOptimalKernelConfig(num_queries, config);
 
     // Launch kernel directly
-    TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
+    TricubicHermiteInterpolationKernel<<<config.grid_x, config.grid_y, config.grid_z, config.block_x, config.block_y, config.block_z>>>(
         d_query_points, d_field_data, interp.GetGridParams(), d_results, num_queries);
 
     // Copy results back
@@ -176,7 +214,7 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 - `use_gpu`: Whether to use GPU acceleration (default: true)
 - `device_id`: CUDA device ID (default: 0)
 - `method`: Interpolation method (default: TricubicHermite)
-- `extrapolation_method`: Extrapolation method (default: None)
+- `extrapolation_method`: Extrapolation method for out-of-bounds queries in unstructured data (default: None)
 
 #### Methods
 
@@ -202,15 +240,25 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 
 ## Performance Characteristics
 
-### Benchmark Results (Example)
+### Benchmark Results (Latest)
 
+#### Structured Data (Regular Grids)
 | Configuration | Data Points | Query Points | CPU Time | GPU Time | Speedup |
 |---------------|-------------|--------------|----------|----------|---------|
-| 3x3x3 grid | 27 | 1,000 | 0.5ms | 0.1ms | 5x |
-| 10x10x10 grid | 1,000 | 10,000 | 5ms | 0.8ms | 6x |
-| 50x50x50 grid | 125,000 | 100,000 | 200ms | 15ms | 13x |
+| 10x10x10 grid | 1,000 | 10,000 | 1.06ms | 0.72ms | 1.47x |
+| 20x20x20 grid | 8,000 | 10,000 | 1.06ms | 0.70ms | 1.51x |
+| 30x30x30 grid | 27,000 | 10,000 | 0.85ms | 0.78ms | 1.09x |
+| 50x50x50 grid | 125,000 | 10,000 | 1.63ms | 0.90ms | 1.81x |
 
-*Test Environment: Intel i7-9700K + NVIDIA RTX 3080*
+#### Unstructured Data (Point Clouds)
+| Configuration | Data Points | Query Points | CPU Time | GPU Time | Speedup |
+|---------------|-------------|--------------|----------|----------|---------|
+| 1,000 points | 1,000 | 10,000 | 72.03ms | 0.80ms | 89.81x |
+| 8,000 points | 8,000 | 10,000 | 579.45ms | 1.57ms | 369.54x |
+| 27,000 points | 27,000 | 10,000 | 2002.41ms | 0.97ms | 2068.60x |
+| 125,000 points | 125,000 | 10,000 | 9457.22ms | 2.08ms | 4548.93x |
+
+*Test Environment: Intel i7-13700K + NVIDIA GeForce RTX 3050 Ti Laptop GPU*
 
 ### Optimization Recommendations
 

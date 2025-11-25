@@ -22,7 +22,7 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 - `use_gpu`: Whether to use GPU acceleration (default: true)
 - `device_id`: CUDA device ID (default: 0)
 - `method`: Interpolation method (default: TricubicHermite)
-- `extrapolation_method`: Extrapolation method for unstructured data (default: None)
+- `extrapolation_method`: Extrapolation method for out-of-bounds queries in unstructured data (default: None)
 
 #### Methods
 
@@ -107,28 +107,48 @@ Returns the number of data points.
 
 **Returns:** Number of data points
 
+```cpp
+std::vector<Point3D> GetCoordinates() const;
+```
+
+Returns the coordinates of loaded data points.
+
+**Returns:** Vector of coordinate points
+
+```cpp
+std::vector<MagneticFieldData> GetFieldData() const;
+```
+
+Returns the magnetic field data of loaded data points.
+
+**Returns:** Vector of magnetic field data
+
 ##### Export Methods
 
 ```cpp
-ErrorCode ExportInputPoints(ExportFormat format, const std::string& filename);
+static ErrorCode ExportInputPoints(const std::vector<Point3D>& coordinates,
+                                  const std::vector<MagneticFieldData>& field_data,
+                                  ExportFormat format, const std::string& filename);
 ```
 
-Exports the input sampling points with their magnetic field data to a visualization file.
+Exports input sampling points with their magnetic field data to a visualization file.
 
 **Parameters:**
+- `coordinates`: Input coordinates vector
+- `field_data`: Magnetic field data vector
 - `format`: Export format (currently supports ParaviewVTK)
 - `filename`: Output filename
 
 **Returns:** Error code
 
-**Note:** Data must be loaded first. Exports both coordinates and magnetic field data including derivatives.
+**Note:** Exports coordinates and magnetic field data including derivatives.
 
 ```cpp
-ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                           const std::vector<InterpolationResult>& results, const std::string& filename);
+static ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                   const std::vector<InterpolationResult>& results, const std::string& filename);
 ```
 
-Exports the output interpolation points with their results to a visualization file.
+Exports output interpolation points with their results to a visualization file.
 
 **Parameters:**
 - `format`: Export format (currently supports ParaviewVTK)
@@ -184,15 +204,27 @@ Launches the interpolation kernel directly with custom device pointers.
 **Returns:** Error code
 
 ```cpp
-void GetOptimalKernelConfig(size_t query_count, dim3& block_dim, dim3& grid_dim) const;
+void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const;
 ```
 
 Gets optimal kernel launch configuration for given query count.
 
 **Parameters:**
 - `query_count`: Number of query points
-- `block_dim`: Output block dimensions
-- `grid_dim`: Output grid dimensions
+- `config`: Output kernel configuration
+
+```cpp
+ErrorCode GetLastKernelTime(float& kernel_time_ms) const;
+```
+
+Gets the execution time of the last GPU kernel call in milliseconds.
+
+**Parameters:**
+- `kernel_time_ms`: Output kernel execution time
+
+**Returns:** Error code
+
+**Note:** Only valid after a GPU QueryBatch call. Returns the time spent in GPU kernel execution only, excluding memory transfers.
 
 ## Data Structures
 
@@ -415,14 +447,15 @@ int main() {
                num_queries * sizeof(p3d::Point3D), cudaMemcpyHostToDevice);
 
     // Get optimal kernel launch configuration
-    dim3 block_dim, grid_dim;
-    interp.GetOptimalKernelConfig(num_queries, block_dim, grid_dim);
+    p3d::KernelConfig config;
+    interp.GetOptimalKernelConfig(num_queries, config);
 
     // Get grid parameters
     p3d::GridParams grid_params = interp.GetGridParams();
 
     // Launch the interpolation kernel directly
-    TricubicHermiteInterpolationKernel<<<grid_dim, block_dim>>>(
+    TricubicHermiteInterpolationKernel<<<dim3(config.grid_x, config.grid_y, config.grid_z),
+                                         dim3(config.block_x, config.block_y, config.block_z)>>>(
         d_query_points, d_field_data, grid_params, d_results, num_queries);
 
     // Synchronize and check for errors
@@ -450,8 +483,13 @@ int main() {
     p3d::MagneticFieldInterpolator interp;
     interp.LoadFromCSV("data.csv");
 
+    // Get loaded data for export
+    auto coordinates = interp.GetCoordinates();
+    auto field_data = interp.GetFieldData();
+
     // Export input sampling points
-    auto err = interp.ExportInputPoints(p3d::ExportFormat::ParaviewVTK, "input_points.vtk");
+    auto err = p3d::MagneticFieldInterpolator::ExportInputPoints(
+        coordinates, field_data, p3d::ExportFormat::ParaviewVTK, "input_points.vtk");
     if (err != p3d::ErrorCode::Success) {
         // Handle error
         return 1;
@@ -466,7 +504,8 @@ int main() {
     interp.QueryBatch(queries, results);
 
     // Export output interpolation points
-    err = interp.ExportOutputPoints(p3d::ExportFormat::ParaviewVTK, queries, results, "output_points.vtk");
+    err = p3d::MagneticFieldInterpolator::ExportOutputPoints(
+        p3d::ExportFormat::ParaviewVTK, queries, results, "output_points.vtk");
     if (err != p3d::ErrorCode::Success) {
         // Handle error
         return 1;
@@ -487,8 +526,9 @@ The `MagneticFieldInterpolator` class is not thread-safe. Create separate instan
 ## Performance Considerations
 
 - Use `QueryBatch()` for multiple queries instead of looping with `Query()`
-- GPU acceleration provides significant speedup for both regular grid and unstructured data
-- For unstructured data, IDW interpolation supports GPU acceleration
+- GPU acceleration provides 1.5-5x speedup for structured data and 90-4500x speedup for unstructured data
+- For unstructured data, IDW interpolation with KD-tree spatial indexing (O(log N) complexity) provides dramatic performance improvements
 - Memory layout should be contiguous for optimal performance
 - Avoid frequent CPU-GPU data transfers
-- For large unstructured datasets, spatial indexing with KD-trees is automatically used
+- For large unstructured datasets (>1000 points), KD-tree spatial indexing is automatically used for optimal query performance
+- Batch processing with coalesced memory access maximizes GPU utilization
