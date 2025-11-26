@@ -38,17 +38,15 @@ TEST_F(ExporterTest, ExportInputPointsVTK) {
     p3d::MagneticFieldInterpolator interpolator;
 
     // Load test data
-    auto err = interpolator.LoadFromMemory(points.data(), field_data.data(), points.size());
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
+    EXPECT_NO_THROW(interpolator.LoadFromMemory(points.data(), field_data.data(), points.size()));
 
     // Export input points
     fs::path input_file = temp_dir / "input_points.vtk";
     std::cout << "Exporting input points to: " << input_file << std::endl;
     auto export_coordinates = interpolator.GetCoordinates();
     auto export_field_data  = interpolator.GetFieldData();
-    err                     = p3d::MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data,
-                                                                                p3d::ExportFormat::ParaviewVTK, input_file.string());
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
+    EXPECT_NO_THROW(p3d::MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data,
+                                                                      p3d::ExportFormat::ParaviewVTK, input_file.string()));
 
     // Check file exists
     ASSERT_TRUE(fs::exists(input_file));
@@ -80,23 +78,20 @@ TEST_F(ExporterTest, ExportOutputPointsVTK) {
     p3d::MagneticFieldInterpolator interpolator;
 
     // Load test data
-    auto err = interpolator.LoadFromMemory(points.data(), field_data.data(), points.size());
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
+    EXPECT_NO_THROW(interpolator.LoadFromMemory(points.data(), field_data.data(), points.size()));
 
     // Create query points
     std::vector<p3d::Point3D> query_points = {{0.5f, 0.5f, 0.5f}, {0.25f, 0.25f, 0.25f}};
 
     // Query interpolation results
     std::vector<p3d::InterpolationResult> results;
-    err = interpolator.QueryBatch(query_points, results);
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
+    EXPECT_NO_THROW(interpolator.QueryBatch(query_points, results));
     ASSERT_EQ(results.size(), query_points.size());
 
     // Export output points
     fs::path output_file = temp_dir / "output_points.vtk";
     std::cout << "Exporting output points to: " << output_file << std::endl;
-    err = interpolator.ExportOutputPoints(p3d::ExportFormat::ParaviewVTK, query_points, results, output_file.string());
-    ASSERT_EQ(err, p3d::ErrorCode::Success);
+    EXPECT_NO_THROW(interpolator.ExportOutputPoints(p3d::ExportFormat::ParaviewVTK, query_points, results, output_file.string()));
 
     // Check file exists
     ASSERT_TRUE(fs::exists(output_file));
@@ -132,9 +127,9 @@ TEST_F(ExporterTest, ExportWithoutDataLoaded) {
 
 TEST_F(ExporterTest, ExportWithInvalidFormat) {
     // Try to export with invalid format (this will use Tecplot which is not implemented)
-    // Note: Since Tecplot is not implemented, it should return InvalidParameter
+    // Note: Since Tecplot is not implemented, it should throw an exception
     fs::path input_file = temp_dir / "invalid_format.vtk";
-    auto     err        = p3d::MagneticFieldInterpolator::ExportInputPoints(
-                   points, field_data, static_cast<p3d::ExportFormat>(999), input_file.string());
-    EXPECT_EQ(err, p3d::ErrorCode::InvalidParameter);
+    EXPECT_THROW(p3d::MagneticFieldInterpolator::ExportInputPoints(
+                 points, field_data, static_cast<p3d::ExportFormat>(999), input_file.string()),
+                 std::runtime_error);
 }

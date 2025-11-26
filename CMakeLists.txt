@@ -58,7 +58,6 @@ file(COPY ${PROJECT_SOURCE_DIR}/data DESTINATION ${CMAKE_BINARY_DIR})
 
 # Source files (only include existing files)
 set(SOURCES
-    src/error_codes.cpp
     src/data_loader.cpp
     src/grid_structure.cpp
     src/cpu_interpolator.cpp

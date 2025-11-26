@@ -48,9 +48,7 @@ TEST_F(DataLoaderTest, LoadValidCSV) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params);
-
-    EXPECT_EQ(result, ErrorCode::Success);
+    EXPECT_NO_THROW(loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params));
     EXPECT_EQ(coordinates.size(), 8u);
     EXPECT_EQ(field_data.size(), 8u);
 
@@ -103,9 +101,7 @@ TEST_F(DataLoaderTest, FileNotFound) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV("nonexistent_file.csv", coordinates, field_data, grid_params);
-
-    EXPECT_EQ(result, ErrorCode::FileNotFound);
+    EXPECT_THROW(loader.LoadFromCSV("nonexistent_file.csv", coordinates, field_data, grid_params), std::runtime_error);
 }
 
 // 测试无效文件格式
@@ -122,9 +118,7 @@ TEST_F(DataLoaderTest, InvalidFileFormat) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV(invalid_file, coordinates, field_data, grid_params);
-
-    EXPECT_EQ(result, ErrorCode::InvalidFileFormat);
+    EXPECT_THROW(loader.LoadFromCSV(invalid_file, coordinates, field_data, grid_params), std::runtime_error);
 
     std::remove(invalid_file.c_str());
 }
@@ -141,9 +135,7 @@ TEST_F(DataLoaderTest, EmptyFile) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV(empty_file, coordinates, field_data, grid_params);
-
-    EXPECT_EQ(result, ErrorCode::InvalidFileFormat);
+    EXPECT_THROW(loader.LoadFromCSV(empty_file, coordinates, field_data, grid_params), std::runtime_error);
 
     std::remove(empty_file.c_str());
 }
@@ -160,9 +152,7 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params);
-
-    EXPECT_EQ(result, ErrorCode::Success);
+    EXPECT_NO_THROW(loader.LoadFromCSV(test_file_path_, coordinates, field_data, grid_params));
 
     // 验证数据是否按自定义索引正确解析
     // 第一个数据行: 0.0,0.0,0.0,0.1,0.2,0.3,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09

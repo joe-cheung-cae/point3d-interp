@@ -84,23 +84,24 @@ class MagneticFieldInterpolator::Impl {
     // Move assignment
     Impl& operator=(Impl&& other) noexcept;
 
-    ErrorCode        LoadFromCSV(const std::string& filepath);
-    ErrorCode        LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
-    ErrorCode        Query(const Point3D& query_point, InterpolationResult& result);
-    ErrorCode        QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
-    static ErrorCode ExportInputPoints(const std::vector<Point3D>&           coordinates,
-                                       const std::vector<MagneticFieldData>& field_data, ExportFormat format,
-                                       const std::string& filename);
-    static ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                                        const std::vector<InterpolationResult>& results, const std::string& filename);
+    void        LoadFromCSV(const std::string& filepath);
+    void        LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
+    void        Query(const Point3D& query_point, InterpolationResult& result);
+    void        QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
+    static void ExportInputPoints(const std::vector<Point3D>&           coordinates,
+                                  const std::vector<MagneticFieldData>& field_data, ExportFormat format,
+                                  const std::string& filename);
+    static void ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                   const std::vector<InterpolationResult>& results, const std::string& filename);
 
-    ErrorCode GetLastKernelTime(float& kernel_time_ms) const {
+    void GetLastKernelTime(float& kernel_time_ms) const {
         if (use_gpu_ && gpu_initialized_ && interpolator_) {
-            if (interpolator_->getLastKernelTime(kernel_time_ms)) {
-                return ErrorCode::Success;
+            if (!interpolator_->getLastKernelTime(kernel_time_ms)) {
+                throw std::runtime_error("CUDA not available");
             }
+        } else {
+            throw std::runtime_error("CUDA not available");
         }
-        return ErrorCode::CudaNotAvailable;
     }
 
     const GridParams& GetGridParams() const {
@@ -135,14 +136,14 @@ class MagneticFieldInterpolator::Impl {
         return nullptr;
     }
 
-    ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
-                                        void* stream) {
+    void LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
+                                   void* stream) {
         if (!interpolator_ || interpolator_->getDataType() != DataStructureType::RegularGrid) {
-            return ErrorCode::DataNotLoaded;
+            throw std::runtime_error("Data not loaded");
         }
 
         if (!d_query_points || !d_results || count == 0) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Invalid parameter");
         }
 
         if (use_gpu_ && gpu_initialized_) {
@@ -169,16 +170,14 @@ class MagneticFieldInterpolator::Impl {
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
                     LogCudaError("kernel launch", cuda_err);
-                    return ErrorCode::CudaError;
+                    throw std::runtime_error("CUDA error");
                 }
-
-                return ErrorCode::Success;
             } catch (const std::exception& e) {
                 LogError("GPU kernel launch", e.what());
-                return ErrorCode::CudaError;
+                throw std::runtime_error("CUDA error");
             }
         } else {
-            return ErrorCode::CudaNotAvailable;
+            throw std::runtime_error("CUDA not available");
         }
     }
 
@@ -234,60 +233,56 @@ class MagneticFieldInterpolator::Impl {
     mutable GridParams cached_grid_params_;
 };
 
-ErrorCode MagneticFieldInterpolator::Impl::ExportInputPoints(const std::vector<Point3D>&           coordinates,
-                                                             const std::vector<MagneticFieldData>& field_data,
-                                                             ExportFormat format, const std::string& filename) {
+void MagneticFieldInterpolator::Impl::ExportInputPoints(const std::vector<Point3D>&           coordinates,
+                                                        const std::vector<MagneticFieldData>& field_data,
+                                                        ExportFormat format, const std::string& filename) {
     if (coordinates.size() != field_data.size()) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: coordinates and field_data size mismatch");
     }
 
     if (coordinates.empty()) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: empty data");
     }
 
     auto exporter = CreateExporter(format);
     if (!exporter) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: unsupported export format");
     }
 
     try {
         if (!exporter->ExportInputPoints(coordinates, field_data, filename)) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Export failed");
         }
-
-        return ErrorCode::Success;
     } catch (const std::exception& e) {
         LogError("Export input points", e.what());
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Export failed: " + std::string(e.what()));
     }
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat                            format,
-                                                              const std::vector<Point3D>&             query_points,
-                                                              const std::vector<InterpolationResult>& results,
-                                                              const std::string&                      filename) {
+void MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat                            format,
+                                                         const std::vector<Point3D>&             query_points,
+                                                         const std::vector<InterpolationResult>& results,
+                                                         const std::string&                      filename) {
     if (query_points.size() != results.size()) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: query_points and results size mismatch");
     }
 
     if (query_points.empty()) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: empty data");
     }
 
     auto exporter = CreateExporter(format);
     if (!exporter) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: unsupported export format");
     }
 
     try {
         if (!exporter->ExportOutputPoints(query_points, results, filename)) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Export failed");
         }
-
-        return ErrorCode::Success;
     } catch (const std::exception& e) {
         LogError("Export output points", e.what());
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Export failed: " + std::string(e.what()));
     }
 }
 
@@ -353,39 +348,36 @@ MagneticFieldInterpolator::Impl& MagneticFieldInterpolator::Impl::operator=(Impl
 
 MagneticFieldInterpolator::Impl::~Impl() { ReleaseGPU(); }
 
-ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepath) {
+void MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepath) {
     DataLoader loader;
 
     std::vector<Point3D>           coordinates;
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode err = loader.LoadFromCSV(filepath, coordinates, field_data, grid_params);
-    if (err != ErrorCode::Success) {
-        return err;
-    }
+    loader.LoadFromCSV(filepath, coordinates, field_data, grid_params);
 
-    return LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
+    LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
-                                                          size_t count) {
+void MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
+                                                     size_t count) {
     // Basic null pointer and size validation
     if (!points || !field_data) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: null pointers");
     }
 
     if (!ValidateSize(count)) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: invalid count");
     }
 
     // Validate coordinate and field data values
     for (size_t i = 0; i < count; ++i) {
         if (!ValidatePoint(points[i])) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Invalid parameter: invalid point coordinates");
         }
         if (!ValidateFieldData(field_data[i])) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Invalid parameter: invalid field data");
         }
     }
 
@@ -415,7 +407,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
             factory_->createInterpolator(dataType, method, coordinates, field_values, extrapolation_method_, use_gpu_);
 
         if (!interpolator_) {
-            return ErrorCode::InvalidGridData;
+            throw std::runtime_error("Invalid grid data: failed to create interpolator");
         }
 
         // Upload data to GPU if needed (legacy support for direct kernel access)
@@ -423,41 +415,39 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
             // Failed to upload to GPU, fall back to CPU
             use_gpu_ = false;
         }
-
-        return ErrorCode::Success;
     } catch (const std::exception& e) {
         LogError("Data loading", e.what());
-        return ErrorCode::InvalidGridData;
+        throw std::runtime_error("Invalid grid data: " + std::string(e.what()));
     }
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, InterpolationResult& result) {
+void MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, InterpolationResult& result) {
     // Validate query point coordinates
     if (!ValidatePoint(query_point)) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: invalid query point");
     }
 
-    return QueryBatch(&query_point, &result, 1);
+    QueryBatch(&query_point, &result, 1);
 }
 
-ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,
-                                                      size_t count) {
+void MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,
+                                                 size_t count) {
     if (!IsDataLoaded()) {
-        return ErrorCode::DataNotLoaded;
+        throw std::runtime_error("Data not loaded");
     }
 
     if (!query_points || !results) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: null pointers");
     }
 
     if (!ValidateSize(count)) {
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Invalid parameter: invalid count");
     }
 
     // Validate all query points
     for (size_t i = 0; i < count; ++i) {
         if (!ValidatePoint(query_points[i])) {
-            return ErrorCode::InvalidParameter;
+            throw std::runtime_error("Invalid parameter: invalid query point");
         }
     }
 
@@ -468,11 +458,9 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
 
         // Copy results
         std::copy(cpu_results.begin(), cpu_results.end(), results);
-
-        return ErrorCode::Success;
     } catch (const std::exception& e) {
         LogError("Query batch", e.what());
-        return ErrorCode::InvalidParameter;
+        throw std::runtime_error("Query failed: " + std::string(e.what()));
     }
 }
 
@@ -548,51 +536,45 @@ MagneticFieldInterpolator& MagneticFieldInterpolator::operator=(MagneticFieldInt
     return *this;
 }
 
-ErrorCode MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
+void MagneticFieldInterpolator::LoadFromCSV(const std::string& filepath) {
     if (!impl_) {
         impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite, ExtrapolationMethod::None);
     }
-    return impl_->LoadFromCSV(filepath);
+    impl_->LoadFromCSV(filepath);
 }
 
-ErrorCode MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
-                                                    size_t count) {
+void MagneticFieldInterpolator::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
+                                               size_t count) {
     if (!impl_) {
         impl_ = std::make_unique<Impl>(false, 0, InterpolationMethod::TricubicHermite, ExtrapolationMethod::None);
     }
-    return impl_->LoadFromMemory(points, field_data, count);
+    impl_->LoadFromMemory(points, field_data, count);
 }
 
-ErrorCode MagneticFieldInterpolator::Query(const Point3D& query_point, InterpolationResult& result) {
-    return impl_->Query(query_point, result);
+void MagneticFieldInterpolator::Query(const Point3D& query_point, InterpolationResult& result) {
+    impl_->Query(query_point, result);
 }
 
-ErrorCode MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results,
-                                                size_t count) {
-    return impl_->QueryBatch(query_points, results, count);
+void MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results,
+                                           size_t count) {
+    impl_->QueryBatch(query_points, results, count);
 }
 
-ErrorCode MagneticFieldInterpolator::QueryBatch(const std::vector<Point3D>&       query_points,
-                                                std::vector<InterpolationResult>& results) {
+void MagneticFieldInterpolator::QueryBatch(const std::vector<Point3D>&       query_points,
+                                           std::vector<InterpolationResult>& results) {
     results.resize(query_points.size());
-    return impl_->QueryBatch(query_points.data(), results.data(), query_points.size());
+    impl_->QueryBatch(query_points.data(), results.data(), query_points.size());
 }
 
 InterpolationResult MagneticFieldInterpolator::QueryEx(const Point3D& query_point) {
     InterpolationResult result;
-    ErrorCode           err = Query(query_point, result);
-    if (err != ErrorCode::Success) {
-        throw std::runtime_error("Interpolation query failed: " + std::string(ErrorCodeToString(err)));
-    }
+    Query(query_point, result);
     return result;
 }
 
 std::vector<InterpolationResult> MagneticFieldInterpolator::QueryBatchEx(const std::vector<Point3D>& query_points) {
     std::vector<InterpolationResult> results;
-    ErrorCode                        err = QueryBatch(query_points, results);
-    if (err != ErrorCode::Success) {
-        throw std::runtime_error("Batch interpolation query failed: " + std::string(ErrorCodeToString(err)));
-    }
+    QueryBatch(query_points, results);
     return results;
 }
 
@@ -625,13 +607,13 @@ const GridParams* MagneticFieldInterpolator::GetDeviceGridParams() const {
     return impl_ ? impl_->GetDeviceGridParams() : nullptr;
 }
 
-ErrorCode MagneticFieldInterpolator::LaunchInterpolationKernel(const Point3D*       d_query_points,
-                                                               InterpolationResult* d_results, size_t count,
-                                                               void* stream) {
+void MagneticFieldInterpolator::LaunchInterpolationKernel(const Point3D*       d_query_points,
+                                                          InterpolationResult* d_results, size_t count,
+                                                          void* stream) {
     if (!impl_) {
-        return ErrorCode::DataNotLoaded;
+        throw std::runtime_error("Data not loaded");
     }
-    return impl_->LaunchInterpolationKernel(d_query_points, d_results, count, stream);
+    impl_->LaunchInterpolationKernel(d_query_points, d_results, count, stream);
 }
 
 void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const {
@@ -650,23 +632,23 @@ void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, Kerne
     }
 }
 
-ErrorCode MagneticFieldInterpolator::ExportInputPoints(const std::vector<Point3D>&           coordinates,
-                                                       const std::vector<MagneticFieldData>& field_data,
-                                                       ExportFormat format, const std::string& filename) {
-    return Impl::ExportInputPoints(coordinates, field_data, format, filename);
+void MagneticFieldInterpolator::ExportInputPoints(const std::vector<Point3D>&           coordinates,
+                                                  const std::vector<MagneticFieldData>& field_data,
+                                                  ExportFormat format, const std::string& filename) {
+    Impl::ExportInputPoints(coordinates, field_data, format, filename);
 }
 
-ErrorCode MagneticFieldInterpolator::ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                                                        const std::vector<InterpolationResult>& results,
-                                                        const std::string&                      filename) {
-    return Impl::ExportOutputPoints(format, query_points, results, filename);
+void MagneticFieldInterpolator::ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                                   const std::vector<InterpolationResult>& results,
+                                                   const std::string&                      filename) {
+    Impl::ExportOutputPoints(format, query_points, results, filename);
 }
 
-ErrorCode MagneticFieldInterpolator::GetLastKernelTime(float& kernel_time_ms) const {
+void MagneticFieldInterpolator::GetLastKernelTime(float& kernel_time_ms) const {
     if (!impl_) {
-        return ErrorCode::DataNotLoaded;
+        throw std::runtime_error("Data not loaded");
     }
-    return impl_->GetLastKernelTime(kernel_time_ms);
+    impl_->GetLastKernelTime(kernel_time_ms);
 }
 
 }  // namespace p3d

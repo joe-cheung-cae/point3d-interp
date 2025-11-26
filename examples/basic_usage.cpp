@@ -13,9 +13,10 @@ int main() {
 
     // Load data
     std::cout << "Loading magnetic field data..." << std::endl;
-    ErrorCode err = interp.LoadFromCSV("../data/sample_magnetic_field.csv");
-    if (err != ErrorCode::Success) {
-        std::cerr << "Data loading failed: " << ErrorCodeToString(err) << std::endl;
+    try {
+        interp.LoadFromCSV("../data/sample_magnetic_field.csv");
+    } catch (const std::exception& e) {
+        std::cerr << "Data loading failed: " << e.what() << std::endl;
         return 1;
     }
 
@@ -41,19 +42,23 @@ int main() {
     InterpolationResult result;
 
     auto start = std::chrono::high_resolution_clock::now();
-    err        = interp.Query(query_point, result);
-    auto end   = std::chrono::high_resolution_clock::now();
-
-    if (err == ErrorCode::Success && result.valid) {
+    try {
+        interp.Query(query_point, result);
+        auto end      = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        std::cout << "Query point: (" << query_point.x << ", " << query_point.y << ", " << query_point.z << ")"
-                  << std::endl;
-        std::cout << "Interpolation result:" << std::endl;
-        std::cout << "  Magnetic field vector: (" << result.data.Bx << ", " << result.data.By << ", " << result.data.Bz
-                  << ")" << std::endl;
-        std::cout << "Query time: " << duration.count() << " microseconds" << std::endl;
-    } else {
-        std::cout << "Interpolation failed: " << ErrorCodeToString(err) << std::endl;
+
+        if (result.valid) {
+            std::cout << "Query point: (" << query_point.x << ", " << query_point.y << ", " << query_point.z << ")"
+                      << std::endl;
+            std::cout << "Interpolation result:" << std::endl;
+            std::cout << "  Magnetic field vector: (" << result.data.Bx << ", " << result.data.By << ", " << result.data.Bz
+                      << ")" << std::endl;
+            std::cout << "Query time: " << duration.count() << " microseconds" << std::endl;
+        } else {
+            std::cout << "Query point is out of bounds" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cout << "Interpolation failed: " << e.what() << std::endl;
     }
 
     std::cout << std::endl;
@@ -77,11 +82,10 @@ int main() {
     }
 
     start = std::chrono::high_resolution_clock::now();
-    err   = interp.QueryBatch(query_points.data(), results.data(), num_queries);
-    end   = std::chrono::high_resolution_clock::now();
-
-    if (err == ErrorCode::Success) {
-        auto   duration   = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    try {
+        interp.QueryBatch(query_points.data(), results.data(), num_queries);
+        auto end      = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         double throughput = num_queries / (duration.count() / 1000.0);
 
         std::cout << "Batch query of " << num_queries << " points" << std::endl;
@@ -100,8 +104,8 @@ int main() {
                           << std::endl;
             }
         }
-    } else {
-        std::cout << "Batch interpolation failed: " << ErrorCodeToString(err) << std::endl;
+    } catch (const std::exception& e) {
+        std::cout << "Batch interpolation failed: " << e.what() << std::endl;
     }
 
     std::cout << std::endl;

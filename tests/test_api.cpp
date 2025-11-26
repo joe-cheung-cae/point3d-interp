@@ -56,8 +56,7 @@ TEST_F(APITest, BasicAPIUsage) {
     MagneticFieldInterpolator interp;
 
     // Load data
-    ErrorCode err = interp.LoadFromCSV(test_file_path_);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromCSV(test_file_path_));
 
     // Check data loading status
     EXPECT_TRUE(interp.IsDataLoaded());
@@ -73,13 +72,12 @@ TEST_F(APITest, BasicAPIUsage) {
 // Test single point query
 TEST_F(APITest, SinglePointQuery) {
     MagneticFieldInterpolator interp;
-    interp.LoadFromCSV(test_file_path_);
+    EXPECT_NO_THROW(interp.LoadFromCSV(test_file_path_));
 
     Point3D             query_point(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
 
-    ErrorCode err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query_point, result));
     EXPECT_TRUE(result.valid);
 
     std::cout << std::fixed << std::setprecision(6);
@@ -94,22 +92,20 @@ TEST_F(APITest, SinglePointQuery) {
     // Export query point and result for visualization
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/single_point_query.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/single_point_query.vtk"));
 }
 
 // Test batch query
 TEST_F(APITest, BatchQuery) {
     MagneticFieldInterpolator interp;
-    interp.LoadFromCSV(test_file_path_);
+    EXPECT_NO_THROW(interp.LoadFromCSV(test_file_path_));
 
     std::vector<Point3D> query_points = {{0.0f, 0.0f, 0.0f}, {0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}};
 
     std::vector<InterpolationResult> results(query_points.size());
 
-    ErrorCode err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.QueryBatch(query_points.data(), results.data(), query_points.size()));
 
     std::cout << std::fixed << std::setprecision(6);
     for (size_t i = 0; i < results.size(); ++i) {
@@ -129,20 +125,18 @@ TEST_F(APITest, BatchQuery) {
     }
 
     // Export batch query points and results for visualization
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/batch_query.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/batch_query.vtk"));
 }
 
 // Test out of bounds query
 TEST_F(APITest, OutOfBoundsQuery) {
     MagneticFieldInterpolator interp;
-    interp.LoadFromCSV(test_file_path_);
+    EXPECT_NO_THROW(interp.LoadFromCSV(test_file_path_));
 
     Point3D             query_point(-1.0f, 0.5f, 0.5f);  // Out of bounds
     InterpolationResult result;
 
-    ErrorCode err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query_point, result));
     EXPECT_FALSE(result.valid);
 
     std::cout << std::fixed << std::setprecision(6);
@@ -159,9 +153,7 @@ TEST_F(APITest, LoadFromMemory) {
 
     MagneticFieldInterpolator interp;
 
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
-
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size()));
     EXPECT_TRUE(interp.IsDataLoaded());
     EXPECT_EQ(interp.GetDataPointCount(), 8u);
 }
@@ -170,18 +162,16 @@ TEST_F(APITest, LoadFromMemory) {
 TEST_F(APITest, FileNotFound) {
     MagneticFieldInterpolator interp;
 
-    ErrorCode err = interp.LoadFromCSV("nonexistent_file.csv");
-    EXPECT_EQ(err, ErrorCode::FileNotFound);
+    EXPECT_THROW(interp.LoadFromCSV("nonexistent_file.csv"), std::runtime_error);
     EXPECT_FALSE(interp.IsDataLoaded());
 }
 
 // Test empty query
 TEST_F(APITest, EmptyBatchQuery) {
     MagneticFieldInterpolator interp;
-    interp.LoadFromCSV(test_file_path_);
+    EXPECT_NO_THROW(interp.LoadFromCSV(test_file_path_));
 
-    ErrorCode err = interp.QueryBatch(nullptr, nullptr, 0);
-    EXPECT_EQ(err, ErrorCode::InvalidParameter);
+    EXPECT_THROW(interp.QueryBatch(nullptr, nullptr, 0), std::runtime_error);
 }
 
 // Test query without loaded data
@@ -191,8 +181,7 @@ TEST(QueryWithoutDataTest, QueryWithoutData) {
     Point3D             query_point(0.0f, 0.0f, 0.0f);
     InterpolationResult result;
 
-    ErrorCode err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::DataNotLoaded);
+    EXPECT_THROW(interp.Query(query_point, result), std::runtime_error);
 }
 
 // Test unstructured data loading
@@ -208,9 +197,7 @@ TEST_F(APITest, UnstructuredDataLoading) {
 
     MagneticFieldInterpolator interp;
 
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
-
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size()));
     EXPECT_TRUE(interp.IsDataLoaded());
     EXPECT_EQ(interp.GetDataPointCount(), 5u);
 
@@ -218,8 +205,7 @@ TEST_F(APITest, UnstructuredDataLoading) {
     Point3D             query_point(1.0f, 1.0f, 0.5f);
     InterpolationResult result;
 
-    err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query_point, result));
     EXPECT_TRUE(result.valid);
 
     // IDW should produce reasonable interpolated values
@@ -230,15 +216,13 @@ TEST_F(APITest, UnstructuredDataLoading) {
     // Export input points and query result for visualization
     auto export_coordinates = interp.GetCoordinates();
     auto export_field_data  = interp.GetFieldData();
-    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
-                                                       "test_output/unstructured_input.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
+                                                                 "test_output/unstructured_input.vtk"));
 
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/unstructured_query.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/unstructured_query.vtk"));
 }
 
 // Test GPU acceleration for unstructured data
@@ -255,17 +239,15 @@ TEST_F(APITest, GPUUnstructuredData) {
     // Test with GPU enabled
     MagneticFieldInterpolator interp(true);  // GPU enabled
 
-    ErrorCode err = interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), coordinates.size()));
     EXPECT_TRUE(interp.IsDataLoaded());
 
     // Test batch queries (GPU acceleration should be used)
     std::vector<Point3D> query_points = {{0.5f, 0.5f, 0.0f}, {0.3f, 0.7f, 0.2f}, {0.8f, 0.2f, 0.8f}};
 
     std::vector<InterpolationResult> results;
-    err = interp.QueryBatch(query_points, results);
+    EXPECT_NO_THROW(interp.QueryBatch(query_points, results));
 
-    EXPECT_EQ(err, ErrorCode::Success);
     EXPECT_EQ(results.size(), query_points.size());
 
     for (const auto& result : results) {
@@ -278,13 +260,11 @@ TEST_F(APITest, GPUUnstructuredData) {
     // Export input points and GPU query results for visualization
     auto export_coordinates = interp.GetCoordinates();
     auto export_field_data  = interp.GetFieldData();
-    err = MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
-                                                       "test_output/gpu_unstructured_input.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
+                                                                 "test_output/gpu_unstructured_input.vtk"));
 
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/gpu_unstructured_query.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/gpu_unstructured_query.vtk"));
 }
 
 // Test move semantics

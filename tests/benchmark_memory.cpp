@@ -36,15 +36,13 @@ class Benchmark {
             {
                 MagneticFieldInterpolator interp(false);
                 auto                      start = std::chrono::high_resolution_clock::now();
-                ErrorCode                 err =
+                try {
                     interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                auto end = std::chrono::high_resolution_clock::now();
-
-                if (err == ErrorCode::Success) {
+                    auto end = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                     std::cout << "  CPU loading time: " << duration.count() << " ms\n";
-                } else {
-                    std::cout << "  CPU loading failed\n";
+                } catch (const std::exception& e) {
+                    std::cout << "  CPU loading failed: " << e.what() << "\n";
                 }
             }
 
@@ -52,15 +50,13 @@ class Benchmark {
             {
                 MagneticFieldInterpolator interp(true);
                 auto                      start = std::chrono::high_resolution_clock::now();
-                ErrorCode                 err =
+                try {
                     interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                auto end = std::chrono::high_resolution_clock::now();
-
-                if (err == ErrorCode::Success) {
+                    auto end = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                     std::cout << "  GPU loading time: " << duration.count() << " ms\n";
-                } else {
-                    std::cout << "  GPU loading failed (possibly insufficient memory)\n";
+                } catch (const std::exception& e) {
+                    std::cout << "  GPU loading failed (possibly insufficient memory): " << e.what() << "\n";
                 }
             }
 

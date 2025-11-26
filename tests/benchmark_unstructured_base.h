@@ -134,27 +134,37 @@ class UnstructuredBenchmarkBase : public BenchmarkBase {
         std::string count_str   = std::to_string(GetDataPointCount());
 
         // Export input data points
-        {
+        try {
             std::string filename = "benchmark_output/input_" + count_str + type_suffix + ".vtk";
             MagneticFieldInterpolator::ExportInputPoints(test_data.coordinates, test_data.field_data,
                                                          ExportFormat::ParaviewVTK, filename);
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to export input points: " << e.what() << std::endl;
         }
 
         // Export CPU results
         if (!cpu_results.empty()) {
-            std::string filename =
-                "benchmark_output/cpu_" + count_str + type_suffix + "_q" + std::to_string(query_size) + ".vtk";
+            try {
+                std::string filename =
+                    "benchmark_output/cpu_" + count_str + type_suffix + "_q" + std::to_string(query_size) + ".vtk";
 
-            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results,
-                                                          filename);
+                MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, cpu_results,
+                                                              filename);
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to export CPU results: " << e.what() << std::endl;
+            }
         }
 
         // Export GPU results
         if (!gpu_results.empty()) {
-            std::string filename =
-                "benchmark_output/gpu_" + count_str + type_suffix + "_q" + std::to_string(query_size) + ".vtk";
-            MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results,
-                                                          filename);
+            try {
+                std::string filename =
+                    "benchmark_output/gpu_" + count_str + type_suffix + "_q" + std::to_string(query_size) + ".vtk";
+                MagneticFieldInterpolator::ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, gpu_results,
+                                                              filename);
+            } catch (const std::exception& e) {
+                std::cerr << "Failed to export GPU results: " << e.what() << std::endl;
+            }
         }
     }
 
@@ -211,29 +221,35 @@ class UnstructuredBenchmarkBase : public BenchmarkBase {
                                          ExtrapolationMethod::LinearExtrapolation);  // CPU mode with IDW interpolation
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
-                                              test_data.coordinates.size());
-        if (err != ErrorCode::Success) {
-            std::cerr << "CPU data loading failed: " << static_cast<int>(err) << std::endl;
+        try {
+            interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                  test_data.coordinates.size());
+        } catch (const std::exception& e) {
+            std::cerr << "CPU data loading failed: " << e.what() << std::endl;
             return {-1.0, {}};
         }
 
         // Warm up
         InterpolationResult dummy;
-        interp.Query(query_points[0], dummy);
+        try {
+            interp.Query(query_points[0], dummy);
+        } catch (const std::exception& e) {
+            std::cerr << "CPU warm-up query failed: " << e.what() << std::endl;
+            return {-1.0, {}};
+        }
 
         // Benchmark
         auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<InterpolationResult> results(query_points.size());
-        err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-
-        auto end = std::chrono::high_resolution_clock::now();
-
-        if (err != ErrorCode::Success) {
-            std::cerr << "CPU query failed: " << static_cast<int>(err) << std::endl;
+        try {
+            interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+        } catch (const std::exception& e) {
+            std::cerr << "CPU query failed: " << e.what() << std::endl;
             return {-1.0, {}};
         }
+
+        auto end = std::chrono::high_resolution_clock::now();
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         return {duration.count() / 1000.0, results};  // Convert to milliseconds
@@ -245,27 +261,32 @@ class UnstructuredBenchmarkBase : public BenchmarkBase {
                                          ExtrapolationMethod::LinearExtrapolation);  // GPU mode with IDW interpolation
 
         // Load data
-        ErrorCode err = interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
-                                              test_data.coordinates.size());
-        if (err != ErrorCode::Success) {
+        try {
+            interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(),
+                                  test_data.coordinates.size());
+        } catch (const std::exception&) {
             return {-1.0, {}};  // GPU unavailable or initialization failed
         }
 
         // Warm up
         InterpolationResult dummy;
-        interp.Query(query_points[0], dummy);
+        try {
+            interp.Query(query_points[0], dummy);
+        } catch (const std::exception&) {
+            return {-1.0, {}};  // GPU unavailable or initialization failed
+        }
 
         // Benchmark
         auto start = std::chrono::high_resolution_clock::now();
 
         std::vector<InterpolationResult> results(query_points.size());
-        err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+        try {
+            interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+        } catch (const std::exception&) {
+            return {-1.0, {}};  // GPU unavailable or initialization failed
+        }
 
         auto end = std::chrono::high_resolution_clock::now();
-
-        if (err != ErrorCode::Success) {
-            return {-1.0, {}};
-        }
 
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         return {duration.count() / 1000.0, results};  // Convert to milliseconds

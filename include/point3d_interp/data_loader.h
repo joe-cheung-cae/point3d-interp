@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include "error_codes.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -24,10 +23,10 @@ class DataLoader {
      * @param coordinates Output coordinate array
      * @param field_data Output magnetic field data array
      * @param grid_params Output grid parameters
-     * @return Error code
+     * @throws std::runtime_error on error
      */
-    ErrorCode LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
-                          std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
+    void LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
+                     std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
 
     /**
      * @brief Set delimiter

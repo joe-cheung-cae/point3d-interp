@@ -31,57 +31,57 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 ##### Data Loading
 
 ```cpp
-ErrorCode LoadFromCSV(const std::string& filepath);
+void LoadFromCSV(const std::string& filepath);
 ```
 
-Loads magnetic field data from a CSV file.
+Loads magnetic field data from a CSV file. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `filepath`: Path to the CSV file
 
-**Returns:** Error code indicating success or failure
+**Throws:** `std::runtime_error` if the file cannot be loaded or parsed
 
 ```cpp
-ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
+void LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
 ```
 
-Loads magnetic field data from memory arrays. Automatically detects whether the data forms a regular grid or is an unstructured point cloud.
+Loads magnetic field data from memory arrays. Automatically detects whether the data forms a regular grid or is an unstructured point cloud. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `points`: Array of 3D coordinates
 - `field_data`: Array of magnetic field data
 - `count`: Number of data points
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if the data is invalid
 
 **Note:** For regular grid data, GPU acceleration is available. For unstructured data, CPU-based IDW interpolation is used.
 
 ##### Query Methods
 
 ```cpp
-ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
+void Query(const Point3D& query_point, InterpolationResult& result);
 ```
 
-Performs single-point interpolation.
+Performs single-point interpolation. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `query_point`: The point to interpolate at
 - `result`: Output interpolation result
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if interpolation fails
 
 ```cpp
-ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
+void QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
 ```
 
-Performs batch interpolation for multiple points.
+Performs batch interpolation for multiple points. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `query_points`: Array of query points
 - `results`: Array to store results
 - `count`: Number of query points
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if interpolation fails
 
 ##### Information Methods
 
@@ -128,12 +128,12 @@ Returns the magnetic field data of loaded data points.
 ##### Export Methods
 
 ```cpp
-static ErrorCode ExportInputPoints(const std::vector<Point3D>& coordinates,
-                                  const std::vector<MagneticFieldData>& field_data,
-                                  ExportFormat format, const std::string& filename);
+static void ExportInputPoints(const std::vector<Point3D>& coordinates,
+                              const std::vector<MagneticFieldData>& field_data,
+                              ExportFormat format, const std::string& filename);
 ```
 
-Exports input sampling points with their magnetic field data to a visualization file.
+Exports input sampling points with their magnetic field data to a visualization file. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `coordinates`: Input coordinates vector
@@ -141,16 +141,16 @@ Exports input sampling points with their magnetic field data to a visualization 
 - `format`: Export format (currently supports ParaviewVTK)
 - `filename`: Output filename
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if export fails
 
 **Note:** Exports coordinates and magnetic field data including derivatives.
 
 ```cpp
-static ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                                   const std::vector<InterpolationResult>& results, const std::string& filename);
+static void ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                               const std::vector<InterpolationResult>& results, const std::string& filename);
 ```
 
-Exports output interpolation points with their results to a visualization file.
+Exports output interpolation points with their results to a visualization file. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `format`: Export format (currently supports ParaviewVTK)
@@ -158,7 +158,7 @@ Exports output interpolation points with their results to a visualization file.
 - `results`: Interpolation results
 - `filename`: Output filename
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if export fails
 
 **Note:** Exports query points with interpolated magnetic field data, derivatives, and validity flags.
 
@@ -189,13 +189,13 @@ Returns GPU device pointer to grid parameters for direct CUDA kernel access.
 **Returns:** Device pointer to grid parameters, nullptr if not available
 
 ```cpp
-ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points,
-                                   InterpolationResult* d_results,
-                                   size_t count,
-                                   cudaStream_t stream = 0);
+void LaunchInterpolationKernel(const Point3D* d_query_points,
+                               InterpolationResult* d_results,
+                               size_t count,
+                               cudaStream_t stream = 0);
 ```
 
-Launches the interpolation kernel directly with custom device pointers.
+Launches the interpolation kernel directly with custom device pointers. Throws `std::runtime_error` on failure.
 
 **Parameters:**
 - `d_query_points`: Device pointer to query points array
@@ -203,7 +203,7 @@ Launches the interpolation kernel directly with custom device pointers.
 - `count`: Number of query points
 - `stream`: CUDA stream for asynchronous execution
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if kernel launch fails
 
 ```cpp
 void GetOptimalKernelConfig(size_t query_count, KernelConfig& config) const;
@@ -216,15 +216,15 @@ Gets optimal kernel launch configuration for given query count.
 - `config`: Output kernel configuration
 
 ```cpp
-ErrorCode GetLastKernelTime(float& kernel_time_ms) const;
+void GetLastKernelTime(float& kernel_time_ms) const;
 ```
 
-Gets the execution time of the last GPU kernel call in milliseconds.
+Gets the execution time of the last GPU kernel call in milliseconds. Throws `std::runtime_error` if no timing data is available.
 
 **Parameters:**
 - `kernel_time_ms`: Output kernel execution time
 
-**Returns:** Error code
+**Throws:** `std::runtime_error` if timing data is not available
 
 **Note:** Only valid after a GPU QueryBatch call. Returns the time spent in GPU kernel execution only, excluding memory transfers.
 
@@ -434,24 +434,30 @@ enum class DataStructureType {
 };
 ```
 
-## Error Codes
+## Error Handling
 
-The library uses error codes instead of exceptions for error handling.
+The library uses modern C++ exceptions for error handling. All API methods throw `std::runtime_error` with descriptive error messages when errors occur. Client code should wrap API calls in try-catch blocks:
 
-| Error Code | Description |
-|------------|-------------|
-| `Success` | Operation completed successfully |
-| `FileNotFound` | The specified file was not found |
-| `FileReadError` | Error reading from file |
-| `InvalidFileFormat` | The file format is invalid |
-| `InvalidGridData` | The grid data is invalid or inconsistent |
-| `MemoryAllocationError` | Memory allocation failed |
-| `CudaError` | CUDA-related error |
-| `InvalidParameter` | Invalid parameter passed to function |
-| `DataNotLoaded` | No data has been loaded |
-| `QueryOutOfBounds` | Query point is outside the valid range |
-| `CudaNotAvailable` | CUDA is not available |
-| `CudaDeviceError` | CUDA device error |
+```cpp
+try {
+    MagneticFieldInterpolator interp;
+    interp.LoadFromCSV("data.csv");
+    InterpolationResult result;
+    interp.Query(Point3D(1.0, 1.0, 1.0), result);
+} catch (const std::runtime_error& e) {
+    std::cerr << "Interpolation error: " << e.what() << std::endl;
+}
+```
+
+Common error conditions that may throw exceptions:
+- File not found or cannot be read
+- Invalid CSV file format or corrupted data
+- Invalid or inconsistent grid/mesh data
+- Memory allocation failures
+- CUDA-related errors (when GPU acceleration is enabled)
+- Query points outside valid data bounds
+- CUDA not available or device errors
+- Invalid parameters passed to functions
 
 ## Usage Examples
 
@@ -459,28 +465,30 @@ The library uses error codes instead of exceptions for error handling.
 
 ```cpp
 #include "point3d_interp/interpolator_api.h"
+#include <stdexcept>
 
 int main() {
-    // Create interpolator
-    p3d::MagneticFieldInterpolator interp;
+    try {
+        // Create interpolator
+        p3d::MagneticFieldInterpolator interp;
 
-    // Load data
-    auto err = interp.LoadFromCSV("data.csv");
-    if (err != p3d::ErrorCode::Success) {
-        // Handle error
+        // Load data (throws on error)
+        interp.LoadFromCSV("data.csv");
+
+        // Query single point (throws on error)
+        p3d::Point3D query(1.5, 2.3, 0.8);
+        p3d::InterpolationResult result;
+
+        interp.Query(query, result);
+        if (result.valid) {
+            std::cout << "Bx = " << result.data.Bx << std::endl;
+        }
+
+        return 0;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
-    // Query single point
-    p3d::Point3D query(1.5, 2.3, 0.8);
-    p3d::InterpolationResult result;
-
-    err = interp.Query(query, result);
-    if (err == p3d::ErrorCode::Success && result.valid) {
-        std::cout << "Bx = " << result.data.Bx << std::endl;
-    }
-
-    return 0;
 }
 ```
 
@@ -489,24 +497,30 @@ int main() {
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <vector>
+#include <stdexcept>
 
 int main() {
-    p3d::MagneticFieldInterpolator interp;
-    interp.LoadFromCSV("data.csv");
+    try {
+        p3d::MagneticFieldInterpolator interp;
+        interp.LoadFromCSV("data.csv");
 
-    // Prepare query points
-    std::vector<p3d::Point3D> queries = {
-        {1.0, 1.0, 1.0},
-        {2.0, 2.0, 2.0},
-        {3.0, 3.0, 3.0}
-    };
+        // Prepare query points
+        std::vector<p3d::Point3D> queries = {
+            {1.0, 1.0, 1.0},
+            {2.0, 2.0, 2.0},
+            {3.0, 3.0, 3.0}
+        };
 
-    std::vector<p3d::InterpolationResult> results(queries.size());
+        std::vector<p3d::InterpolationResult> results(queries.size());
 
-    // Batch query
-    auto err = interp.QueryBatch(queries.data(), results.data(), queries.size());
+        // Batch query (throws on error)
+        interp.QueryBatch(queries.data(), results.data(), queries.size());
 
-    return 0;
+        return 0;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 }
 ```
 
@@ -515,25 +529,31 @@ int main() {
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <vector>
+#include <stdexcept>
 
 int main() {
-    // Prepare data in memory
-    std::vector<p3d::Point3D> points = {
-        {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
-        {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}
-    };
+    try {
+        // Prepare data in memory
+        std::vector<p3d::Point3D> points = {
+            {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0},
+            {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}
+        };
 
-    std::vector<p3d::MagneticFieldData> field_data(points.size());
-    // Fill field_data...
+        std::vector<p3d::MagneticFieldData> field_data(points.size());
+        // Fill field_data...
 
-    p3d::MagneticFieldInterpolator interp;
-    auto err = interp.LoadFromMemory(
-        points.data(),
-        field_data.data(),
-        points.size()
-    );
+        p3d::MagneticFieldInterpolator interp;
+        interp.LoadFromMemory(
+            points.data(),
+            field_data.data(),
+            points.size()
+        );
 
-    return 0;
+        return 0;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 }
 ```
 
@@ -544,54 +564,54 @@ For advanced users who need maximum performance or integration with existing CUD
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <cuda_runtime.h>
+#include <stdexcept>
 
 int main() {
-    p3d::MagneticFieldInterpolator interp(true);  // GPU enabled
-    interp.LoadFromCSV("data.csv");
+    try {
+        p3d::MagneticFieldInterpolator interp(true);  // GPU enabled
+        interp.LoadFromCSV("data.csv");
 
-    // Get GPU device pointers
-    const p3d::Point3D* d_grid_points = interp.GetDeviceGridPoints();
-    const p3d::MagneticFieldData* d_field_data = interp.GetDeviceFieldData();
+        // Get GPU device pointers
+        const p3d::Point3D* d_grid_points = interp.GetDeviceGridPoints();
+        const p3d::MagneticFieldData* d_field_data = interp.GetDeviceFieldData();
 
-    if (!d_grid_points || !d_field_data) {
-        // GPU not available or data not loaded
+        if (!d_grid_points || !d_field_data) {
+            throw std::runtime_error("GPU not available or data not loaded");
+        }
+
+        // Allocate GPU memory for your queries and results
+        p3d::Point3D* d_query_points;
+        p3d::InterpolationResult* d_results;
+        cudaMalloc(&d_query_points, num_queries * sizeof(p3d::Point3D));
+        cudaMalloc(&d_results, num_queries * sizeof(p3d::InterpolationResult));
+
+        // Copy your query points to GPU
+        cudaMemcpy(d_query_points, host_query_points,
+                   num_queries * sizeof(p3d::Point3D), cudaMemcpyHostToDevice);
+
+        // Get optimal kernel launch configuration
+        p3d::KernelConfig config;
+        interp.GetOptimalKernelConfig(num_queries, config);
+
+        // Get grid parameters
+        p3d::GridParams grid_params = interp.GetGridParams();
+
+        // Launch the interpolation kernel directly (throws on error)
+        interp.LaunchInterpolationKernel(d_query_points, d_results, num_queries);
+
+        // Copy results back to host
+        cudaMemcpy(host_results, d_results,
+                   num_queries * sizeof(p3d::InterpolationResult), cudaMemcpyDeviceToHost);
+
+        // Clean up
+        cudaFree(d_query_points);
+        cudaFree(d_results);
+
+        return 0;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
-    // Allocate GPU memory for your queries and results
-    p3d::Point3D* d_query_points;
-    p3d::InterpolationResult* d_results;
-    cudaMalloc(&d_query_points, num_queries * sizeof(p3d::Point3D));
-    cudaMalloc(&d_results, num_queries * sizeof(p3d::InterpolationResult));
-
-    // Copy your query points to GPU
-    cudaMemcpy(d_query_points, host_query_points,
-               num_queries * sizeof(p3d::Point3D), cudaMemcpyHostToDevice);
-
-    // Get optimal kernel launch configuration
-    p3d::KernelConfig config;
-    interp.GetOptimalKernelConfig(num_queries, config);
-
-    // Get grid parameters
-    p3d::GridParams grid_params = interp.GetGridParams();
-
-    // Launch the interpolation kernel directly
-    TricubicHermiteInterpolationKernel<<<dim3(config.grid_x, config.grid_y, config.grid_z),
-                                         dim3(config.block_x, config.block_y, config.block_z)>>>(
-        d_query_points, d_field_data, grid_params, d_results, num_queries);
-
-    // Synchronize and check for errors
-    cudaDeviceSynchronize();
-
-    // Copy results back to host
-    cudaMemcpy(host_results, d_results,
-               num_queries * sizeof(p3d::InterpolationResult), cudaMemcpyDeviceToHost);
-
-    // Clean up
-    cudaFree(d_query_points);
-    cudaFree(d_results);
-
-    return 0;
 }
 ```
 
@@ -600,40 +620,38 @@ int main() {
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <vector>
+#include <stdexcept>
 
 int main() {
-    p3d::MagneticFieldInterpolator interp;
-    interp.LoadFromCSV("data.csv");
+    try {
+        p3d::MagneticFieldInterpolator interp;
+        interp.LoadFromCSV("data.csv");
 
-    // Get loaded data for export
-    auto coordinates = interp.GetCoordinates();
-    auto field_data = interp.GetFieldData();
+        // Get loaded data for export
+        auto coordinates = interp.GetCoordinates();
+        auto field_data = interp.GetFieldData();
 
-    // Export input sampling points
-    auto err = p3d::MagneticFieldInterpolator::ExportInputPoints(
-        coordinates, field_data, p3d::ExportFormat::ParaviewVTK, "input_points.vtk");
-    if (err != p3d::ErrorCode::Success) {
-        // Handle error
+        // Export input sampling points (throws on error)
+        p3d::MagneticFieldInterpolator::ExportInputPoints(
+            coordinates, field_data, p3d::ExportFormat::ParaviewVTK, "input_points.vtk");
+
+        // Perform some queries
+        std::vector<p3d::Point3D> queries = {
+            {1.0, 1.0, 1.0},
+            {2.0, 2.0, 2.0}
+        };
+        std::vector<p3d::InterpolationResult> results;
+        interp.QueryBatch(queries, results);
+
+        // Export output interpolation points (throws on error)
+        p3d::MagneticFieldInterpolator::ExportOutputPoints(
+            p3d::ExportFormat::ParaviewVTK, queries, results, "output_points.vtk");
+
+        return 0;
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Export error: " << e.what() << std::endl;
         return 1;
     }
-
-    // Perform some queries
-    std::vector<p3d::Point3D> queries = {
-        {1.0, 1.0, 1.0},
-        {2.0, 2.0, 2.0}
-    };
-    std::vector<p3d::InterpolationResult> results;
-    interp.QueryBatch(queries, results);
-
-    // Export output interpolation points
-    err = p3d::MagneticFieldInterpolator::ExportOutputPoints(
-        p3d::ExportFormat::ParaviewVTK, queries, results, "output_points.vtk");
-    if (err != p3d::ErrorCode::Success) {
-        // Handle error
-        return 1;
-    }
-
-    return 0;
 }
 ```
 

@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include <unordered_set>
+#include <stdexcept>
 
 namespace p3d {
 
@@ -19,12 +20,12 @@ DataLoader::DataLoader()
 
 DataLoader::~DataLoader() = default;
 
-ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
-                                  std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
+void DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
+                             std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
     // Open file
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        return ErrorCode::FileNotFound;
+        throw std::runtime_error("File not found: " + filepath);
     }
 
     coordinates.clear();
@@ -36,7 +37,7 @@ ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point
     // Skip header line
     if (skip_header_) {
         if (!std::getline(file, line)) {
-            return ErrorCode::FileReadError;
+            throw std::runtime_error("File read error: unable to read header");
         }
         line_number++;
     }
@@ -54,7 +55,7 @@ ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point
         MagneticFieldData field;
 
         if (!ParseLine(line, point, field)) {
-            return ErrorCode::InvalidFileFormat;
+            throw std::runtime_error("Invalid file format at line " + std::to_string(line_number));
         }
 
         coordinates.push_back(point);
@@ -62,20 +63,18 @@ ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point
     }
 
     if (coordinates.empty()) {
-        return ErrorCode::InvalidFileFormat;
+        throw std::runtime_error("Invalid file format: no data found");
     }
 
     // Detect grid parameters
     if (!DetectGridParams(coordinates, grid_params)) {
-        return ErrorCode::InvalidGridData;
+        throw std::runtime_error("Invalid grid data: unable to detect grid parameters");
     }
 
     // Validate grid regularity
     if (!ValidateGridRegularity(coordinates, grid_params)) {
-        return ErrorCode::InvalidGridData;
+        throw std::runtime_error("Invalid grid data: grid is not regular");
     }
-
-    return ErrorCode::Success;
 }
 
 void DataLoader::SetColumnIndices(const std::array<size_t, 3>& coord_cols, const std::array<size_t, 12>& field_cols) {

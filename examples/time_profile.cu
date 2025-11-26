@@ -24,9 +24,10 @@ int main() {
 
     // Create temporary interpolator to get grid parameters
     MagneticFieldInterpolator temp_interp(false);
-    ErrorCode                 err = temp_interp.LoadFromCSV(data_file);
-    if (err != ErrorCode::Success) {
-        std::cerr << "Data loading failed: " << ErrorCodeToString(err) << std::endl;
+    try {
+        temp_interp.LoadFromCSV(data_file);
+    } catch (const std::exception& e) {
+        std::cerr << "Data loading failed: " << e.what() << std::endl;
         return 1;
     }
 
@@ -52,15 +53,21 @@ int main() {
                                                  const std::vector<Point3D>& query_points) -> double {
         MagneticFieldInterpolator interp(use_gpu);
 
-        err = interp.LoadFromCSV(data_file);
-        if (err != ErrorCode::Success) {
-            std::cerr << name << " interpolator initialization failed: " << ErrorCodeToString(err) << std::endl;
+        try {
+            interp.LoadFromCSV(data_file);
+        } catch (const std::exception& e) {
+            std::cerr << name << " interpolator initialization failed: " << e.what() << std::endl;
             return -1.0;
         }
 
         // Warm up
         InterpolationResult dummy;
-        interp.Query(query_points[0], dummy);
+        try {
+            interp.Query(query_points[0], dummy);
+        } catch (const std::exception& e) {
+            std::cerr << name << " warm-up query failed: " << e.what() << std::endl;
+            return -1.0;
+        }
 
         // Benchmark iterations
         std::vector<double> times;
@@ -70,22 +77,22 @@ int main() {
             std::vector<InterpolationResult> results(query_points.size());
 
             auto start = std::chrono::high_resolution_clock::now();
-            err        = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-            auto end   = std::chrono::high_resolution_clock::now();
-
-            if (err != ErrorCode::Success) {
-                std::cerr << name << " query failed at iteration " << iter << ": " << ErrorCodeToString(err)
-                          << std::endl;
+            try {
+                interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+            } catch (const std::exception& e) {
+                std::cerr << name << " query failed at iteration " << iter << ": " << e.what() << std::endl;
                 return -1.0;
             }
+            auto end = std::chrono::high_resolution_clock::now();
 
             // For GPU, get kernel-only time if available
             double measured_time;
             if (use_gpu) {
                 float kernel_time_ms;
-                if (interp.GetLastKernelTime(kernel_time_ms) == ErrorCode::Success) {
+                try {
+                    interp.GetLastKernelTime(kernel_time_ms);
                     measured_time = kernel_time_ms;
-                } else {
+                } catch (const std::exception&) {
                     // Fallback to total time if kernel timing not available
                     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                     measured_time = duration.count() / 1000.0;
@@ -200,16 +207,22 @@ int main() {
         std::cout << "Creating " << name << " interpolator (use_gpu=" << use_gpu << ")" << std::endl;
         MagneticFieldInterpolator interp(use_gpu, 0, InterpolationMethod::IDW);
 
-        ErrorCode err = interp.LoadFromMemory(data_points.data(), data_field.data(), num_data_points);
-        if (err != ErrorCode::Success) {
-            std::cerr << name << " interpolator initialization failed: " << ErrorCodeToString(err) << std::endl;
+        try {
+            interp.LoadFromMemory(data_points.data(), data_field.data(), num_data_points);
+        } catch (const std::exception& e) {
+            std::cerr << name << " interpolator initialization failed: " << e.what() << std::endl;
             return -1.0;
         }
         std::cout << "Data loaded successfully. Data points: " << interp.GetDataPointCount() << std::endl;
 
         // Warm up
         InterpolationResult dummy;
-        interp.Query(query_points[0], dummy);
+        try {
+            interp.Query(query_points[0], dummy);
+        } catch (const std::exception& e) {
+            std::cerr << name << " warm-up query failed: " << e.what() << std::endl;
+            return -1.0;
+        }
 
         // Benchmark iterations
         std::vector<double> times;
@@ -219,26 +232,26 @@ int main() {
             std::vector<InterpolationResult> results(query_points.size());
 
             auto start = std::chrono::high_resolution_clock::now();
-            err        = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-            auto end   = std::chrono::high_resolution_clock::now();
-
-            if (err != ErrorCode::Success) {
-                std::cerr << name << " query failed at iteration " << iter << ": " << ErrorCodeToString(err)
-                          << std::endl;
+            try {
+                interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+            } catch (const std::exception& e) {
+                std::cerr << name << " query failed at iteration " << iter << ": " << e.what() << std::endl;
                 cudaError_t cuda_err = cudaGetLastError();
                 if (cuda_err != cudaSuccess) {
                     std::cerr << "CUDA error: " << cudaGetErrorString(cuda_err) << std::endl;
                 }
                 return -1.0;
             }
+            auto end = std::chrono::high_resolution_clock::now();
 
             // For GPU, get kernel-only time if available
             double measured_time;
             if (use_gpu) {
                 float kernel_time_ms;
-                if (interp.GetLastKernelTime(kernel_time_ms) == ErrorCode::Success) {
+                try {
+                    interp.GetLastKernelTime(kernel_time_ms);
                     measured_time = kernel_time_ms;
-                } else {
+                } catch (const std::exception&) {
                     // Fallback to total time if kernel timing not available
                     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
                     measured_time = duration.count() / 1000.0;

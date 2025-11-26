@@ -62,8 +62,7 @@ class GPUTest : public ::testing::Test {
 TEST_F(GPUTest, GPUInitialization) {
     MagneticFieldInterpolator interp(true, 0);  // use_gpu=true, device_id=0
 
-    ErrorCode err = interp.LoadFromMemory(coordinates_.data(), field_data_.data(), coordinates_.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates_.data(), field_data_.data(), coordinates_.size()));
     EXPECT_TRUE(interp.IsDataLoaded());
     EXPECT_EQ(interp.GetDataPointCount(), 27u);  // 3x3x3 grid
 }
@@ -77,8 +76,7 @@ TEST_F(GPUTest, GPUSinglePointQuery) {
     Point3D             query_point(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
 
-    ErrorCode err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query_point, result));
     EXPECT_TRUE(result.valid);
 
     // For linear field Bx=x, By=y, Bz=z, interpolated value should be close to query point
@@ -89,9 +87,8 @@ TEST_F(GPUTest, GPUSinglePointQuery) {
     // Export query point and result for visualization
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    err =
-        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/gpu_single_point.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(
+        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/gpu_single_point.vtk"));
 }
 
 // Test batch GPU query
@@ -103,8 +100,7 @@ TEST_F(GPUTest, GPUBatchQuery) {
 
     std::vector<InterpolationResult> results(query_points.size());
 
-    ErrorCode err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.QueryBatch(query_points.data(), results.data(), query_points.size()));
 
     for (const auto& result : results) {
         EXPECT_TRUE(result.valid);
@@ -118,9 +114,8 @@ TEST_F(GPUTest, GPUBatchQuery) {
     }
 
     // Export batch query points and results for visualization
-    err =
-        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/gpu_batch_query.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(
+        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/gpu_batch_query.vtk"));
 }
 
 // Test CPU/GPU consistency
@@ -142,11 +137,9 @@ TEST_F(GPUTest, CPU_GPU_Consistency) {
     for (const auto& point : test_points) {
         InterpolationResult cpu_result, gpu_result;
 
-        ErrorCode cpu_err = cpu_interp.Query(point, cpu_result);
-        ErrorCode gpu_err = gpu_interp.Query(point, gpu_result);
+        EXPECT_NO_THROW(cpu_interp.Query(point, cpu_result));
+        EXPECT_NO_THROW(gpu_interp.Query(point, gpu_result));
 
-        EXPECT_EQ(cpu_err, ErrorCode::Success);
-        EXPECT_EQ(gpu_err, ErrorCode::Success);
         EXPECT_EQ(cpu_result.valid, gpu_result.valid);
 
         cpu_results.push_back(cpu_result);
@@ -166,12 +159,10 @@ TEST_F(GPUTest, CPU_GPU_Consistency) {
     }
 
     // Export CPU and GPU results for comparison visualization
-    ErrorCode err = cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
-                                                  "test_output/cpu_consistency.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
-    err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
-                                        "test_output/gpu_consistency.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
+                                                  "test_output/cpu_consistency.vtk"));
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
+                                        "test_output/gpu_consistency.vtk"));
 }
 
 // Test GPU out of bounds handling
@@ -182,8 +173,7 @@ TEST_F(GPUTest, GPUOutOfBounds) {
     Point3D             out_of_bounds(-1.0f, 0.5f, 0.5f);
     InterpolationResult result;
 
-    ErrorCode err = interp.Query(out_of_bounds, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(out_of_bounds, result));
     EXPECT_FALSE(result.valid);
 }
 
@@ -199,8 +189,7 @@ TEST_F(GPUTest, GPUHermiteInterpolationAccuracy) {
 
     for (const auto& point : test_points) {
         InterpolationResult result;
-        ErrorCode           err = gpu_interp.Query(point, result);
-        EXPECT_EQ(err, ErrorCode::Success);
+        EXPECT_NO_THROW(gpu_interp.Query(point, result));
         EXPECT_TRUE(result.valid);
         results.push_back(result);
 
@@ -228,9 +217,8 @@ TEST_F(GPUTest, GPUHermiteInterpolationAccuracy) {
     }
 
     // Export Hermite interpolation results for visualization
-    ErrorCode err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, results,
-                                                  "test_output/gpu_hermite_accuracy.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, results,
+                                                  "test_output/gpu_hermite_accuracy.vtk"));
 }
 
 // Test GPU gradient verification - compare with CPU to ensure gradients are used
@@ -251,11 +239,9 @@ TEST_F(GPUTest, GPUGradientVerification) {
     for (const auto& point : test_points) {
         InterpolationResult cpu_result, gpu_result;
 
-        ErrorCode cpu_err = cpu_interp.Query(point, cpu_result);
-        ErrorCode gpu_err = gpu_interp.Query(point, gpu_result);
+        EXPECT_NO_THROW(cpu_interp.Query(point, cpu_result));
+        EXPECT_NO_THROW(gpu_interp.Query(point, gpu_result));
 
-        EXPECT_EQ(cpu_err, ErrorCode::Success);
-        EXPECT_EQ(gpu_err, ErrorCode::Success);
         EXPECT_EQ(cpu_result.valid, gpu_result.valid);
 
         cpu_results.push_back(cpu_result);
@@ -275,12 +261,10 @@ TEST_F(GPUTest, GPUGradientVerification) {
     }
 
     // Export gradient verification results for visualization
-    ErrorCode err = cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
-                                                  "test_output/cpu_gradient_verification.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
-    err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
-                                        "test_output/gpu_gradient_verification.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
+                                                  "test_output/cpu_gradient_verification.vtk"));
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
+                                        "test_output/gpu_gradient_verification.vtk"));
 }
 
 // Test GPU boundary interpolation
@@ -300,8 +284,7 @@ TEST_F(GPUTest, GPUBoundaryInterpolation) {
 
     for (const auto& point : boundary_points) {
         InterpolationResult result;
-        ErrorCode           err = gpu_interp.Query(point, result);
-        EXPECT_EQ(err, ErrorCode::Success);
+        EXPECT_NO_THROW(gpu_interp.Query(point, result));
         EXPECT_TRUE(result.valid);
         results.push_back(result);
 
@@ -319,9 +302,8 @@ TEST_F(GPUTest, GPUBoundaryInterpolation) {
     }
 
     // Export boundary interpolation results for visualization
-    ErrorCode err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, boundary_points, results,
-                                                  "test_output/gpu_boundary_interpolation.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, boundary_points, results,
+                                                  "test_output/gpu_boundary_interpolation.vtk"));
 }
 
 // Test GPU performance regression - ensure queries are reasonably fast
@@ -340,11 +322,9 @@ TEST_F(GPUTest, GPUPerformanceRegression) {
     std::vector<InterpolationResult> results(query_points.size());
 
     // Time the batch query
-    auto      start = std::chrono::high_resolution_clock::now();
-    ErrorCode err   = gpu_interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-    auto      end   = std::chrono::high_resolution_clock::now();
-
-    EXPECT_EQ(err, ErrorCode::Success);
+    auto start = std::chrono::high_resolution_clock::now();
+    EXPECT_NO_THROW(gpu_interp.QueryBatch(query_points.data(), results.data(), query_points.size()));
+    auto end = std::chrono::high_resolution_clock::now();
 
     auto   duration           = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     double queries_per_second = query_points.size() / (duration.count() / 1000.0);
@@ -384,16 +364,14 @@ TEST_F(GPUTest, GPUDifferentGridConfigs) {
     }
 
     MagneticFieldInterpolator gpu_interp(true, 0);
-    ErrorCode err = gpu_interp.LoadFromMemory(large_coords.data(), large_data.data(), large_coords.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.LoadFromMemory(large_coords.data(), large_data.data(), large_coords.size()));
     EXPECT_TRUE(gpu_interp.IsDataLoaded());
     EXPECT_EQ(gpu_interp.GetDataPointCount(), 64u);  // 4x4x4 grid
 
     // Test query on larger grid
     Point3D             query_point(0.75f, 0.75f, 0.75f);
     InterpolationResult result;
-    err = gpu_interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.Query(query_point, result));
     EXPECT_TRUE(result.valid);
 
     // Should interpolate correctly
@@ -404,9 +382,8 @@ TEST_F(GPUTest, GPUDifferentGridConfigs) {
     // Export different grid configuration results for visualization
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                        "test_output/gpu_different_grid.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                        "test_output/gpu_different_grid.vtk"));
 }
 
 // Test GPU with quadratic field to verify Hermite interpolation benefits
@@ -446,8 +423,7 @@ TEST_F(GPUTest, GPUQuadraticFieldInterpolation) {
 
     for (const auto& point : test_points) {
         InterpolationResult result;
-        ErrorCode           err = gpu_interp.Query(point, result);
-        EXPECT_EQ(err, ErrorCode::Success);
+        EXPECT_NO_THROW(gpu_interp.Query(point, result));
         EXPECT_TRUE(result.valid);
         results.push_back(result);
 
@@ -468,9 +444,8 @@ TEST_F(GPUTest, GPUQuadraticFieldInterpolation) {
     }
 
     // Export quadratic field interpolation results for visualization
-    ErrorCode err = gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, results,
-                                                  "test_output/gpu_quadratic_field.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, results,
+                                                  "test_output/gpu_quadratic_field.vtk"));
 }
 
 // Test GPU memory management with move semantics
@@ -486,8 +461,7 @@ TEST_F(GPUTest, GPUMoveSemantics) {
     // Test query on moved interpolator
     Point3D             point(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
-    ErrorCode           err = interp2.Query(point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp2.Query(point, result));
     EXPECT_TRUE(result.valid);
 }
 

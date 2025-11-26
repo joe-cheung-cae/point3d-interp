@@ -94,23 +94,19 @@ TEST_F(EdgeCaseTest, IrregularGridDetection) {
     std::vector<MagneticFieldData> field_data;
     GridParams                     grid_params;
 
-    ErrorCode result = loader.LoadFromCSV("irregular_grid.csv", coordinates, field_data, grid_params);
-
     // Should fail due to irregular spacing
-    EXPECT_EQ(result, ErrorCode::InvalidGridData);
+    EXPECT_THROW(loader.LoadFromCSV("irregular_grid.csv", coordinates, field_data, grid_params), std::runtime_error);
 }
 
 // Test boundary conditions
 TEST_F(EdgeCaseTest, BoundaryConditions) {
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromCSV("boundary_test.csv");
-    ASSERT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromCSV("boundary_test.csv"));
 
     // Test points at grid boundaries
     Point3D             boundary_point(0.0f, 0.0f, 0.0f);
     InterpolationResult result;
-    err = interp.Query(boundary_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(boundary_point, result));
     EXPECT_TRUE(result.valid);
 
     std::cout << std::fixed << std::setprecision(6);
@@ -119,8 +115,7 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
 
     // Test points outside boundaries
     Point3D outside_point(1.0f, 1.0f, 1.0f);  // Beyond grid bounds
-    err = interp.Query(outside_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(outside_point, result));
     EXPECT_FALSE(result.valid);
 
     std::cout << "Outside point (1.0,1.0,1.0): valid=" << result.valid << std::endl << std::endl;
@@ -128,23 +123,19 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
     // Export boundary condition test results for visualization
     std::vector<Point3D>             query_points = {boundary_point, outside_point};
     std::vector<InterpolationResult> results      = {InterpolationResult(), result};  // First result is overwritten
-    err                                           = interp.Query(boundary_point, results[0]);
-    EXPECT_EQ(err, ErrorCode::Success);
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/boundary_conditions.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(boundary_point, results[0]));
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/boundary_conditions.vtk"));
 }
 
 // Test high precision data handling
 TEST_F(EdgeCaseTest, HighPrecisionData) {
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromCSV("precision_test.csv");
-    ASSERT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromCSV("precision_test.csv"));
 
     Point3D             query_point(0.5f, 0.5f, 0.0f);
     InterpolationResult result;
-    err = interp.Query(query_point, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query_point, result));
     EXPECT_TRUE(result.valid);
 
     std::cout << std::fixed << std::setprecision(10);
@@ -159,9 +150,8 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
     // Export high precision data test results for visualization
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/high_precision_data.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/high_precision_data.vtk"));
 }
 
 // Test extreme values
@@ -178,13 +168,11 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), 8));
 
     Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
-    err = interp.Query(query, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query, result));
     EXPECT_TRUE(result.valid);
     EXPECT_FLOAT_EQ(result.data.Bx, 1e8f);  // Should interpolate correctly
 
@@ -196,9 +184,8 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     // Export very large values test results for visualization
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/very_large_values.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/very_large_values.vtk"));
 }
 
 // Test very small values
@@ -214,13 +201,11 @@ TEST(ExtremeValueTest, VerySmallValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), 8));
 
     Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
-    err = interp.Query(query, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query, result));
     EXPECT_TRUE(result.valid);
     EXPECT_NEAR(result.data.Bx, 1e-8f, 1e-9f);
 
@@ -232,9 +217,8 @@ TEST(ExtremeValueTest, VerySmallValues) {
     // Export very small values test results for visualization
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/very_small_values.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/very_small_values.vtk"));
 }
 
 // Test NaN and Inf values
@@ -257,14 +241,12 @@ TEST(ExtremeValueTest, NaNInfValues) {
     }
 
     MagneticFieldInterpolator interp;
-    ErrorCode                 err = interp.LoadFromMemory(coordinates.data(), field_data.data(), 8);
     // Should still load (NaN is a valid float value)
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coordinates.data(), field_data.data(), 8));
 
     Point3D             query(0.5f, 0.5f, 0.5f);
     InterpolationResult result;
-    err = interp.Query(query, result);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query, result));
     // Result may be NaN due to interpolation with NaN
     EXPECT_TRUE(std::isnan(result.data.Bx) || std::isfinite(result.data.Bx));
 
@@ -277,22 +259,19 @@ TEST(ExtremeValueTest, NaNInfValues) {
     // Export NaN/Inf values test results for visualization
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/nan_inf_values.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/nan_inf_values.vtk"));
 }
 
 // Test empty data arrays
 TEST(ErrorHandlingTest, EmptyDataArrays) {
     MagneticFieldInterpolator interp;
 
-    // Empty arrays
-    ErrorCode err = interp.LoadFromMemory(nullptr, nullptr, 0);
-    EXPECT_EQ(err, ErrorCode::InvalidParameter);
+    // Empty arrays - should throw exceptions
+    EXPECT_THROW(interp.LoadFromMemory(nullptr, nullptr, 0), std::runtime_error);
 
     std::vector<Point3D>           coords;
     std::vector<MagneticFieldData> data;
-    err = interp.LoadFromMemory(coords.data(), data.data(), 0);
-    EXPECT_EQ(err, ErrorCode::InvalidParameter);
+    EXPECT_THROW(interp.LoadFromMemory(coords.data(), data.data(), 0), std::runtime_error);
 }
 
 // Test mismatched array sizes
@@ -302,8 +281,7 @@ TEST(ErrorHandlingTest, MismatchedArraySizes) {
     std::vector<Point3D>           coords = {{0, 0, 0}, {1, 0, 0}};
     std::vector<MagneticFieldData> data   = {{1.0f, 0.1f, 0.2f, 0.3f}};  // Only 1 element
 
-    ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), coords.size());
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coords.data(), data.data(), coords.size()));
 }
 
 // Test concurrent access (basic thread safety check)
@@ -315,8 +293,7 @@ TEST(ConcurrencyTest, BasicConcurrency) {
                                              {0, 0, 1}, {1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
     std::vector<MagneticFieldData> data(8, MagneticFieldData(1.0f, 0.1f, 0.2f, 0.3f));
 
-    ErrorCode err = interp.LoadFromMemory(coords.data(), data.data(), 8);
-    ASSERT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.LoadFromMemory(coords.data(), data.data(), 8));
 
     // Test that multiple queries work (basic concurrency check)
     Point3D query1(0.5f, 0.5f, 0.5f);
@@ -325,11 +302,8 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     InterpolationResult result1, result2;
 
     // These should work without interference
-    err = interp.Query(query1, result1);
-    EXPECT_EQ(err, ErrorCode::Success);
-
-    err = interp.Query(query2, result2);
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.Query(query1, result1));
+    EXPECT_NO_THROW(interp.Query(query2, result2));
 
     EXPECT_TRUE(result1.valid);
     EXPECT_TRUE(result2.valid);
@@ -344,9 +318,8 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     // Export concurrency test results for visualization
     std::vector<Point3D>             query_points = {query1, query2};
     std::vector<InterpolationResult> results      = {result1, result2};
-    err = interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                    "test_output/basic_concurrency.vtk");
-    EXPECT_EQ(err, ErrorCode::Success);
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                             "test_output/basic_concurrency.vtk"));
 }
 
 // Test grid parameter validation

@@ -51,37 +51,39 @@ make -j8
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <iostream>
+#include <stdexcept>
 
 int main() {
     using namespace p3d;
 
-    // Create interpolator (auto-detects GPU by default)
-    MagneticFieldInterpolator interp;
+    try {
+        // Create interpolator (auto-detects GPU by default)
+        MagneticFieldInterpolator interp;
 
-    // Load data from CSV file
-    ErrorCode err = interp.LoadFromCSV("magnetic_field_data.csv");
-    if (err != ErrorCode::Success) {
-        std::cerr << "Load failed: " << ErrorCodeToString(err) << std::endl;
+        // Load data from CSV file
+        interp.LoadFromCSV("magnetic_field_data.csv");
+
+        // Single-point interpolation
+        Point3D query_point(1.5, 2.3, 0.8);
+        InterpolationResult result;
+
+        interp.Query(query_point, result);
+        if (result.valid) {
+            std::cout << "Magnetic field: (" << result.data.Bx << ", "
+                      << result.data.By << ", " << result.data.Bz << ")" << std::endl;
+        }
+
+        // Batch interpolation
+        std::vector<Point3D> query_points = {/* ... */};
+        std::vector<InterpolationResult> results(query_points.size());
+
+        interp.QueryBatch(query_points.data(), results.data(), query_points.size());
+
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
-    // Single-point interpolation
-    Point3D query_point(1.5, 2.3, 0.8);
-    InterpolationResult result;
-
-    err = interp.Query(query_point, result);
-    if (err == ErrorCode::Success && result.valid) {
-        std::cout << "Magnetic field: (" << result.data.Bx << ", "
-                  << result.data.By << ", " << result.data.Bz << ")" << std::endl;
-    }
-
-    // Batch interpolation
-    std::vector<Point3D> query_points = {/* ... */};
-    std::vector<InterpolationResult> results(query_points.size());
-
-    err = interp.QueryBatch(query_points.data(), results.data(), query_points.size());
-
-    return 0;
 }
 ```
 
@@ -92,33 +94,35 @@ Export interpolation data to Paraview VTK format for advanced visualization and 
 ```cpp
 #include "point3d_interp/interpolator_api.h"
 #include <vector>
+#include <stdexcept>
 
 int main() {
     using namespace p3d;
 
-    MagneticFieldInterpolator interp;
-    interp.LoadFromCSV("magnetic_field_data.csv");
+    try {
+        MagneticFieldInterpolator interp;
+        interp.LoadFromCSV("magnetic_field_data.csv");
 
-    // Export input sampling points with field data
-    ErrorCode err = MagneticFieldInterpolator::ExportInputPoints(
-        ExportFormat::ParaviewVTK, "input_points.vtk");
-    if (err != ErrorCode::Success) {
-        std::cerr << "Export failed: " << ErrorCodeToString(err) << std::endl;
+        // Export input sampling points with field data
+        MagneticFieldInterpolator::ExportInputPoints(
+            ExportFormat::ParaviewVTK, "input_points.vtk");
+
+        // Perform interpolation queries
+        std::vector<Point3D> query_points = {
+            {1.0, 1.0, 1.0}, {2.0, 2.0, 2.0}, {3.0, 3.0, 3.0}
+        };
+        std::vector<InterpolationResult> results;
+        interp.QueryBatch(query_points, results);
+
+        // Export interpolated results
+        MagneticFieldInterpolator::ExportOutputPoints(
+            ExportFormat::ParaviewVTK, query_points, results, "output_points.vtk");
+
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Export failed: " << e.what() << std::endl;
         return 1;
     }
-
-    // Perform interpolation queries
-    std::vector<Point3D> query_points = {
-        {1.0, 1.0, 1.0}, {2.0, 2.0, 2.0}, {3.0, 3.0, 3.0}
-    };
-    std::vector<InterpolationResult> results;
-    interp.QueryBatch(query_points, results);
-
-    // Export interpolated results
-    err = MagneticFieldInterpolator::ExportOutputPoints(
-        ExportFormat::ParaviewVTK, query_points, results, "output_points.vtk");
-
-    return 0;
 }
 ```
 
@@ -219,13 +223,11 @@ MagneticFieldInterpolator(bool use_gpu = true, int device_id = 0,
 
 #### Methods
 
-- `ErrorCode LoadFromCSV(const std::string& filepath)`: Load data from CSV file
-- `ErrorCode LoadFromMemory(const Point3D*, const MagneticFieldData*, size_t)`: Load data from memory
-- `ErrorCode Query(const Point3D&, InterpolationResult&)`: Single-point interpolation query
-- `ErrorCode QueryBatch(const Point3D*, InterpolationResult*, size_t)`: Batch interpolation query
-- `ErrorCode QueryBatch(const std::vector<Point3D>&, std::vector<InterpolationResult>&)`: Batch interpolation query with vectors
-- `InterpolationResult QueryEx(const Point3D&)`: Single-point interpolation query (throws on error)
-- `std::vector<InterpolationResult> QueryBatchEx(const std::vector<Point3D>&)`: Batch interpolation query with vectors (throws on error)
+- `void LoadFromCSV(const std::string& filepath)`: Load data from CSV file (throws on error)
+- `void LoadFromMemory(const Point3D*, const MagneticFieldData*, size_t)`: Load data from memory (throws on error)
+- `void Query(const Point3D&, InterpolationResult&)`: Single-point interpolation query (throws on error)
+- `void QueryBatch(const Point3D*, InterpolationResult*, size_t)`: Batch interpolation query (throws on error)
+- `void QueryBatch(const std::vector<Point3D>&, std::vector<InterpolationResult>&)`: Batch interpolation query with vectors (throws on error)
 - `const GridParams& GetGridParams() const`: Get grid parameters
 - `bool IsDataLoaded() const`: Check if data is loaded
 - `size_t GetDataPointCount() const`: Get number of data points
@@ -280,7 +282,6 @@ point3d_interp/
 │   └── point3d_interp/
 │       ├── interpolator_api.h       # Main API (Pimpl pattern)
 │       ├── types.h                  # Data type definitions
-│       ├── error_codes.h            # Error codes
 │       ├── data_loader.h            # Data loader
 │       ├── grid_structure.h         # Grid structure
 │       ├── cpu_interpolator.h       # CPU interpolator
@@ -384,14 +385,24 @@ cmake -DCMAKE_CUDA_ARCHITECTURES="75;80;86" ..
 
 ## Error Handling
 
-The library uses error codes instead of exceptions for error handling:
+The library uses modern C++ exceptions for error handling. All API methods throw `std::runtime_error` with descriptive error messages when errors occur. Client code should wrap API calls in try-catch blocks:
 
-- `Success`: Operation successful
-- `FileNotFound`: File not found
-- `InvalidFileFormat`: Invalid file format
-- `InvalidGridData`: Invalid grid data
-- `CudaError`: CUDA-related error
-- `QueryOutOfBounds`: Query point out of bounds
+```cpp
+try {
+    MagneticFieldInterpolator interp;
+    interp.LoadFromCSV("data.csv");
+    // ... use interpolator
+} catch (const std::runtime_error& e) {
+    std::cerr << "Interpolation error: " << e.what() << std::endl;
+}
+```
+
+Common error conditions:
+- File not found or cannot be read
+- Invalid CSV file format
+- Invalid or inconsistent grid data
+- CUDA-related errors (when GPU acceleration is enabled)
+- Query points outside valid data bounds
 
 ## License
 

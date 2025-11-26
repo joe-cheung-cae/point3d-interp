@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include "error_codes.h"
 #include "exporter.h"
 #include <string>
 #include <vector>
@@ -80,16 +79,16 @@ class MagneticFieldInterpolator {
     /**
      * @brief Load magnetic field data from CSV file
      * @param filepath CSV file path
-     * @return Error code
+     * @throws std::runtime_error on error
      */
-    ErrorCode LoadFromCSV(const std::string& filepath);
+    void LoadFromCSV(const std::string& filepath);
 
     /**
      * @brief Load data from memory
      * @param points Coordinate array (must not be null, coordinates must be finite, not NaN)
      * @param field_data Magnetic field data array (must not be null, field values must be finite, not NaN)
      * @param count Number of data points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
-     * @return Error code
+     * @throws std::runtime_error on error
      *
      * @note Input validation:
      * - points and field_data must not be null
@@ -97,26 +96,26 @@ class MagneticFieldInterpolator {
      * - All coordinate values (x, y, z) must be finite (not NaN or infinite)
      * - All magnetic field values (Bx, By, Bz) must be finite (not NaN or infinite)
      */
-    ErrorCode LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
+    void LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data, size_t count);
 
     /**
      * @brief Single point interpolation query
      * @param query_point Query point coordinates (must be finite, not NaN)
      * @param result Output result
-     * @return Error code
+     * @throws std::runtime_error on error
      *
      * @note Input validation:
      * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
      * - query_point coordinates must be finite (not NaN or infinite)
      */
-    ErrorCode Query(const Point3D& query_point, InterpolationResult& result);
+    void Query(const Point3D& query_point, InterpolationResult& result);
 
     /**
      * @brief Batch interpolation query
      * @param query_points Query point array (must not be null, coordinates must be finite, not NaN)
      * @param results Output result array (must not be null)
      * @param count Number of query points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
-     * @return Error code
+     * @throws std::runtime_error on error
      *
      * @note Input validation:
      * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
@@ -124,15 +123,15 @@ class MagneticFieldInterpolator {
      * - count must be > 0 and <= SIZE_MAX/2
      * - All query point coordinates must be finite (not NaN or infinite)
      */
-    ErrorCode QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
+    void QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count);
 
     /**
      * @brief Batch interpolation query with vectors
      * @param query_points Query point vector
      * @param results Output result vector (will be resized)
-     * @return Error code
+     * @throws std::runtime_error on error
      */
-    ErrorCode QueryBatch(const std::vector<Point3D>& query_points, std::vector<InterpolationResult>& results);
+    void QueryBatch(const std::vector<Point3D>& query_points, std::vector<InterpolationResult>& results);
 
     /**
      * @brief Single point interpolation query (throws on error)
@@ -204,7 +203,7 @@ class MagneticFieldInterpolator {
      * @param d_results Device pointer to results array (must not be null)
      * @param count Number of query points (must be > 0 and <= SIZE_MAX/2 to prevent overflow)
      * @param stream CUDA stream for asynchronous execution (default nullptr)
-     * @return Error code
+     * @throws std::runtime_error on error
      *
      * @note Input validation:
      * - Data must be loaded first (call LoadFromCSV or LoadFromMemory)
@@ -212,8 +211,8 @@ class MagneticFieldInterpolator {
      * - count must be > 0 and <= SIZE_MAX/2
      * - Only works with regular grid data (not unstructured)
      */
-    ErrorCode LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
-                                        void* stream = nullptr);
+    void LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results, size_t count,
+                                   void* stream = nullptr);
 
     /**
      * @brief Get optimal kernel launch configuration for given query count
@@ -228,11 +227,11 @@ class MagneticFieldInterpolator {
      * @param field_data Magnetic field data
      * @param format Export format
      * @param filename Output filename
-     * @return Error code
+     * @throws std::runtime_error on error
      */
-    static ErrorCode ExportInputPoints(const std::vector<Point3D>&           coordinates,
-                                       const std::vector<MagneticFieldData>& field_data, ExportFormat format,
-                                       const std::string& filename);
+    static void ExportInputPoints(const std::vector<Point3D>&           coordinates,
+                                  const std::vector<MagneticFieldData>& field_data, ExportFormat format,
+                                  const std::string& filename);
 
     /**
      * @brief Export output interpolation points to visualization format
@@ -240,20 +239,20 @@ class MagneticFieldInterpolator {
      * @param query_points Query points used for interpolation
      * @param results Interpolation results
      * @param filename Output filename
-     * @return Error code
+     * @throws std::runtime_error on error
      */
-    static ErrorCode ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
-                                        const std::vector<InterpolationResult>& results, const std::string& filename);
+    static void ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
+                                   const std::vector<InterpolationResult>& results, const std::string& filename);
 
     /**
      * @brief Get the last kernel execution time (GPU only)
      * @param kernel_time_ms Output kernel execution time in milliseconds
-     * @return Error code
+     * @throws std::runtime_error on error
      *
      * @note Only valid after a GPU QueryBatch call. Returns the time spent in GPU kernel execution only,
      *       excluding memory transfers.
      */
-    ErrorCode GetLastKernelTime(float& kernel_time_ms) const;
+    void GetLastKernelTime(float& kernel_time_ms) const;
 
   private:
     /**
