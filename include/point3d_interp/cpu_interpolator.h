@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_CPU_INTERPOLATOR_H
-#define POINTER3D_INTERP_CPU_INTERPOLATOR_H
+#pragma once
 
 #include "types.h"
 #include "grid_structure.h"
@@ -129,5 +128,3 @@ class CPUInterpolator {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_CPU_INTERPOLATOR_H

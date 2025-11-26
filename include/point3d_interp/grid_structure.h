@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_GRID_STRUCTURE_H
-#define POINTER3D_INTERP_GRID_STRUCTURE_H
+#pragma once
 
 #include "types.h"
 #include <vector>
@@ -122,5 +121,3 @@ class RegularGrid3D {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_GRID_STRUCTURE_H

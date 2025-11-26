@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_ERROR_CODES_H
-#define POINTER3D_INTERP_ERROR_CODES_H
+#pragma once
 
 #include <string>
 
@@ -26,5 +25,3 @@ const char* ErrorCodeToString(ErrorCode code);
 inline std::string ErrorCodeToStringStd(ErrorCode code) { return std::string(ErrorCodeToString(code)); }
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_ERROR_CODES_H

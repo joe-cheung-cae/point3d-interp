@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_EXPORTER_H
-#define POINTER3D_INTERP_EXPORTER_H
+#pragma once
 
 #include "types.h"
 #include <string>
@@ -73,5 +72,3 @@ class Exporter {
 std::unique_ptr<Exporter> CreateExporter(ExportFormat format);
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_EXPORTER_H

@@ -1,5 +1,4 @@
-#ifndef POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
-#define POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H
+#pragma once
 
 #include "benchmark_structured_base.h"
 #include <iostream>
@@ -274,5 +273,3 @@ class UnstructuredBenchmarkBase : public BenchmarkBase {
 };
 
 }  // namespace p3d
-
-#endif  // POINT3D_INTERP_UNSTRUCTURED_BENCHMARK_BASE_H

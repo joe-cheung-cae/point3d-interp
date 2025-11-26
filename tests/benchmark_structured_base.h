@@ -1,5 +1,4 @@
-#ifndef POINT3D_INTERP_BENCHMARK_BASE_H
-#define POINT3D_INTERP_BENCHMARK_BASE_H
+#pragma once
 
 #include "point3d_interp/api.h"
 #include <iostream>
@@ -268,5 +267,3 @@ class BenchmarkBase {
 };
 
 }  // namespace p3d
-
-#endif  // POINT3D_INTERP_BENCHMARK_BASE_H

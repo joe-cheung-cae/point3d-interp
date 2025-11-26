@@ -1,5 +1,4 @@
-#ifndef POINT3D_INTERP_CONSTANTS_H
-#define POINT3D_INTERP_CONSTANTS_H
+#pragma once
 
 #include "types.h"
 
@@ -82,5 +81,3 @@ constexpr size_t MAX_EXTRAPOLATION_NEIGHBORS = 5;
 constexpr size_t SHARED_MEMORY_LIMIT_FACTOR = 1;
 
 }  // namespace p3d
-
-#endif  // POINT3D_INTERP_CONSTANTS_H

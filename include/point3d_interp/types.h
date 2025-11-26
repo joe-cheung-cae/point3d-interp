@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_TYPES_H
-#define POINTER3D_INTERP_TYPES_H
+#pragma once
 
 #include <cstdint>
 #include <cstddef>
@@ -212,5 +211,3 @@ struct SpatialGrid {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_TYPES_H

@@ -20,7 +20,7 @@ DataLoader::DataLoader()
 DataLoader::~DataLoader() = default;
 
 ErrorCode DataLoader::LoadFromCSV(const std::string& filepath, std::vector<Point3D>& coordinates,
-                                   std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
+                                  std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
     // Open file
     std::ifstream file(filepath);
     if (!file.is_open()) {

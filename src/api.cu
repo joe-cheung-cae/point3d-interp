@@ -16,12 +16,11 @@
 
 namespace p3d {
 
-
 /**
  * @brief API implementation class (Pimpl pattern)
  */
 class MagneticFieldInterpolator::Impl {
-   private:
+  private:
     /**
      * @brief Log CUDA error with consistent formatting
      * @param operation Description of the operation that failed
@@ -75,7 +74,7 @@ class MagneticFieldInterpolator::Impl {
         return count > 0 && count <= SIZE_MAX / 2;
     }
 
-   public:
+  public:
     Impl(bool use_gpu, int device_id, InterpolationMethod method,
          ExtrapolationMethod extrapolation_method = ExtrapolationMethod::None);
     ~Impl();
@@ -161,10 +160,10 @@ class MagneticFieldInterpolator::Impl {
                 const size_t shared_mem_size = sizeof(GridParams);
 
                 // Launch kernel with specified stream
-                cuda::
-                    TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, shared_mem_size, static_cast<cudaStream_t>(stream)>>>(
-                        d_query_points, gpu_grid_field_data_->getDevicePtr(), grid_params, d_results, count,
-                        static_cast<int>(extrapolation_method_));
+                cuda::TricubicHermiteInterpolationKernel<<<grid_dim, block_dim, shared_mem_size,
+                                                           static_cast<cudaStream_t>(stream)>>>(
+                    d_query_points, gpu_grid_field_data_->getDevicePtr(), grid_params, d_results, count,
+                    static_cast<int>(extrapolation_method_));
 
                 // Check for kernel launch errors
                 cudaError_t cuda_err = cudaGetLastError();
@@ -201,13 +200,13 @@ class MagneticFieldInterpolator::Impl {
         config.grid_z  = 1;
     }
 
-   private:
+  private:
     static bool InitializeGPU(int device_id);
-    void ReleaseGPU();
-    bool UploadDataToGPU();
+    void        ReleaseGPU();
+    bool        UploadDataToGPU();
 
     // New architecture: unified interpolator interface
-    std::unique_ptr<IInterpolator> interpolator_;
+    std::unique_ptr<IInterpolator>       interpolator_;
     std::unique_ptr<InterpolatorFactory> factory_;
 
     // GPU implementation
@@ -370,7 +369,7 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromCSV(const std::string& filepa
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points, const MagneticFieldData* field_data,
-                                                           size_t count) {
+                                                          size_t count) {
     // Basic null pointer and size validation
     if (!points || !field_data) {
         return ErrorCode::InvalidParameter;
@@ -408,12 +407,12 @@ ErrorCode MagneticFieldInterpolator::Impl::LoadFromMemory(const Point3D* points,
         }
 
         // For unstructured data, we need to use IDW method
-        InterpolationMethod method = (dataType == DataStructureType::RegularGrid) ?
-            InterpolationMethod::TricubicHermite : InterpolationMethod::IDW;
+        InterpolationMethod method = (dataType == DataStructureType::RegularGrid) ? InterpolationMethod::TricubicHermite
+                                                                                  : InterpolationMethod::IDW;
 
         // Create interpolator using factory
-        interpolator_ = factory_->createInterpolator(dataType, method, coordinates, field_values,
-                                                    extrapolation_method_, use_gpu_);
+        interpolator_ =
+            factory_->createInterpolator(dataType, method, coordinates, field_values, extrapolation_method_, use_gpu_);
 
         if (!interpolator_) {
             return ErrorCode::InvalidGridData;
@@ -442,7 +441,7 @@ ErrorCode MagneticFieldInterpolator::Impl::Query(const Point3D& query_point, Int
 }
 
 ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_points, InterpolationResult* results,
-                                                       size_t count) {
+                                                      size_t count) {
     if (!IsDataLoaded()) {
         return ErrorCode::DataNotLoaded;
     }
@@ -465,7 +464,7 @@ ErrorCode MagneticFieldInterpolator::Impl::QueryBatch(const Point3D* query_point
     try {
         // Use the new unified interpolator interface
         std::vector<Point3D> query_vec(query_points, query_points + count);
-        auto cpu_results = interpolator_->queryBatch(query_vec);
+        auto                 cpu_results = interpolator_->queryBatch(query_vec);
 
         // Copy results
         std::copy(cpu_results.begin(), cpu_results.end(), results);

@@ -1,5 +1,4 @@
-#ifndef POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H
-#define POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H
+#pragma once
 
 #include "benchmark_unstructured_base.h"
 
@@ -46,5 +45,3 @@ class UnstructuredBenchmarkOutsideDomainBase : public UnstructuredBenchmarkBase 
 };
 
 }  // namespace p3d
-
-#endif  // POINT3D_INTERP_UNSTRUCTURED_OUTSIDE_DOMAIN_BENCHMARK_BASE_H

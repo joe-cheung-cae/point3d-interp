@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_DATA_LOADER_H
-#define POINTER3D_INTERP_DATA_LOADER_H
+#pragma once
 
 #include "types.h"
 #include "error_codes.h"
@@ -108,5 +107,3 @@ class DataLoader {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_DATA_LOADER_H

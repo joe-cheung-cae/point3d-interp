@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_SPATIAL_GRID_H
-#define POINTER3D_INTERP_SPATIAL_GRID_H
+#pragma once
 
 #include "types.h"
 #include <vector>
@@ -32,5 +31,3 @@ SpatialGrid buildSpatialGrid(const std::vector<Point3D>& points, const Point3D& 
                              const std::array<uint32_t, 3>& grid_resolutions = {0, 0, 0});
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_SPATIAL_GRID_H

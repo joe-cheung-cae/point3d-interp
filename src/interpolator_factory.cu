@@ -7,14 +7,11 @@ namespace p3d {
 
 // InterpolatorFactory implementation
 
-std::unique_ptr<IInterpolator> InterpolatorFactory::createInterpolator(
-    DataStructureType dataType,
-    InterpolationMethod method,
-    const std::vector<Point3D>& coordinates,
-    const std::vector<MagneticFieldData>& fieldData,
-    ExtrapolationMethod extrapolation,
-    bool useGPU) {
-
+std::unique_ptr<IInterpolator> InterpolatorFactory::createInterpolator(DataStructureType           dataType,
+                                                                       InterpolationMethod         method,
+                                                                       const std::vector<Point3D>& coordinates,
+                                                                       const std::vector<MagneticFieldData>& fieldData,
+                                                                       ExtrapolationMethod extrapolation, bool useGPU) {
     if (!supports(dataType, method, useGPU)) {
         throw std::invalid_argument("Unsupported interpolator configuration");
     }
@@ -51,12 +48,8 @@ bool InterpolatorFactory::supports(DataStructureType dataType, InterpolationMeth
 }
 
 std::unique_ptr<IInterpolator> InterpolatorFactory::createStructuredInterpolator(
-    InterpolationMethod method,
-    const std::vector<Point3D>& coordinates,
-    const std::vector<MagneticFieldData>& fieldData,
-    ExtrapolationMethod extrapolation,
-    bool useGPU) {
-
+    InterpolationMethod method, const std::vector<Point3D>& coordinates,
+    const std::vector<MagneticFieldData>& fieldData, ExtrapolationMethod extrapolation, bool useGPU) {
     // Try to create regular grid
     std::unique_ptr<RegularGrid3D> grid;
     if (!isRegularGrid(coordinates, fieldData, grid)) {
@@ -64,40 +57,32 @@ std::unique_ptr<IInterpolator> InterpolatorFactory::createStructuredInterpolator
     }
 
     if (useGPU) {
-        return std::make_unique<GPUStructuredInterpolatorAdapter>(
-            std::move(grid), method, extrapolation);
+        return std::make_unique<GPUStructuredInterpolatorAdapter>(std::move(grid), method, extrapolation);
     } else {
-        return std::make_unique<CPUStructuredInterpolatorAdapter>(
-            std::move(grid), method, extrapolation);
+        return std::make_unique<CPUStructuredInterpolatorAdapter>(std::move(grid), method, extrapolation);
     }
 }
 
 std::unique_ptr<IInterpolator> InterpolatorFactory::createUnstructuredInterpolator(
-    InterpolationMethod method,
-    const std::vector<Point3D>& coordinates,
-    const std::vector<MagneticFieldData>& fieldData,
-    ExtrapolationMethod extrapolation,
-    bool useGPU) {
-
+    InterpolationMethod method, const std::vector<Point3D>& coordinates,
+    const std::vector<MagneticFieldData>& fieldData, ExtrapolationMethod extrapolation, bool useGPU) {
     // For unstructured data, we need to determine power parameter based on method
-    Real power = 2.0f;  // Default for IDW
-    size_t max_neighbors = 0;  // Use all neighbors by default
+    Real   power         = 2.0f;  // Default for IDW
+    size_t max_neighbors = 0;     // Use all neighbors by default
 
-    auto interpolator = std::make_unique<UnstructuredInterpolator>(
-        coordinates, fieldData, power, max_neighbors, extrapolation);
+    auto interpolator =
+        std::make_unique<UnstructuredInterpolator>(coordinates, fieldData, power, max_neighbors, extrapolation);
 
     if (useGPU) {
-        return std::make_unique<GPUUnstructuredInterpolatorAdapter>(
-            std::move(interpolator), method, extrapolation);
+        return std::make_unique<GPUUnstructuredInterpolatorAdapter>(std::move(interpolator), method, extrapolation);
     } else {
-        return std::make_unique<CPUUnstructuredInterpolatorAdapter>(
-            std::move(interpolator), method, extrapolation);
+        return std::make_unique<CPUUnstructuredInterpolatorAdapter>(std::move(interpolator), method, extrapolation);
     }
 }
 
-bool InterpolatorFactory::isRegularGrid(const std::vector<Point3D>& coordinates,
-                                       const std::vector<MagneticFieldData>& fieldData,
-                                       std::unique_ptr<RegularGrid3D>& grid) {
+bool InterpolatorFactory::isRegularGrid(const std::vector<Point3D>&           coordinates,
+                                        const std::vector<MagneticFieldData>& fieldData,
+                                        std::unique_ptr<RegularGrid3D>&       grid) {
     try {
         grid = std::make_unique<RegularGrid3D>(coordinates, fieldData);
         return true;
@@ -113,13 +98,8 @@ void PluginInterpolatorFactory::registerPlugin(std::unique_ptr<IInterpolatorFact
 }
 
 std::unique_ptr<IInterpolator> PluginInterpolatorFactory::createInterpolator(
-    DataStructureType dataType,
-    InterpolationMethod method,
-    const std::vector<Point3D>& coordinates,
-    const std::vector<MagneticFieldData>& fieldData,
-    ExtrapolationMethod extrapolation,
-    bool useGPU) {
-
+    DataStructureType dataType, InterpolationMethod method, const std::vector<Point3D>& coordinates,
+    const std::vector<MagneticFieldData>& fieldData, ExtrapolationMethod extrapolation, bool useGPU) {
     for (auto& plugin : plugins_) {
         if (plugin->supports(dataType, method, useGPU)) {
             return plugin->createInterpolator(dataType, method, coordinates, fieldData, extrapolation, useGPU);
@@ -131,7 +111,7 @@ std::unique_ptr<IInterpolator> PluginInterpolatorFactory::createInterpolator(
 
 bool PluginInterpolatorFactory::supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const {
     return std::any_of(plugins_.begin(), plugins_.end(),
-        [&](const auto& plugin) { return plugin->supports(dataType, method, useGPU); });
+                       [&](const auto& plugin) { return plugin->supports(dataType, method, useGPU); });
 }
 
 // GlobalInterpolatorFactory implementation
@@ -146,13 +126,8 @@ void GlobalInterpolatorFactory::registerFactory(std::unique_ptr<IInterpolatorFac
 }
 
 std::unique_ptr<IInterpolator> GlobalInterpolatorFactory::createInterpolator(
-    DataStructureType dataType,
-    InterpolationMethod method,
-    const std::vector<Point3D>& coordinates,
-    const std::vector<MagneticFieldData>& fieldData,
-    ExtrapolationMethod extrapolation,
-    bool useGPU) {
-
+    DataStructureType dataType, InterpolationMethod method, const std::vector<Point3D>& coordinates,
+    const std::vector<MagneticFieldData>& fieldData, ExtrapolationMethod extrapolation, bool useGPU) {
     for (auto& factory : factories_) {
         if (factory->supports(dataType, method, useGPU)) {
             return factory->createInterpolator(dataType, method, coordinates, fieldData, extrapolation, useGPU);

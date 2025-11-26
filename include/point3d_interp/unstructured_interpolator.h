@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_UNSTRUCTURED_INTERPOLATOR_H
-#define POINTER3D_INTERP_UNSTRUCTURED_INTERPOLATOR_H
+#pragma once
 
 #include "types.h"
 #include "kd_tree.h"
@@ -140,5 +139,3 @@ class UnstructuredInterpolator {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_UNSTRUCTURED_INTERPOLATOR_H

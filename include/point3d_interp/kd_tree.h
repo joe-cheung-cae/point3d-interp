@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_KD_TREE_H
-#define POINTER3D_INTERP_KD_TREE_H
+#pragma once
 
 #include "types.h"
 #include <vector>
@@ -136,5 +135,3 @@ class KDTree {
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_KD_TREE_H

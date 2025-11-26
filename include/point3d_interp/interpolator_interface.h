@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_INTERPOLATOR_INTERFACE_H
-#define POINTER3D_INTERP_INTERPOLATOR_INTERFACE_H
+#pragma once
 
 #include "types.h"
 #include <vector>
@@ -19,7 +18,7 @@ enum class DataStructureType { RegularGrid, Unstructured };
  * enabling polymorphic usage and decoupling algorithm implementations from the API layer.
  */
 class IInterpolator {
-public:
+  public:
     virtual ~IInterpolator() = default;
 
     /**
@@ -103,7 +102,7 @@ public:
  * @brief Abstract factory for creating interpolators
  */
 class IInterpolatorFactory {
-public:
+  public:
     virtual ~IInterpolatorFactory() = default;
 
     /**
@@ -116,13 +115,10 @@ public:
      * @param useGPU Whether to use GPU acceleration
      * @return Unique pointer to interpolator instance
      */
-    virtual std::unique_ptr<IInterpolator> createInterpolator(
-        DataStructureType dataType,
-        InterpolationMethod method,
-        const std::vector<Point3D>& coordinates,
-        const std::vector<MagneticFieldData>& fieldData,
-        ExtrapolationMethod extrapolation,
-        bool useGPU) = 0;
+    virtual std::unique_ptr<IInterpolator> createInterpolator(DataStructureType dataType, InterpolationMethod method,
+                                                              const std::vector<Point3D>&           coordinates,
+                                                              const std::vector<MagneticFieldData>& fieldData,
+                                                              ExtrapolationMethod extrapolation, bool useGPU) = 0;
 
     /**
      * @brief Check if this factory supports the given configuration
@@ -135,5 +131,3 @@ public:
 };
 
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_INTERPOLATOR_INTERFACE_H

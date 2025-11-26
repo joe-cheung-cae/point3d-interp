@@ -1,5 +1,4 @@
-#ifndef POINTER3D_INTERP_MEMORY_MANAGER_H
-#define POINTER3D_INTERP_MEMORY_MANAGER_H
+#pragma once
 
 #include "types.h"
 #ifdef __CUDACC__
@@ -294,5 +293,3 @@ bool GpuMemory<T>::copyToHost(T* host_data, size_t count) {
 }  // namespace cuda
 #endif  // __CUDACC__
 }  // namespace p3d
-
-#endif  // POINTER3D_INTERP_MEMORY_MANAGER_H
