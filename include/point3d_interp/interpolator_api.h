@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "exporter.h"
+#include "interpolator_exporter.h"
 #include <string>
 #include <vector>
 #include <memory>

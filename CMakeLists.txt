@@ -64,7 +64,7 @@ set(SOURCES
     src/spatial_grid.cpp
     src/unstructured_interpolator.cpp
     src/kd_tree.cpp
-    src/exporter.cpp
+    src/interpolator_exporter.cpp
 )
 
 set(CUDA_SOURCES

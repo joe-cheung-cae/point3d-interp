@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Notes about VTK file compatibility with Paraview visualization
 
 ### Technical Details
-- **New Files**: `include/point3d_interp/exporter.h`, `src/exporter.cpp`, `tests/test_exporter.cpp`, `tests/benchmark_out_of_domain_10x10x10.cpp`, `tests/benchmark_out_of_domain_20x20x20.cpp`, `tests/benchmark_out_of_domain_30x30x30.cpp`, `tests/benchmark_out_of_domain_50x50x50.cpp`
+- **New Files**: `include/point3d_interp/interpolator_exporter.h`, `src/interpolator_exporter.cpp`, `tests/test_exporter.cpp`, `tests/benchmark_out_of_domain_10x10x10.cpp`, `tests/benchmark_out_of_domain_20x20x20.cpp`, `tests/benchmark_out_of_domain_30x30x30.cpp`, `tests/benchmark_out_of_domain_50x50x50.cpp`
 - **Modified Files**: `include/point3d_interp/api.h`, `src/api.cpp`, `tests/benchmark_base.h`, `CMakeLists.txt`, `tests/CMakeLists.txt`, `docs/API_Reference.md`
 - **Export Format**: VTK legacy unstructured grid format ensuring maximum compatibility
 - **Data Completeness**: Exports all magnetic field components, derivatives, and validity information

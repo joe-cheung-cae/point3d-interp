@@ -1,4 +1,4 @@
-#include "point3d_interp/exporter.h"
+#include "point3d_interp/interpolator_exporter.h"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
