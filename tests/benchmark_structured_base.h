@@ -1,6 +1,6 @@
 #pragma once
 
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <iostream>
 #include <iomanip>
 #include <chrono>

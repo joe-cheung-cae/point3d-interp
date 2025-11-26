@@ -458,7 +458,7 @@ The library uses error codes instead of exceptions for error handling.
 ### Basic Usage
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 
 int main() {
     // Create interpolator
@@ -487,7 +487,7 @@ int main() {
 ### Batch Queries
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <vector>
 
 int main() {
@@ -513,7 +513,7 @@ int main() {
 ### Memory-Based Loading
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <vector>
 
 int main() {
@@ -542,7 +542,7 @@ int main() {
 For advanced users who need maximum performance or integration with existing CUDA applications, the library provides direct access to the CUDA interpolation kernel:
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <cuda_runtime.h>
 
 int main() {
@@ -598,7 +598,7 @@ int main() {
 ### Exporting Data for Visualization
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <vector>
 
 int main() {

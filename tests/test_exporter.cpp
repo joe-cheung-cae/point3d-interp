@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <point3d_interp/api.h>
+#include <point3d_interp/interpolator_api.h>
 #include <filesystem>
 #include <fstream>
 #include <string>

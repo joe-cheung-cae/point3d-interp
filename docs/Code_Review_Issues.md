@@ -25,7 +25,7 @@ Enhanced CUDA_CHECK macro to log detailed error messages with file, line, and CU
 Made tolerance configurable in DataLoader with SetTolerance() method; replaced hardcoded 1e-6 values.
 
 ### 6. Potential Header Pollution
-Removed conditional CUDA headers from api.h; types in types.h without CUDA deps.
+Removed conditional CUDA headers from interpolator_api.h; types in types.h without CUDA deps.
 
 ### 7. Thread Safety Undocumented
 Removed mutex locks causing deadlocks; documented as not thread-safe.

@@ -9,6 +9,7 @@ project(point3d_interp LANGUAGES CXX CUDA)
 # Set CMAKE build type
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the build type")
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Release Debug)
+message(STATUS "CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -68,7 +69,7 @@ set(SOURCES
 )
 
 set(CUDA_SOURCES
-    src/api.cu
+    src/interpolator_api.cu
     src/cuda_interpolator.cu
     src/memory_manager.cu
     src/interpolator_adapters.cu

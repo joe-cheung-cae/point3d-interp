@@ -49,7 +49,7 @@ make -j8
 ### Basic Usage
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <iostream>
 
 int main() {
@@ -90,7 +90,7 @@ int main() {
 Export interpolation data to Paraview VTK format for advanced visualization and analysis:
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <vector>
 
 int main() {
@@ -127,7 +127,7 @@ int main() {
 For maximum performance and integration with existing CUDA applications, you can access the interpolation kernel directly:
 
 ```cpp
-#include "point3d_interp/api.h"
+#include "point3d_interp/interpolator_api.h"
 #include <cuda_runtime.h>
 
 int main() {
@@ -278,7 +278,7 @@ The library uses a modular, extensible architecture based on abstract interfaces
 point3d_interp/
 ├── include/          # Public headers
 │   └── point3d_interp/
-│       ├── api.h                    # Main API (Pimpl pattern)
+│       ├── interpolator_api.h       # Main API (Pimpl pattern)
 │       ├── types.h                  # Data type definitions
 │       ├── error_codes.h            # Error codes
 │       ├── data_loader.h            # Data loader
@@ -292,7 +292,7 @@ point3d_interp/
 │       ├── interpolator_adapters.h  # Adapter classes for existing interpolators
 │       └── interpolator_factory.h   # Factory classes for interpolator creation
 ├── src/              # Implementation files
-│   ├── api.cu                       # API implementation (CUDA)
+│   ├── interpolator_api.cu          # API implementation (CUDA)
 │   ├── data_loader.cpp              # CSV parsing
 │   ├── grid_structure.cpp           # Grid management
 │   ├── cpu_interpolator.cpp         # CPU interpolation
