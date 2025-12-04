@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Export format enumeration
@@ -72,4 +72,4 @@ class Exporter {
  */
 std::unique_ptr<Exporter> CreateExporter(ExportFormat format);
 
-}  // namespace p3d
+P3D_NAMESPACE_END

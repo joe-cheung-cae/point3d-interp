@@ -3,7 +3,7 @@
 #include <fstream>
 #include <string>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 class DataLoaderTest : public ::testing::Test {
@@ -177,4 +177,4 @@ TEST_F(DataLoaderTest, CustomColumnIndices) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Data structure type enumeration
@@ -130,4 +130,4 @@ class IInterpolatorFactory {
     virtual bool supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const = 0;
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

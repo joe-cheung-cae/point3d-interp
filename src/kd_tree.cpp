@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 KDTree::KDTree(const std::vector<Point3D>& points) : points_(points), root_(nullptr) {
     if (points.empty()) {
@@ -232,4 +232,4 @@ void KDTree::deleteTree(KDNode* node) {
     }
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

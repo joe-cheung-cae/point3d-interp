@@ -11,7 +11,7 @@
 #include <cstring>
 #include <charconv>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 DataLoader::DataLoader()
     : delimiter_(','),
@@ -531,4 +531,4 @@ bool DataLoader::StringToValue(const std::string& str, T& value) {
 template bool DataLoader::StringToValue<float>(const std::string& str, float& value);
 template bool DataLoader::StringToValue<double>(const std::string& str, double& value);
 
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -14,7 +14,7 @@
 #include <cuda_runtime.h>
 #include "point3d_interp/memory_manager.h"
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief API implementation class (Pimpl pattern)
@@ -651,4 +651,4 @@ void MagneticFieldInterpolator::GetLastKernelTime(float& kernel_time_ms) const {
     impl_->GetLastKernelTime(kernel_time_ms);
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

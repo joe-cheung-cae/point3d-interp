@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 RegularGrid3D::RegularGrid3D(const GridParams& params) : params_(params) {
     if (params.dimensions[0] == 0 || params.dimensions[1] == 0 || params.dimensions[2] == 0) {
@@ -207,4 +207,4 @@ bool RegularGrid3D::validateGridData() const {
     return true;
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

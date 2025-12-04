@@ -2,7 +2,7 @@
 #include <algorithm>
 
 // Forward declarations of CUDA kernels
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace cuda {
 __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ query_points,
                                                    const MagneticFieldData* __restrict__ grid_data,
@@ -25,9 +25,9 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
                                        const Point3D max_bound, InterpolationResult* __restrict__ results,
                                        const size_t  query_count);
 }  // namespace cuda
-}  // namespace p3d
+P3D_NAMESPACE_END
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 // CPUStructuredInterpolatorAdapter implementation
 
@@ -368,4 +368,4 @@ bool GPUUnstructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms
     return true;
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

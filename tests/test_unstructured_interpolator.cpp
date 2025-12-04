@@ -4,7 +4,7 @@
 #include <vector>
 #include <cmath>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 class UnstructuredInterpolatorTest : public ::testing::Test {
   protected:
@@ -273,4 +273,4 @@ TEST_F(UnstructuredInterpolatorTest, ExtrapolationNone) {
     EXPECT_GE(result.data.Bz, 0.0f);
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

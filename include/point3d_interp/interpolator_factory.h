@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Concrete interpolator factory implementation
@@ -83,4 +83,4 @@ class GlobalInterpolatorFactory {
     std::vector<std::unique_ptr<IInterpolatorFactory>> factories_;
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

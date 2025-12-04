@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Regular grid structure class
@@ -120,4 +120,4 @@ class RegularGrid3D {
     std::vector<MagneticFieldData> field_data_;   // Magnetic field data
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

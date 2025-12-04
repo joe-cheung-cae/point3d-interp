@@ -9,7 +9,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 // Test class for edge cases
@@ -340,4 +340,4 @@ TEST(GridValidationTest, InvalidGridParameters) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -2,7 +2,7 @@
 
 #include "benchmark_unstructured_base.h"
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Base class for unstructured data performance benchmarks with queries outside the domain
@@ -44,4 +44,4 @@ class UnstructuredBenchmarkOutsideDomainBase : public UnstructuredBenchmarkBase 
     std::string GetBenchmarkType() const override { return "_unstructured_out_of_domain"; }
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -5,7 +5,7 @@
     #include <cuda_runtime.h>
 #endif
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace cuda {
 
 #ifdef __CUDACC__
@@ -292,4 +292,4 @@ bool GpuMemory<T>::copyToHost(T* host_data, size_t count) {
 
 }  // namespace cuda
 #endif  // __CUDACC__
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -9,7 +9,7 @@
 #include <chrono>
 #include <cmath>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 class GPUTest : public ::testing::Test {
@@ -466,4 +466,4 @@ TEST_F(GPUTest, GPUMoveSemantics) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

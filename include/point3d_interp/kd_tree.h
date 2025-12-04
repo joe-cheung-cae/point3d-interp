@@ -5,7 +5,7 @@
 #include <memory>
 #include <queue>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief KD-tree node structure
@@ -134,4 +134,4 @@ class KDTree {
     KDNode*              root_;    // Root of the KD-tree
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

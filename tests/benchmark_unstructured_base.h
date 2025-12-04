@@ -9,7 +9,7 @@
 #include <array>
 #include <filesystem>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Base class for unstructured data performance benchmarks
@@ -293,4 +293,4 @@ class UnstructuredBenchmarkBase : public BenchmarkBase {
     }
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

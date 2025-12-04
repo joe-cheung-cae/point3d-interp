@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 #include <iostream>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace cuda {
 
 /**
@@ -293,4 +293,4 @@ template class GpuMemory<InterpolationResult>;
 template class GpuMemory<uint32_t>;
 
 }  // namespace cuda
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -5,7 +5,7 @@
 #include <limits>
 #include <stdexcept>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 UnstructuredInterpolator::UnstructuredInterpolator(const std::vector<Point3D>&           coordinates,
                                                    const std::vector<MagneticFieldData>& field_data, Real power,
@@ -274,4 +274,4 @@ InterpolationResult UnstructuredInterpolator::extrapolate(const Point3D& query_p
     return result;
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

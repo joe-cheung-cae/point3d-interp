@@ -6,7 +6,7 @@
 #include <iostream>
 #include <iomanip>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 // Test CPU and GPU interpolation result consistency
@@ -296,4 +296,4 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

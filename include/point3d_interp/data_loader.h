@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief CSV data loader
@@ -145,4 +145,4 @@ class DataLoader {
     std::array<size_t, 12> field_cols_;   // Magnetic field data column indices
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

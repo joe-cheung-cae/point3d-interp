@@ -2,7 +2,7 @@
 #include "point3d_interp/grid_structure.h"
 #include <vector>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 // 测试网格参数构造函数
@@ -233,4 +233,4 @@ TEST(GridStructureTest, InvalidGridData) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

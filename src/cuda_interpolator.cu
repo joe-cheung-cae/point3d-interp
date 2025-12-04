@@ -2,7 +2,7 @@
 #include "point3d_interp/constants.h"
 #include <cuda_runtime.h>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace cuda {
 
 /**
@@ -926,4 +926,4 @@ __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ q
 }
 
 }  // namespace cuda
-}  // namespace p3d
+P3D_NAMESPACE_END

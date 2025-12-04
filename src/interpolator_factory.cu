@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "point3d_interp/interpolator_adapters.h"
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 // InterpolatorFactory implementation
 
@@ -137,4 +137,4 @@ std::unique_ptr<IInterpolator> GlobalInterpolatorFactory::createInterpolator(
     throw std::invalid_argument("No factory supports the requested interpolator configuration");
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

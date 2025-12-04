@@ -18,7 +18,7 @@ struct KernelConfig {
 
 #ifdef __CUDACC__
 // Forward declaration of CUDA kernel for external use
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace cuda {
 __global__ void TricubicHermiteInterpolationKernel(const Point3D* __restrict__ query_points,
                                                    const MagneticFieldData* __restrict__ grid_data,
@@ -41,10 +41,10 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
                                        const Point3D max_bound, InterpolationResult* __restrict__ results,
                                        const size_t  query_count);
 }  // namespace cuda
-}  // namespace p3d
+P3D_NAMESPACE_END
 #endif
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Main magnetic field data interpolator class
@@ -276,4 +276,4 @@ class MagneticFieldInterpolator {
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

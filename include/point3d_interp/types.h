@@ -5,7 +5,17 @@
 #include <array>
 #include <vector>
 
-namespace p3d {
+// Namespace macro definitions for easy namespace modification
+#undef P3D_NAMESPACE_NAME
+#define P3D_NAMESPACE_NAME p3d
+
+#undef P3D_NAMESPACE_BEGIN
+#define P3D_NAMESPACE_BEGIN namespace P3D_NAMESPACE_NAME {
+
+#undef P3D_NAMESPACE_END
+#define P3D_NAMESPACE_END }
+
+P3D_NAMESPACE_BEGIN
 
 // Precision selection: use float or double
 #ifdef USE_DOUBLE_PRECISION
@@ -210,4 +220,4 @@ struct SpatialGrid {
     }
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

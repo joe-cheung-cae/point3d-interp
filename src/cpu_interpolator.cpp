@@ -10,7 +10,7 @@
     #include <immintrin.h>
 #endif
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 CPUInterpolator::CPUInterpolator(const RegularGrid3D& grid, ExtrapolationMethod extrapolation_method)
     : grid_ptr_(&grid), extrapolation_method_(extrapolation_method) {}
@@ -366,4 +366,4 @@ void CPUInterpolator::hermiteDerivativeSIMD(const Real f0[4], const Real f1[4], 
 }
 #endif
 
-}  // namespace p3d
+P3D_NAMESPACE_END

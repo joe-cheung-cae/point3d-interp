@@ -8,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 class APITest : public ::testing::Test {
@@ -288,4 +288,4 @@ TEST_F(APITest, MoveSemantics) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 namespace test {
 
 // 测试夹具：创建2x2x2的简单测试网格
@@ -222,4 +222,4 @@ TEST(SinglePointGridTest, SinglePointGrid) {
 }
 
 }  // namespace test
-}  // namespace p3d
+P3D_NAMESPACE_END

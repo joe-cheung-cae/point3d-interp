@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief CPU-side inverse distance weighting (IDW) interpolator for unstructured point clouds
@@ -138,4 +138,4 @@ class UnstructuredInterpolator {
     std::unique_ptr<KDTree>        kd_tree_;               // KD-tree for spatial indexing
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

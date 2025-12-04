@@ -4,7 +4,7 @@
 #include "grid_structure.h"
 #include <vector>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief CPU-side tricubic Hermite interpolator
@@ -127,4 +127,4 @@ class CPUInterpolator {
     ExtrapolationMethod  extrapolation_method_;  // Extrapolation method
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

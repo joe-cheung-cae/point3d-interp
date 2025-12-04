@@ -8,7 +8,7 @@
 #include <memory>
 #include "memory_manager.h"
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Adapter for CPU structured grid interpolator
@@ -136,4 +136,4 @@ class GPUUnstructuredInterpolatorAdapter : public IInterpolator {
     mutable float last_kernel_time_ms_;
 };
 
-}  // namespace p3d
+P3D_NAMESPACE_END

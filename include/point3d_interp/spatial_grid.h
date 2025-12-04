@@ -3,7 +3,7 @@
 #include "types.h"
 #include <vector>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Build a spatial grid for efficient GPU neighbor finding
@@ -30,4 +30,4 @@ SpatialGrid buildSpatialGrid(const std::vector<Point3D>&    points,
 SpatialGrid buildSpatialGrid(const std::vector<Point3D>& points, const Point3D& min_bound, const Point3D& max_bound,
                              const std::array<uint32_t, 3>& grid_resolutions = {0, 0, 0});
 
-}  // namespace p3d
+P3D_NAMESPACE_END

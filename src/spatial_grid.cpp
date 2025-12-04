@@ -3,7 +3,7 @@
 #include <cmath>
 #include <limits>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 namespace {
 
@@ -134,4 +134,4 @@ SpatialGrid buildSpatialGrid(const std::vector<Point3D>& points, const Point3D& 
     return grid;
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END

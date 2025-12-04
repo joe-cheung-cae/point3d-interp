@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 // ============================================================================
 // Tolerance and Precision Constants
@@ -80,4 +80,4 @@ constexpr size_t MAX_EXTRAPOLATION_NEIGHBORS = 5;
  */
 constexpr size_t SHARED_MEMORY_LIMIT_FACTOR = 1;
 
-}  // namespace p3d
+P3D_NAMESPACE_END

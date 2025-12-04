@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace p3d {
+P3D_NAMESPACE_BEGIN
 
 /**
  * @brief Binary data exporter implementation
@@ -410,4 +410,4 @@ std::unique_ptr<Exporter> CreateExporter(ExportFormat format) {
     }
 }
 
-}  // namespace p3d
+P3D_NAMESPACE_END
