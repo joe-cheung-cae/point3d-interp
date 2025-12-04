@@ -330,3 +330,11 @@ set_target_properties(benchmark_unstructured_outside_domain_125000 PROPERTIES
 )
 
 add_test(NAME benchmark_unstructured_outside_domain_125000 COMMAND benchmark_unstructured_outside_domain_125000)
+
+# Data loading benchmark
+add_executable(benchmark_data_loading benchmark_data_loading.cpp)
+target_link_libraries(benchmark_data_loading PRIVATE point3d_interp)
+set_target_properties(benchmark_data_loading PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)

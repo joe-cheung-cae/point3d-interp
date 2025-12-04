@@ -12,6 +12,7 @@ namespace p3d {
  */
 enum class ExportFormat {
     ParaviewVTK,  // VTK legacy format for Paraview
+    BinaryData,   // Fast binary format for internal use
     Tecplot       // Reserved for future implementation
 };
 

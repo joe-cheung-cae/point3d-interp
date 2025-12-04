@@ -29,6 +29,17 @@ class DataLoader {
                      std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
 
     /**
+     * @brief Load data from binary file (much faster than CSV)
+     * @param filepath Binary file path
+     * @param coordinates Output coordinate array
+     * @param field_data Output magnetic field data array
+     * @param grid_params Output grid parameters
+     * @throws std::runtime_error on error
+     */
+    void LoadFromBinary(const std::string& filepath, std::vector<Point3D>& coordinates,
+                        std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
+
+    /**
      * @brief Set delimiter
      * @param delimiter Delimiter (default comma)
      */
@@ -63,6 +74,35 @@ class DataLoader {
      * @return Whether parsing succeeded
      */
     bool ParseLine(const std::string& line, Point3D& point, MagneticFieldData& field);
+
+    /**
+     * @brief Fast line parsing using optimized string operations
+     * @param line Input line
+     * @param point Output coordinate point
+     * @param field Output magnetic field data
+     * @return Whether parsing succeeded
+     */
+    bool ParseLineFast(const std::string& line, Point3D& point, MagneticFieldData& field);
+
+    /**
+     * @brief Sequential CSV loading for small files
+     * @param file Input file stream
+     * @param coordinates Output coordinate array
+     * @param field_data Output magnetic field data array
+     * @param grid_params Output grid parameters
+     */
+    void LoadFromCSVSequential(std::ifstream& file, std::vector<Point3D>& coordinates,
+                               std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
+
+    /**
+     * @brief Parallel CSV loading for large files
+     * @param file Input file stream
+     * @param coordinates Output coordinate array
+     * @param field_data Output magnetic field data array
+     * @param grid_params Output grid parameters
+     */
+    void LoadFromCSVParallel(std::ifstream& file, std::vector<Point3D>& coordinates,
+                             std::vector<MagneticFieldData>& field_data, GridParams& grid_params);
 
     /**
      * @brief Detect grid parameters from data
