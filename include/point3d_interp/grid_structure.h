@@ -75,7 +75,11 @@ class RegularGrid3D {
      * @return Whether valid
      */
     P3D_HOST_DEVICE
-    bool isValidGridCoords(const Point3D& grid_coords) const;
+    bool isValidGridCoords(const Point3D& grid_coords) const {
+        return grid_coords.x >= 0 && grid_coords.x <= params_.dimensions[0] - 1 && grid_coords.y >= 0 &&
+               grid_coords.y <= params_.dimensions[1] - 1 && grid_coords.z >= 0 &&
+               grid_coords.z <= params_.dimensions[2] - 1;
+    }
 
     /**
      * @brief Get grid parameters

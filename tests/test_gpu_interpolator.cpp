@@ -87,8 +87,8 @@ TEST_F(GPUTest, GPUSinglePointQuery) {
     // Export query point and result for visualization
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
-    EXPECT_NO_THROW(
-        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/gpu_single_point.vtk"));
+    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
+                                              "test_output/gpu_single_point.vtk"));
 }
 
 // Test batch GPU query
@@ -162,7 +162,7 @@ TEST_F(GPUTest, CPU_GPU_Consistency) {
     EXPECT_NO_THROW(cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
                                                   "test_output/cpu_consistency.vtk"));
     EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
-                                        "test_output/gpu_consistency.vtk"));
+                                                  "test_output/gpu_consistency.vtk"));
 }
 
 // Test GPU out of bounds handling
@@ -264,7 +264,7 @@ TEST_F(GPUTest, GPUGradientVerification) {
     EXPECT_NO_THROW(cpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, cpu_results,
                                                   "test_output/cpu_gradient_verification.vtk"));
     EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, test_points, gpu_results,
-                                        "test_output/gpu_gradient_verification.vtk"));
+                                                  "test_output/gpu_gradient_verification.vtk"));
 }
 
 // Test GPU boundary interpolation
@@ -383,7 +383,7 @@ TEST_F(GPUTest, GPUDifferentGridConfigs) {
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(gpu_interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                        "test_output/gpu_different_grid.vtk"));
+                                                  "test_output/gpu_different_grid.vtk"));
 }
 
 // Test GPU with quadratic field to verify Hermite interpolation benefits

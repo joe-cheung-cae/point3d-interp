@@ -14,7 +14,7 @@ using namespace p3d;
  * @brief Data loading performance benchmark program
  */
 class DataLoadingBenchmark {
-   public:
+  public:
     DataLoadingBenchmark() : rng_(std::random_device{}()) {}
 
     void RunBenchmark() {
@@ -22,14 +22,15 @@ class DataLoadingBenchmark {
 
         // Test different data sizes
         std::vector<std::array<size_t, 3>> sizes = {
-            {10, 10, 10},    // ~1K points
-            {20, 20, 20},    // ~8K points
-            {30, 30, 30}     // ~27K points
+            {10, 10, 10},  // ~1K points
+            {20, 20, 20},  // ~8K points
+            {30, 30, 30}   // ~27K points
         };
 
         for (const auto& size : sizes) {
             size_t total_points = size[0] * size[1] * size[2];
-            std::cout << "Testing with " << total_points << " data points (" << size[0] << "x" << size[1] << "x" << size[2] << ")\n";
+            std::cout << "Testing with " << total_points << " data points (" << size[0] << "x" << size[1] << "x"
+                      << size[2] << ")\n";
 
             // Generate test data
             auto test_data = GenerateTestData(size);
@@ -61,11 +62,11 @@ class DataLoadingBenchmark {
         }
     }
 
-   private:
+  private:
     struct TestData {
-        std::vector<Point3D> coordinates;
+        std::vector<Point3D>           coordinates;
         std::vector<MagneticFieldData> field_data;
-        GridParams grid_params;
+        GridParams                     grid_params;
     };
 
     std::mt19937 rng_;
@@ -73,10 +74,9 @@ class DataLoadingBenchmark {
     TestData GenerateTestData(const std::array<size_t, 3>& dimensions) {
         TestData data;
 
-        data.grid_params.origin = Point3D(0.0f, 0.0f, 0.0f);
-        data.grid_params.spacing = Point3D(1.0f, 1.0f, 1.0f);
-        data.grid_params.dimensions = {static_cast<uint32_t>(dimensions[0]),
-                                       static_cast<uint32_t>(dimensions[1]),
+        data.grid_params.origin     = Point3D(0.0f, 0.0f, 0.0f);
+        data.grid_params.spacing    = Point3D(1.0f, 1.0f, 1.0f);
+        data.grid_params.dimensions = {static_cast<uint32_t>(dimensions[0]), static_cast<uint32_t>(dimensions[1]),
                                        static_cast<uint32_t>(dimensions[2])};
         data.grid_params.update_bounds();
 
@@ -94,10 +94,8 @@ class DataLoadingBenchmark {
                                   data.grid_params.origin.z + k * data.grid_params.spacing.z);
                     data.coordinates.push_back(coord);
 
-                    MagneticFieldData field(dist(rng_), dist(rng_), dist(rng_),
-                                           dist(rng_), dist(rng_), dist(rng_),
-                                           dist(rng_), dist(rng_), dist(rng_),
-                                           dist(rng_), dist(rng_), dist(rng_));
+                    MagneticFieldData field(dist(rng_), dist(rng_), dist(rng_), dist(rng_), dist(rng_), dist(rng_),
+                                            dist(rng_), dist(rng_), dist(rng_), dist(rng_), dist(rng_), dist(rng_));
                     data.field_data.push_back(field);
                 }
             }
@@ -113,11 +111,9 @@ class DataLoadingBenchmark {
         for (size_t i = 0; i < data.coordinates.size(); ++i) {
             const auto& coord = data.coordinates[i];
             const auto& field = data.field_data[i];
-            file << std::fixed << std::setprecision(6)
-                 << coord.x << "," << coord.y << "," << coord.z << ","
-                 << field.Bx << "," << field.By << "," << field.Bz << ","
-                 << field.dBx_dx << "," << field.dBx_dy << "," << field.dBx_dz << ","
-                 << field.dBy_dx << "," << field.dBy_dy << "," << field.dBy_dz << ","
+            file << std::fixed << std::setprecision(6) << coord.x << "," << coord.y << "," << coord.z << "," << field.Bx
+                 << "," << field.By << "," << field.Bz << "," << field.dBx_dx << "," << field.dBx_dy << ","
+                 << field.dBx_dz << "," << field.dBy_dx << "," << field.dBy_dy << "," << field.dBy_dz << ","
                  << field.dBz_dx << "," << field.dBz_dy << "," << field.dBz_dz << "\n";
         }
     }
@@ -128,9 +124,9 @@ class DataLoadingBenchmark {
     }
 
     double BenchmarkCSVLoading(const std::string& filename, size_t expected_points) {
-        std::vector<Point3D> coordinates;
+        std::vector<Point3D>           coordinates;
         std::vector<MagneticFieldData> field_data;
-        GridParams grid_params;
+        GridParams                     grid_params;
 
         DataLoader loader;
 
@@ -142,16 +138,16 @@ class DataLoadingBenchmark {
             loader.LoadFromCSV(filename, coordinates, field_data, grid_params);
         }
 
-        auto end = std::chrono::high_resolution_clock::now();
+        auto end      = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         return duration.count() / 5000.0 / 1000.0;  // Average in milliseconds
     }
 
     double BenchmarkBinaryLoading(const std::string& filename, size_t expected_points) {
-        std::vector<Point3D> coordinates;
+        std::vector<Point3D>           coordinates;
         std::vector<MagneticFieldData> field_data;
-        GridParams grid_params;
+        GridParams                     grid_params;
 
         DataLoader loader;
 
@@ -163,7 +159,7 @@ class DataLoadingBenchmark {
             loader.LoadFromBinary(filename, coordinates, field_data, grid_params);
         }
 
-        auto end = std::chrono::high_resolution_clock::now();
+        auto end      = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
         return duration.count() / 5000.0 / 1000.0;  // Average in milliseconds

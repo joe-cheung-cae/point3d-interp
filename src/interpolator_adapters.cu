@@ -153,6 +153,9 @@ std::vector<InterpolationResult> GPUStructuredInterpolatorAdapter::queryBatch(
     const size_t num_threads          = 256;
     const size_t num_blocks           = (points.size() + num_threads - 1) / num_threads;
 
+    // Calculate shared memory size for kernel
+    const size_t shared_mem_size = sizeof(GridParams);
+
     // Create CUDA events for timing
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -161,7 +164,7 @@ std::vector<InterpolationResult> GPUStructuredInterpolatorAdapter::queryBatch(
     // Record start event
     cudaEventRecord(start, 0);
 
-    p3d::cuda::TricubicHermiteInterpolationKernel<<<num_blocks, num_threads>>>(
+    p3d::cuda::TricubicHermiteInterpolationKernel<<<num_blocks, num_threads, shared_mem_size>>>(
         d_query_points.getDevicePtr(), d_grid_data_.getDevicePtr(), grid_params, d_results.getDevicePtr(),
         points.size(), extrapolation_method);
 

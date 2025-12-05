@@ -51,8 +51,8 @@ int main() {
             std::cout << "Query point: (" << query_point.x << ", " << query_point.y << ", " << query_point.z << ")"
                       << std::endl;
             std::cout << "Interpolation result:" << std::endl;
-            std::cout << "  Magnetic field vector: (" << result.data.Bx << ", " << result.data.By << ", " << result.data.Bz
-                      << ")" << std::endl;
+            std::cout << "  Magnetic field vector: (" << result.data.Bx << ", " << result.data.By << ", "
+                      << result.data.Bz << ")" << std::endl;
             std::cout << "Query time: " << duration.count() << " microseconds" << std::endl;
         } else {
             std::cout << "Query point is out of bounds" << std::endl;
@@ -84,8 +84,8 @@ int main() {
     start = std::chrono::high_resolution_clock::now();
     try {
         interp.QueryBatch(query_points.data(), results.data(), num_queries);
-        auto end      = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        auto   end        = std::chrono::high_resolution_clock::now();
+        auto   duration   = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
         double throughput = num_queries / (duration.count() / 1000.0);
 
         std::cout << "Batch query of " << num_queries << " points" << std::endl;

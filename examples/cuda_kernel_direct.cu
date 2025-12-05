@@ -101,12 +101,16 @@ int main() {
     // Launch interpolation kernel directly
     std::cout << "Launching CUDA interpolation kernel..." << std::endl;
 
+    // Calculate shared memory size for kernel
+    const size_t shared_mem_size = sizeof(GridParams);
+
     auto start = std::chrono::high_resolution_clock::now();
 
     // Call the kernel directly
-    p3d::cuda::TricubicHermiteInterpolationKernel<<<dim3(config.grid_x, config.grid_y, config.grid_z),
-                                                    dim3(config.block_x, config.block_y, config.block_z)>>>(
-        d_query_points, d_field_data, params, d_results, num_queries, 0);  // 0 = ExtrapolationMethod::None
+    p3d::cuda::
+        TricubicHermiteInterpolationKernel<<<dim3(config.grid_x, config.grid_y, config.grid_z),
+                                             dim3(config.block_x, config.block_y, config.block_z), shared_mem_size>>>(
+            d_query_points, d_field_data, params, d_results, num_queries, 0);  // 0 = ExtrapolationMethod::None
 
     // Check for kernel launch errors
     cuda_err = cudaGetLastError();

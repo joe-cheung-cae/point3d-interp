@@ -93,7 +93,7 @@ TEST_F(APITest, SinglePointQuery) {
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/single_point_query.vtk"));
+                                              "test_output/single_point_query.vtk"));
 }
 
 // Test batch query
@@ -125,7 +125,8 @@ TEST_F(APITest, BatchQuery) {
     }
 
     // Export batch query points and results for visualization
-    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/batch_query.vtk"));
+    EXPECT_NO_THROW(
+        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/batch_query.vtk"));
 }
 
 // Test out of bounds query
@@ -216,13 +217,13 @@ TEST_F(APITest, UnstructuredDataLoading) {
     // Export input points and query result for visualization
     auto export_coordinates = interp.GetCoordinates();
     auto export_field_data  = interp.GetFieldData();
-    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
-                                                                 "test_output/unstructured_input.vtk"));
+    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(
+        export_coordinates, export_field_data, ExportFormat::ParaviewVTK, "test_output/unstructured_input.vtk"));
 
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/unstructured_query.vtk"));
+                                              "test_output/unstructured_query.vtk"));
 }
 
 // Test GPU acceleration for unstructured data
@@ -260,11 +261,11 @@ TEST_F(APITest, GPUUnstructuredData) {
     // Export input points and GPU query results for visualization
     auto export_coordinates = interp.GetCoordinates();
     auto export_field_data  = interp.GetFieldData();
-    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(export_coordinates, export_field_data, ExportFormat::ParaviewVTK,
-                                                                 "test_output/gpu_unstructured_input.vtk"));
+    EXPECT_NO_THROW(MagneticFieldInterpolator::ExportInputPoints(
+        export_coordinates, export_field_data, ExportFormat::ParaviewVTK, "test_output/gpu_unstructured_input.vtk"));
 
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/gpu_unstructured_query.vtk"));
+                                              "test_output/gpu_unstructured_query.vtk"));
 }
 
 // Test move semantics

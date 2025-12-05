@@ -12,16 +12,16 @@ P3D_NAMESPACE_BEGIN
  * Exports data in fast binary format for internal use. Much faster than text formats.
  */
 class BinaryExporter : public Exporter {
-   public:
+  public:
     BinaryExporter() : Exporter(ExportFormat::BinaryData) {}
 
     bool ExportInputPoints(const std::vector<Point3D>& points, const std::vector<MagneticFieldData>& field_data,
-                          const std::string& filename) override;
-
-    bool ExportOutputPoints(const std::vector<Point3D>& points, const std::vector<InterpolationResult>& results,
                            const std::string& filename) override;
 
-   private:
+    bool ExportOutputPoints(const std::vector<Point3D>& points, const std::vector<InterpolationResult>& results,
+                            const std::string& filename) override;
+
+  private:
     /**
      * @brief Write binary header with format version and metadata
      */
@@ -203,7 +203,7 @@ void ParaviewExporter::WriteInputPointData(std::ofstream& file, const std::vecto
 
     // Estimate buffer size for better performance
     // Each point: ~50 chars for vectors + ~10 chars per scalar * 9 scalars + newlines
-    size_t estimated_size = num_points * 150;
+    size_t      estimated_size = num_points * 150;
     std::string buffer;
     buffer.reserve(estimated_size);
 
@@ -221,7 +221,7 @@ void ParaviewExporter::WriteInputPointData(std::ofstream& file, const std::vecto
 
     // Derivative scalars
     const char* scalar_names[9] = {"dBx_dx", "dBx_dy", "dBx_dz", "dBy_dx", "dBy_dy",
-                                  "dBy_dz", "dBz_dx", "dBz_dy", "dBz_dz"};
+                                   "dBy_dz", "dBz_dx", "dBz_dy", "dBz_dz"};
 
     for (int s = 0; s < 9; ++s) {
         ss << "SCALARS " << scalar_names[s] << " float\n";
@@ -230,15 +230,33 @@ void ParaviewExporter::WriteInputPointData(std::ofstream& file, const std::vecto
         for (const auto& data : field_data) {
             float value = 0.0f;
             switch (s) {
-                case 0: value = data.dBx_dx; break;
-                case 1: value = data.dBx_dy; break;
-                case 2: value = data.dBx_dz; break;
-                case 3: value = data.dBy_dx; break;
-                case 4: value = data.dBy_dy; break;
-                case 5: value = data.dBy_dz; break;
-                case 6: value = data.dBz_dx; break;
-                case 7: value = data.dBz_dy; break;
-                case 8: value = data.dBz_dz; break;
+                case 0:
+                    value = data.dBx_dx;
+                    break;
+                case 1:
+                    value = data.dBx_dy;
+                    break;
+                case 2:
+                    value = data.dBx_dz;
+                    break;
+                case 3:
+                    value = data.dBy_dx;
+                    break;
+                case 4:
+                    value = data.dBy_dy;
+                    break;
+                case 5:
+                    value = data.dBy_dz;
+                    break;
+                case 6:
+                    value = data.dBz_dx;
+                    break;
+                case 7:
+                    value = data.dBz_dy;
+                    break;
+                case 8:
+                    value = data.dBz_dz;
+                    break;
             }
             ss << std::fixed << std::setprecision(6) << value << "\n";
         }
@@ -269,7 +287,7 @@ void ParaviewExporter::WriteOutputPointData(std::ofstream& file, const std::vect
 
     // Derivative scalars
     const char* derivative_names[9] = {"dBx_dx", "dBx_dy", "dBx_dz", "dBy_dx", "dBy_dy",
-                                      "dBy_dz", "dBz_dx", "dBz_dy", "dBz_dz"};
+                                       "dBy_dz", "dBz_dx", "dBz_dy", "dBz_dz"};
 
     for (int i = 0; i < 9; ++i) {
         ss << "SCALARS " << derivative_names[i] << " float\n";
@@ -278,15 +296,33 @@ void ParaviewExporter::WriteOutputPointData(std::ofstream& file, const std::vect
         for (const auto& result : results) {
             Real value = 0.0f;
             switch (i) {
-                case 0: value = result.data.dBx_dx; break;
-                case 1: value = result.data.dBx_dy; break;
-                case 2: value = result.data.dBx_dz; break;
-                case 3: value = result.data.dBy_dx; break;
-                case 4: value = result.data.dBy_dy; break;
-                case 5: value = result.data.dBy_dz; break;
-                case 6: value = result.data.dBz_dx; break;
-                case 7: value = result.data.dBz_dy; break;
-                case 8: value = result.data.dBz_dz; break;
+                case 0:
+                    value = result.data.dBx_dx;
+                    break;
+                case 1:
+                    value = result.data.dBx_dy;
+                    break;
+                case 2:
+                    value = result.data.dBx_dz;
+                    break;
+                case 3:
+                    value = result.data.dBy_dx;
+                    break;
+                case 4:
+                    value = result.data.dBy_dy;
+                    break;
+                case 5:
+                    value = result.data.dBy_dz;
+                    break;
+                case 6:
+                    value = result.data.dBz_dx;
+                    break;
+                case 7:
+                    value = result.data.dBz_dy;
+                    break;
+                case 8:
+                    value = result.data.dBz_dz;
+                    break;
             }
             ss << std::fixed << std::setprecision(6) << value << "\n";
         }
@@ -306,8 +342,8 @@ void ParaviewExporter::WriteOutputPointData(std::ofstream& file, const std::vect
 }
 
 // Binary exporter implementation
-bool BinaryExporter::ExportInputPoints(const std::vector<Point3D>& points, const std::vector<MagneticFieldData>& field_data,
-                                      const std::string& filename) {
+bool BinaryExporter::ExportInputPoints(const std::vector<Point3D>&           points,
+                                       const std::vector<MagneticFieldData>& field_data, const std::string& filename) {
     if (points.size() != field_data.size()) {
         std::cerr << "Error: Number of points (" << points.size() << ") does not match number of field data entries ("
                   << field_data.size() << ")" << std::endl;
@@ -344,8 +380,8 @@ bool BinaryExporter::ExportInputPoints(const std::vector<Point3D>& points, const
     }
 }
 
-bool BinaryExporter::ExportOutputPoints(const std::vector<Point3D>& points, const std::vector<InterpolationResult>& results,
-                                       const std::string& filename) {
+bool BinaryExporter::ExportOutputPoints(const std::vector<Point3D>&             points,
+                                        const std::vector<InterpolationResult>& results, const std::string& filename) {
     if (points.size() != results.size()) {
         std::cerr << "Error: Number of points (" << points.size() << ") does not match number of results ("
                   << results.size() << ")" << std::endl;
@@ -384,7 +420,7 @@ bool BinaryExporter::ExportOutputPoints(const std::vector<Point3D>& points, cons
 
 void BinaryExporter::WriteBinaryHeader(std::ofstream& file, uint32_t num_points, bool is_input_data) {
     // Magic number for format identification
-    const uint32_t MAGIC_NUMBER = 0x50494441;  // "PIDA" (Point3D Interpolation Data)
+    const uint32_t MAGIC_NUMBER   = 0x50494441;  // "PIDA" (Point3D Interpolation Data)
     const uint32_t FORMAT_VERSION = 1;
 
     file.write(reinterpret_cast<const char*>(&MAGIC_NUMBER), sizeof(MAGIC_NUMBER));

@@ -259,8 +259,7 @@ void MagneticFieldInterpolator::Impl::ExportInputPoints(const std::vector<Point3
     }
 }
 
-void MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat                            format,
-                                                         const std::vector<Point3D>&             query_points,
+void MagneticFieldInterpolator::Impl::ExportOutputPoints(ExportFormat format, const std::vector<Point3D>& query_points,
                                                          const std::vector<InterpolationResult>& results,
                                                          const std::string&                      filename) {
     if (query_points.size() != results.size()) {
@@ -555,8 +554,7 @@ void MagneticFieldInterpolator::Query(const Point3D& query_point, InterpolationR
     impl_->Query(query_point, result);
 }
 
-void MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results,
-                                           size_t count) {
+void MagneticFieldInterpolator::QueryBatch(const Point3D* query_points, InterpolationResult* results, size_t count) {
     impl_->QueryBatch(query_points, results, count);
 }
 
@@ -607,9 +605,8 @@ const GridParams* MagneticFieldInterpolator::GetDeviceGridParams() const {
     return impl_ ? impl_->GetDeviceGridParams() : nullptr;
 }
 
-void MagneticFieldInterpolator::LaunchInterpolationKernel(const Point3D*       d_query_points,
-                                                          InterpolationResult* d_results, size_t count,
-                                                          void* stream) {
+void MagneticFieldInterpolator::LaunchInterpolationKernel(const Point3D* d_query_points, InterpolationResult* d_results,
+                                                          size_t count, void* stream) {
     if (!impl_) {
         throw std::runtime_error("Data not loaded");
     }
@@ -633,8 +630,8 @@ void MagneticFieldInterpolator::GetOptimalKernelConfig(size_t query_count, Kerne
 }
 
 void MagneticFieldInterpolator::ExportInputPoints(const std::vector<Point3D>&           coordinates,
-                                                  const std::vector<MagneticFieldData>& field_data,
-                                                  ExportFormat format, const std::string& filename) {
+                                                  const std::vector<MagneticFieldData>& field_data, ExportFormat format,
+                                                  const std::string& filename) {
     Impl::ExportInputPoints(coordinates, field_data, format, filename);
 }
 

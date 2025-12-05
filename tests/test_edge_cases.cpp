@@ -125,7 +125,7 @@ TEST_F(EdgeCaseTest, BoundaryConditions) {
     std::vector<InterpolationResult> results      = {InterpolationResult(), result};  // First result is overwritten
     EXPECT_NO_THROW(interp.Query(boundary_point, results[0]));
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/boundary_conditions.vtk"));
+                                              "test_output/boundary_conditions.vtk"));
 }
 
 // Test high precision data handling
@@ -151,7 +151,7 @@ TEST_F(EdgeCaseTest, HighPrecisionData) {
     std::vector<Point3D>             query_points = {query_point};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/high_precision_data.vtk"));
+                                              "test_output/high_precision_data.vtk"));
 }
 
 // Test extreme values
@@ -185,7 +185,7 @@ TEST(ExtremeValueTest, VeryLargeValues) {
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/very_large_values.vtk"));
+                                              "test_output/very_large_values.vtk"));
 }
 
 // Test very small values
@@ -218,7 +218,7 @@ TEST(ExtremeValueTest, VerySmallValues) {
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/very_small_values.vtk"));
+                                              "test_output/very_small_values.vtk"));
 }
 
 // Test NaN and Inf values
@@ -259,7 +259,8 @@ TEST(ExtremeValueTest, NaNInfValues) {
     // Export NaN/Inf values test results for visualization
     std::vector<Point3D>             query_points = {query};
     std::vector<InterpolationResult> results      = {result};
-    EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/nan_inf_values.vtk"));
+    EXPECT_NO_THROW(
+        interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results, "test_output/nan_inf_values.vtk"));
 }
 
 // Test empty data arrays
@@ -319,7 +320,7 @@ TEST(ConcurrencyTest, BasicConcurrency) {
     std::vector<Point3D>             query_points = {query1, query2};
     std::vector<InterpolationResult> results      = {result1, result2};
     EXPECT_NO_THROW(interp.ExportOutputPoints(ExportFormat::ParaviewVTK, query_points, results,
-                                             "test_output/basic_concurrency.vtk"));
+                                              "test_output/basic_concurrency.vtk"));
 }
 
 // Test grid parameter validation

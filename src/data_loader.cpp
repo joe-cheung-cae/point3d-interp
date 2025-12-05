@@ -30,26 +30,27 @@ DataLoader::DataLoader()
  */
 std::vector<std::string> FastSplitString(const std::string& line, char delimiter) {
     std::vector<std::string> tokens;
-    size_t start = 0;
-    size_t end = 0;
+    size_t                   start = 0;
+    size_t                   end   = 0;
 
     while ((end = line.find(delimiter, start)) != std::string::npos) {
         std::string token = line.substr(start, end - start);
         // Trim whitespace
-        token.erase(token.begin(), std::find_if(token.begin(), token.end(),
-                    [](unsigned char ch) { return !std::isspace(ch); }));
-        token.erase(std::find_if(token.rbegin(), token.rend(),
-                    [](unsigned char ch) { return !std::isspace(ch); }).base(), token.end());
+        token.erase(token.begin(),
+                    std::find_if(token.begin(), token.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+        token.erase(
+            std::find_if(token.rbegin(), token.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+            token.end());
         tokens.push_back(token);
         start = end + 1;
     }
 
     // Last token
     std::string token = line.substr(start);
-    token.erase(token.begin(), std::find_if(token.begin(), token.end(),
-                [](unsigned char ch) { return !std::isspace(ch); }));
-    token.erase(std::find_if(token.rbegin(), token.rend(),
-                [](unsigned char ch) { return !std::isspace(ch); }).base(), token.end());
+    token.erase(token.begin(),
+                std::find_if(token.begin(), token.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    token.erase(std::find_if(token.rbegin(), token.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(),
+                token.end());
     tokens.push_back(token);
 
     return tokens;
@@ -66,7 +67,7 @@ bool FastStringToValue(const std::string& str, T& value) {
     if (str.empty()) return false;
 
     const char* start = str.c_str();
-    char* end = nullptr;
+    char*       end   = nullptr;
 
     if constexpr (std::is_same_v<T, float>) {
         value = strtof(start, &end);
@@ -179,8 +180,8 @@ void DataLoader::LoadFromCSVParallel(std::ifstream& file, std::vector<Point3D>& 
                                      std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
     // Read all lines into memory first
     std::vector<std::string> lines;
-    std::string line;
-    size_t line_number = 0;
+    std::string              line;
+    size_t                   line_number = 0;
 
     // Skip header line
     if (skip_header_) {
@@ -206,8 +207,8 @@ void DataLoader::LoadFromCSVParallel(std::ifstream& file, std::vector<Point3D>& 
     if (num_threads == 0) num_threads = 4;  // Fallback
     if (num_threads > 8) num_threads = 8;   // Cap at 8 threads
 
-    static const size_t MIN_CHUNK_SIZE = 1000;  // Minimum lines per thread
-    size_t lines_per_thread = std::max(MIN_CHUNK_SIZE, lines.size() / num_threads);
+    static const size_t MIN_CHUNK_SIZE   = 1000;  // Minimum lines per thread
+    size_t              lines_per_thread = std::max(MIN_CHUNK_SIZE, lines.size() / num_threads);
     if (lines_per_thread * num_threads < lines.size()) {
         lines_per_thread = lines.size() / num_threads + 1;
     }
@@ -217,18 +218,18 @@ void DataLoader::LoadFromCSVParallel(std::ifstream& file, std::vector<Point3D>& 
 
     for (size_t i = 0; i < num_threads; ++i) {
         size_t start_idx = i * lines_per_thread;
-        size_t end_idx = std::min(start_idx + lines_per_thread, lines.size());
+        size_t end_idx   = std::min(start_idx + lines_per_thread, lines.size());
 
         if (start_idx >= lines.size()) break;
 
         futures.push_back(std::async(std::launch::async, [this, start_idx, end_idx, &lines]() {
-            std::vector<Point3D> local_coords;
+            std::vector<Point3D>           local_coords;
             std::vector<MagneticFieldData> local_fields;
             local_coords.reserve(end_idx - start_idx);
             local_fields.reserve(end_idx - start_idx);
 
             for (size_t j = start_idx; j < end_idx; ++j) {
-                Point3D point;
+                Point3D           point;
                 MagneticFieldData field;
                 if (ParseLineFast(lines[j], point, field)) {
                     local_coords.push_back(point);
@@ -274,11 +275,11 @@ void DataLoader::LoadFromBinary(const std::string& filepath, std::vector<Point3D
     field_data.clear();
 
     // Read and validate header
-    const uint32_t EXPECTED_MAGIC = 0x50494441;  // "PIDA"
+    const uint32_t EXPECTED_MAGIC   = 0x50494441;  // "PIDA"
     const uint32_t EXPECTED_VERSION = 1;
 
     uint32_t magic_number, format_version, num_points;
-    bool is_input_data;
+    bool     is_input_data;
 
     file.read(reinterpret_cast<char*>(&magic_number), sizeof(magic_number));
     if (magic_number != EXPECTED_MAGIC) {
@@ -393,10 +394,14 @@ bool DataLoader::ParseLineFast(const std::string& line, Point3D& point, Magnetic
 
     // Parse magnetic field data using fast conversion
     if (!FastStringToValue(tokens[field_cols_[0]], field.Bx) || !FastStringToValue(tokens[field_cols_[1]], field.By) ||
-        !FastStringToValue(tokens[field_cols_[2]], field.Bz) || !FastStringToValue(tokens[field_cols_[3]], field.dBx_dx) ||
-        !FastStringToValue(tokens[field_cols_[4]], field.dBx_dy) || !FastStringToValue(tokens[field_cols_[5]], field.dBx_dz) ||
-        !FastStringToValue(tokens[field_cols_[6]], field.dBy_dx) || !FastStringToValue(tokens[field_cols_[7]], field.dBy_dy) ||
-        !FastStringToValue(tokens[field_cols_[8]], field.dBy_dz) || !FastStringToValue(tokens[field_cols_[9]], field.dBz_dx) ||
+        !FastStringToValue(tokens[field_cols_[2]], field.Bz) ||
+        !FastStringToValue(tokens[field_cols_[3]], field.dBx_dx) ||
+        !FastStringToValue(tokens[field_cols_[4]], field.dBx_dy) ||
+        !FastStringToValue(tokens[field_cols_[5]], field.dBx_dz) ||
+        !FastStringToValue(tokens[field_cols_[6]], field.dBy_dx) ||
+        !FastStringToValue(tokens[field_cols_[7]], field.dBy_dy) ||
+        !FastStringToValue(tokens[field_cols_[8]], field.dBy_dz) ||
+        !FastStringToValue(tokens[field_cols_[9]], field.dBz_dx) ||
         !FastStringToValue(tokens[field_cols_[10]], field.dBz_dy) ||
         !FastStringToValue(tokens[field_cols_[11]], field.dBz_dz)) {
         return false;

@@ -38,7 +38,7 @@ class Benchmark {
                 auto                      start = std::chrono::high_resolution_clock::now();
                 try {
                     interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                    auto end = std::chrono::high_resolution_clock::now();
+                    auto end      = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                     std::cout << "  CPU loading time: " << duration.count() << " ms\n";
                 } catch (const std::exception& e) {
@@ -52,7 +52,7 @@ class Benchmark {
                 auto                      start = std::chrono::high_resolution_clock::now();
                 try {
                     interp.LoadFromMemory(test_data.coordinates.data(), test_data.field_data.data(), total_points);
-                    auto end = std::chrono::high_resolution_clock::now();
+                    auto end      = std::chrono::high_resolution_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
                     std::cout << "  GPU loading time: " << duration.count() << " ms\n";
                 } catch (const std::exception& e) {

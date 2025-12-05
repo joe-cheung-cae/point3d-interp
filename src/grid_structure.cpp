@@ -116,13 +116,6 @@ uint32_t RegularGrid3D::getDataIndex(uint32_t i, uint32_t j, uint32_t k) const {
     return i + j * params_.dimensions[0] + k * params_.dimensions[0] * params_.dimensions[1];
 }
 
-P3D_HOST_DEVICE
-bool RegularGrid3D::isValidGridCoords(const Point3D& grid_coords) const {
-    return (grid_coords.x >= 0 && grid_coords.x <= params_.dimensions[0] - 1) &&
-           (grid_coords.y >= 0 && grid_coords.y <= params_.dimensions[1] - 1) &&
-           (grid_coords.z >= 0 && grid_coords.z <= params_.dimensions[2] - 1);
-}
-
 size_t RegularGrid3D::getDataCount() const { return coordinates_.size(); }
 
 void RegularGrid3D::buildFromCoordinates(const std::vector<Point3D>& coordinates) {
