@@ -265,7 +265,7 @@ void DataLoader::LoadFromCSVParallel(std::ifstream& file, std::vector<Point3D>& 
 
 void DataLoader::LoadFromBinary(const std::string& filepath, std::vector<Point3D>& coordinates,
                                 std::vector<MagneticFieldData>& field_data, GridParams& grid_params) {
-    // Open file in binary mode
+    // Open file in binary mode (but read as text lines for CSV format)
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) {
         throw std::runtime_error("File not found: " + filepath);
@@ -274,48 +274,44 @@ void DataLoader::LoadFromBinary(const std::string& filepath, std::vector<Point3D
     coordinates.clear();
     field_data.clear();
 
-    // Read and validate header
-    const uint32_t EXPECTED_MAGIC   = 0x50494441;  // "PIDA"
-    const uint32_t EXPECTED_VERSION = 1;
+    std::string line;
+    size_t      line_number = 0;
 
-    uint32_t magic_number, format_version, num_points;
-    bool     is_input_data;
-
-    file.read(reinterpret_cast<char*>(&magic_number), sizeof(magic_number));
-    if (magic_number != EXPECTED_MAGIC) {
-        throw std::runtime_error("Invalid binary file format: wrong magic number");
+    // Skip header line if present
+    if (skip_header_) {
+        if (!std::getline(file, line)) {
+            throw std::runtime_error("File read error: unable to read header");
+        }
+        line_number++;
     }
 
-    file.read(reinterpret_cast<char*>(&format_version), sizeof(format_version));
-    if (format_version != EXPECTED_VERSION) {
-        throw std::runtime_error("Unsupported binary format version: " + std::to_string(format_version));
+    // Read and parse data lines
+    while (std::getline(file, line)) {
+        line_number++;
+
+        // Skip empty lines
+        if (line.empty()) {
+            continue;
+        }
+
+        Point3D           point;
+        MagneticFieldData field;
+
+        if (!ParseLineFast(line, point, field)) {
+            throw std::runtime_error("Invalid file format at line " + std::to_string(line_number));
+        }
+
+        coordinates.push_back(point);
+        field_data.push_back(field);
     }
 
-    file.read(reinterpret_cast<char*>(&num_points), sizeof(num_points));
-    file.read(reinterpret_cast<char*>(&is_input_data), sizeof(is_input_data));
-
-    if (!is_input_data) {
-        throw std::runtime_error("Binary file contains output data, not input data");
+    if (coordinates.empty()) {
+        throw std::runtime_error("Invalid file format: no data found");
     }
 
-    if (num_points == 0) {
-        throw std::runtime_error("Binary file contains no data points");
-    }
-
-    // Pre-allocate memory
-    coordinates.resize(num_points);
-    field_data.resize(num_points);
-
-    // Read data in one go for maximum performance
-    file.read(reinterpret_cast<char*>(coordinates.data()), num_points * sizeof(Point3D));
-    if (file.gcount() != static_cast<std::streamsize>(num_points * sizeof(Point3D))) {
-        throw std::runtime_error("Failed to read coordinate data from binary file");
-    }
-
-    file.read(reinterpret_cast<char*>(field_data.data()), num_points * sizeof(MagneticFieldData));
-    if (file.gcount() != static_cast<std::streamsize>(num_points * sizeof(MagneticFieldData))) {
-        throw std::runtime_error("Failed to read field data from binary file");
-    }
+    // Shrink to fit to save memory
+    coordinates.shrink_to_fit();
+    field_data.shrink_to_fit();
 
     // Detect grid parameters
     if (!DetectGridParams(coordinates, grid_params)) {
@@ -440,7 +436,6 @@ bool DataLoader::DetectGridParams(const std::vector<Point3D>& coordinates, GridP
 
     // Calculate spacing (check if uniform)
     auto calculate_spacing = [this](const std::vector<Real>& coords) -> Real {
-        if (coords.size() < 2) return 0;
         Real spacing = coords[1] - coords[0];
         for (size_t i = 2; i < coords.size(); ++i) {
             Real current_spacing = coords[i] - coords[i - 1];
