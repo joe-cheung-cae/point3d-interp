@@ -25,7 +25,9 @@ std::unique_ptr<IInterpolator> InterpolatorFactory::createInterpolator(DataStruc
 
 bool InterpolatorFactory::supports(DataStructureType dataType, InterpolationMethod method, bool useGPU) const {
     // Support current methods
-    if (method != InterpolationMethod::TricubicHermite && method != InterpolationMethod::IDW) {
+    if (method != InterpolationMethod::TricubicHermite &&
+        method != InterpolationMethod::IDW &&
+        method != InterpolationMethod::HermiteMLS) {
         return false;
     }
 
@@ -33,7 +35,9 @@ bool InterpolatorFactory::supports(DataStructureType dataType, InterpolationMeth
     if (dataType == DataStructureType::RegularGrid && method != InterpolationMethod::TricubicHermite) {
         return false;
     }
-    if (dataType == DataStructureType::Unstructured && method != InterpolationMethod::IDW) {
+    if (dataType == DataStructureType::Unstructured &&
+        method != InterpolationMethod::IDW &&
+        method != InterpolationMethod::HermiteMLS) {
         return false;
     }
 
@@ -41,7 +45,8 @@ bool InterpolatorFactory::supports(DataStructureType dataType, InterpolationMeth
     if (useGPU) {
         // Only support GPU for basic configurations
         return (dataType == DataStructureType::RegularGrid && method == InterpolationMethod::TricubicHermite) ||
-               (dataType == DataStructureType::Unstructured && method == InterpolationMethod::IDW);
+               (dataType == DataStructureType::Unstructured && method == InterpolationMethod::IDW) ||
+               (dataType == DataStructureType::Unstructured && method == InterpolationMethod::HermiteMLS);
     }
 
     return true;
@@ -66,7 +71,20 @@ std::unique_ptr<IInterpolator> InterpolatorFactory::createStructuredInterpolator
 std::unique_ptr<IInterpolator> InterpolatorFactory::createUnstructuredInterpolator(
     InterpolationMethod method, const std::vector<Point3D>& coordinates,
     const std::vector<MagneticFieldData>& fieldData, ExtrapolationMethod extrapolation, bool useGPU) {
-    // For unstructured data, we need to determine power parameter based on method
+    
+    // Handle HermiteMLS method
+    if (method == InterpolationMethod::HermiteMLS) {
+        HermiteMLSInterpolator::Parameters params;  // Use default parameters
+        auto hmls_interpolator = std::make_unique<HermiteMLSInterpolator>(coordinates, fieldData, params);
+        
+        if (useGPU) {
+            return std::make_unique<GPUHermiteMLSInterpolatorAdapter>(std::move(hmls_interpolator), method, extrapolation);
+        } else {
+            return std::make_unique<CPUHermiteMLSInterpolatorAdapter>(std::move(hmls_interpolator), method, extrapolation);
+        }
+    }
+    
+    // Handle IDW method (original code)
     Real   power         = 2.0f;  // Default for IDW
     size_t max_neighbors = 0;     // Use all neighbors by default
 

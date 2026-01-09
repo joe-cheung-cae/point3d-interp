@@ -63,6 +63,7 @@ set(SOURCES
     src/cpu_interpolator.cpp
     src/spatial_grid.cpp
     src/unstructured_interpolator.cpp
+    src/hermite_mls_interpolator.cpp
     src/kd_tree.cpp
     src/interpolator_exporter.cpp
 )
@@ -73,6 +74,7 @@ set(CUDA_SOURCES
     src/memory_manager.cu
     src/interpolator_adapters.cu
     src/interpolator_factory.cu
+    src/cuda_hermite_mls_interpolator.cu
 )
 
 # Static library

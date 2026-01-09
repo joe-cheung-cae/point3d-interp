@@ -134,8 +134,8 @@ TEST(AccuracyTest, GridPointExactness) {
     // Set random data
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
-        data = MagneticFieldData(static_cast<float>(rand()) / RAND_MAX, static_cast<float>(rand()) / RAND_MAX,
-                                 static_cast<float>(rand()) / RAND_MAX, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        data = MagneticFieldData(static_cast<float>(static_cast<double>(rand()) / RAND_MAX), static_cast<float>(static_cast<double>(rand()) / RAND_MAX),
+                                 static_cast<float>(static_cast<double>(rand()) / RAND_MAX), 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
                                  0.0f);
     }
 
@@ -237,8 +237,8 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     auto& field_data = const_cast<std::vector<MagneticFieldData>&>(grid.getFieldData());
     for (auto& data : field_data) {
         data = MagneticFieldData(
-            static_cast<float>(rand()) / RAND_MAX * 2.0f, static_cast<float>(rand()) / RAND_MAX * 2.0f,
-            static_cast<float>(rand()) / RAND_MAX * 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+            static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 2.0f, static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 2.0f,
+            static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     }
 
     CPUInterpolator cpu_interp(grid);
@@ -246,9 +246,9 @@ TEST(AccuracyTest, BatchVsSingleConsistency) {
     // Generate test points
     std::vector<Point3D> test_points;
     for (int i = 0; i < 50; ++i) {
-        test_points.push_back(Point3D(static_cast<float>(rand()) / RAND_MAX * 3.0f,
-                                      static_cast<float>(rand()) / RAND_MAX * 3.0f,
-                                      static_cast<float>(rand()) / RAND_MAX * 3.0f));
+        test_points.push_back(Point3D(static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 3.0f,
+                                      static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 3.0f,
+                                      static_cast<float>(static_cast<double>(rand()) / RAND_MAX) * 3.0f));
     }
 
     // Single point query

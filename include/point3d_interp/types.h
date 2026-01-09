@@ -184,7 +184,7 @@ struct InterpolationResult {
     }
 };
 
-enum class InterpolationMethod { Trilinear, TricubicHermite, IDW };
+enum class InterpolationMethod { Trilinear, TricubicHermite, IDW, HermiteMLS };
 
 enum class ExtrapolationMethod { None, NearestNeighbor, LinearExtrapolation };
 

@@ -12,6 +12,14 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+# Google Benchmark setup
+FetchContent_Declare(
+    benchmark
+    URL https://github.com/google/benchmark/archive/refs/tags/v1.8.3.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(benchmark)
+
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -156,6 +164,42 @@ set_target_properties(test_unstructured_interpolator PROPERTIES
 )
 
 add_test(NAME test_unstructured_interpolator COMMAND test_unstructured_interpolator)
+
+# Hermite MLS interpolator tests
+add_executable(test_hermite_mls_interpolator
+    test_hermite_mls_interpolator.cpp
+)
+
+target_link_libraries(test_hermite_mls_interpolator
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_hermite_mls_interpolator PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_hermite_mls_interpolator COMMAND test_hermite_mls_interpolator)
+
+# Hermite MLS accuracy tests
+add_executable(test_hmls_accuracy
+    test_hmls_accuracy.cpp
+)
+
+target_link_libraries(test_hmls_accuracy
+    PRIVATE
+    point3d_interp
+    GTest::gtest_main
+)
+
+set_target_properties(test_hmls_accuracy PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME test_hmls_accuracy COMMAND test_hmls_accuracy)
 
 # Exporter tests
 add_executable(test_exporter
@@ -330,6 +374,43 @@ set_target_properties(benchmark_unstructured_outside_domain_125000 PROPERTIES
 )
 
 add_test(NAME benchmark_unstructured_outside_domain_125000 COMMAND benchmark_unstructured_outside_domain_125000)
+
+# HMLS benchmarks
+add_executable(benchmark_hmls_inside_domain_1000 benchmark_hmls_inside_domain_1000.cpp)
+target_link_libraries(benchmark_hmls_inside_domain_1000 PRIVATE point3d_interp benchmark::benchmark_main)
+set_target_properties(benchmark_hmls_inside_domain_1000 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_hmls_inside_domain_1000 COMMAND benchmark_hmls_inside_domain_1000)
+
+add_executable(benchmark_hmls_inside_domain_8000 benchmark_hmls_inside_domain_8000.cpp)
+target_link_libraries(benchmark_hmls_inside_domain_8000 PRIVATE point3d_interp benchmark::benchmark_main)
+set_target_properties(benchmark_hmls_inside_domain_8000 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_hmls_inside_domain_8000 COMMAND benchmark_hmls_inside_domain_8000)
+
+add_executable(benchmark_hmls_inside_domain_27000 benchmark_hmls_inside_domain_27000.cpp)
+target_link_libraries(benchmark_hmls_inside_domain_27000 PRIVATE point3d_interp benchmark::benchmark_main)
+set_target_properties(benchmark_hmls_inside_domain_27000 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_hmls_inside_domain_27000 COMMAND benchmark_hmls_inside_domain_27000)
+
+add_executable(benchmark_hmls_inside_domain_125000 benchmark_hmls_inside_domain_125000.cpp)
+target_link_libraries(benchmark_hmls_inside_domain_125000 PRIVATE point3d_interp benchmark::benchmark_main)
+set_target_properties(benchmark_hmls_inside_domain_125000 PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+)
+
+add_test(NAME benchmark_hmls_inside_domain_125000 COMMAND benchmark_hmls_inside_domain_125000)
 
 # Data loading benchmark
 add_executable(benchmark_data_loading benchmark_data_loading.cpp)

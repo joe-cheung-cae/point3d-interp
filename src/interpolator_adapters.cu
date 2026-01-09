@@ -24,6 +24,34 @@ __global__ void IDWInterpolationKernel(const Point3D* __restrict__ query_points,
                                        const Real power, const int extrapolation_method, const Point3D min_bound,
                                        const Point3D max_bound, InterpolationResult* __restrict__ results,
                                        const size_t  query_count);
+
+// HMLS Parameters structure for GPU
+struct HMLSParameters {
+    int basis_order;
+    int weight_function;
+    Real support_radius;
+    Real derivative_weight;
+    size_t max_neighbors;
+    Real regularization;
+};
+
+__global__ void HermiteMLSKernel(
+    const Point3D* __restrict__ query_points,
+    const Point3D* __restrict__ data_points,
+    const MagneticFieldData* __restrict__ field_data,
+    const size_t data_count,
+    const uint32_t* __restrict__ cell_offsets,
+    const uint32_t* __restrict__ cell_points,
+    const Point3D grid_origin,
+    const Point3D grid_cell_size,
+    uint32_t grid_dim_x,
+    uint32_t grid_dim_y,
+    uint32_t grid_dim_z,
+    const HMLSParameters params,
+    const Point3D min_bound,
+    const Point3D max_bound,
+    InterpolationResult* __restrict__ results,
+    const size_t query_count);
 }  // namespace cuda
 P3D_NAMESPACE_END
 
@@ -367,6 +395,195 @@ std::vector<MagneticFieldData> GPUUnstructuredInterpolatorAdapter::getFieldData(
 }
 
 bool GPUUnstructuredInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
+    kernel_time_ms = last_kernel_time_ms_;
+    return true;
+}
+
+P3D_NAMESPACE_END
+
+P3D_NAMESPACE_BEGIN
+// CPUHermiteMLSInterpolatorAdapter implementation
+
+CPUHermiteMLSInterpolatorAdapter::CPUHermiteMLSInterpolatorAdapter(
+    std::unique_ptr<HermiteMLSInterpolator> interpolator, InterpolationMethod method,
+    ExtrapolationMethod extrapolation)
+    : hmls_interpolator_(std::move(interpolator)), method_(method), extrapolation_(extrapolation) {}
+
+InterpolationResult CPUHermiteMLSInterpolatorAdapter::query(const Point3D& point) const {
+    return hmls_interpolator_->query(point);
+}
+
+std::vector<InterpolationResult> CPUHermiteMLSInterpolatorAdapter::queryBatch(
+    const std::vector<Point3D>& points) const {
+    return hmls_interpolator_->queryBatch(points);
+}
+
+size_t CPUHermiteMLSInterpolatorAdapter::getDataCount() const {
+    return hmls_interpolator_->getCoordinates().size();
+}
+
+void CPUHermiteMLSInterpolatorAdapter::getBounds(Point3D& min_bound, Point3D& max_bound) const {
+    hmls_interpolator_->getBounds(min_bound, max_bound);
+}
+
+GridParams CPUHermiteMLSInterpolatorAdapter::getGridParams() const {
+    return GridParams();
+}
+
+std::vector<Point3D> CPUHermiteMLSInterpolatorAdapter::getCoordinates() const {
+    return std::vector<Point3D>();
+}
+
+std::vector<MagneticFieldData> CPUHermiteMLSInterpolatorAdapter::getFieldData() const {
+    return std::vector<MagneticFieldData>();
+}
+
+bool CPUHermiteMLSInterpolatorAdapter::getLastKernelTime(float&) const {
+    return false;
+}
+
+// GPUHermiteMLSInterpolatorAdapter implementation
+GPUHermiteMLSInterpolatorAdapter::GPUHermiteMLSInterpolatorAdapter(
+    std::unique_ptr<HermiteMLSInterpolator> interpolator, InterpolationMethod method,
+    ExtrapolationMethod extrapolation)
+    : hmls_interpolator_(std::move(interpolator)),
+      method_(method),
+      extrapolation_(extrapolation),
+      last_kernel_time_ms_(0.0f) {
+    // Initialize GPU memory for points and field data
+    const auto& coordinates = hmls_interpolator_->getCoordinates();
+    const auto& field_data  = hmls_interpolator_->getFieldData();
+
+    if (!coordinates.empty()) {
+        d_points_.allocate(coordinates.size());
+        d_points_.copyToDevice(coordinates.data(), coordinates.size());
+    }
+
+    if (!field_data.empty()) {
+        d_field_data_.allocate(field_data.size());
+        d_field_data_.copyToDevice(field_data.data(), field_data.size());
+    }
+
+    // Build spatial grid for efficient neighbor finding
+    Point3D min_bound, max_bound;
+    hmls_interpolator_->getBounds(min_bound, max_bound);
+    spatial_grid_ = buildSpatialGrid(coordinates, min_bound, max_bound);
+
+    // Upload spatial grid data to GPU
+    if (!spatial_grid_.cell_offsets.empty()) {
+        d_cell_offsets_.allocate(spatial_grid_.cell_offsets.size());
+        d_cell_offsets_.copyToDevice(spatial_grid_.cell_offsets.data(), spatial_grid_.cell_offsets.size());
+    }
+
+    if (!spatial_grid_.cell_points.empty()) {
+        d_cell_points_.allocate(spatial_grid_.cell_points.size());
+        d_cell_points_.copyToDevice(spatial_grid_.cell_points.data(), spatial_grid_.cell_points.size());
+    }
+}
+
+InterpolationResult GPUHermiteMLSInterpolatorAdapter::query(const Point3D& point) const {
+    return hmls_interpolator_->query(point);
+}
+
+std::vector<InterpolationResult> GPUHermiteMLSInterpolatorAdapter::queryBatch(
+    const std::vector<Point3D>& points) const {
+    if (points.empty()) {
+        return {};
+    }
+
+    // Allocate GPU memory for query points and results
+    p3d::cuda::GpuMemory<Point3D>             d_query_points;
+    p3d::cuda::GpuMemory<InterpolationResult> d_results;
+
+    d_query_points.allocate(points.size());
+    d_results.allocate(points.size());
+
+    // Copy query points to GPU
+    d_query_points.copyToDevice(points.data(), points.size());
+
+    // Get HMLS parameters
+    const auto& params = hmls_interpolator_->getParameters();
+    p3d::cuda::HMLSParameters hmls_params;
+    hmls_params.basis_order = static_cast<int>(params.basis_order);
+    hmls_params.weight_function = static_cast<int>(params.weight_function);
+    hmls_params.support_radius = params.support_radius;
+    hmls_params.derivative_weight = params.derivative_weight;
+    hmls_params.max_neighbors = params.max_neighbors;
+    hmls_params.regularization = params.regularization;
+
+    // Get bounds
+    Point3D min_bound, max_bound;
+    hmls_interpolator_->getBounds(min_bound, max_bound);
+
+    // Launch kernel
+    const size_t num_threads = 256;
+    const size_t num_blocks  = (points.size() + num_threads - 1) / num_threads;
+
+    // Create CUDA events for timing
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    // Record start event
+    cudaEventRecord(start, 0);
+
+    p3d::cuda::HermiteMLSKernel<<<num_blocks, num_threads>>>(
+        d_query_points.getDevicePtr(), d_points_.getDevicePtr(), d_field_data_.getDevicePtr(),
+        hmls_interpolator_->getCoordinates().size(),
+        d_cell_offsets_.getDevicePtr(), d_cell_points_.getDevicePtr(),
+        spatial_grid_.origin, spatial_grid_.cell_size,
+        spatial_grid_.dimensions[0], spatial_grid_.dimensions[1], spatial_grid_.dimensions[2],
+        hmls_params, min_bound, max_bound, d_results.getDevicePtr(), points.size());
+
+    // Record stop event
+    cudaEventRecord(stop, 0);
+
+    // Check for kernel launch errors
+    cudaError_t error = cudaGetLastError();
+    if (error != cudaSuccess) {
+        // Clean up events
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+        // Fallback to CPU on error
+        return hmls_interpolator_->queryBatch(points);
+    }
+
+    // Wait for kernel completion
+    cudaEventSynchronize(stop);
+
+    // Calculate elapsed time
+    float elapsed_time_ms;
+    cudaEventElapsedTime(&elapsed_time_ms, start, stop);
+    last_kernel_time_ms_ = elapsed_time_ms;
+
+    // Clean up events
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
+    // Copy results back to host
+    std::vector<InterpolationResult> results(points.size());
+    d_results.copyToHost(results.data(), points.size());
+
+    return results;
+}
+
+size_t GPUHermiteMLSInterpolatorAdapter::getDataCount() const {
+    return hmls_interpolator_->getCoordinates().size();
+}
+
+void GPUHermiteMLSInterpolatorAdapter::getBounds(Point3D& min_bound, Point3D& max_bound) const {
+    hmls_interpolator_->getBounds(min_bound, max_bound);
+}
+
+GridParams GPUHermiteMLSInterpolatorAdapter::getGridParams() const { return GridParams(); }
+
+std::vector<Point3D> GPUHermiteMLSInterpolatorAdapter::getCoordinates() const { return std::vector<Point3D>(); }
+
+std::vector<MagneticFieldData> GPUHermiteMLSInterpolatorAdapter::getFieldData() const {
+    return std::vector<MagneticFieldData>();
+}
+
+bool GPUHermiteMLSInterpolatorAdapter::getLastKernelTime(float& kernel_time_ms) const {
     kernel_time_ms = last_kernel_time_ms_;
     return true;
 }
